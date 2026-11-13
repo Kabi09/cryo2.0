@@ -603,13 +603,18 @@ export default function App() {
   };
 
   // Employee & RBAC Handlers
-  const handleLogin = async (credentials) => {
+  const handleLogin = async (arg1, arg2) => {
+    const credentials = (typeof arg1 === 'object' && arg1 !== null)
+      ? arg1
+      : { username: arg1, password: arg2 };
     const res = await api.loginEmployee(credentials);
-    if (res.user && res.token) {
-      setCurrentUser(res.user);
+    const userObj = res.user || res.data;
+    if (userObj && res.token) {
+      setCurrentUser(userObj);
       localStorage.setItem('cryo_auth_token', res.token);
-      localStorage.setItem('cryo_current_user', JSON.stringify(res.user));
-      showToast(`Welcome back, ${res.user.name} (${res.user.role?.roleName || 'Employee'})!`, 'success');
+      localStorage.setItem('cryo_current_user', JSON.stringify(userObj));
+      const roleName = userObj.role?.name || userObj.role?.roleName || (typeof userObj.role === 'string' ? userObj.role : 'Employee');
+      showToast(`Logged in successfully: ${userObj.name} (${roleName})`, 'success');
       await loadAllData();
     }
     return res;

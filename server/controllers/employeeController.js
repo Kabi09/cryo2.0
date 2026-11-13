@@ -88,23 +88,26 @@ exports.login = async (req, res) => {
       req
     );
 
+    const userObj = {
+      _id: employee._id,
+      employeeId: employee.employeeId,
+      name: employee.name,
+      email: employee.email,
+      mobile: employee.mobile,
+      department: employee.departmentName,
+      designation: employee.designation,
+      role: employee.role,
+      username: employee.username,
+      profileImage: employee.profileImage,
+      joiningDate: employee.joiningDate,
+      lastLogin: employee.lastLogin
+    };
+
     res.json({
       success: true,
       token,
-      data: {
-        _id: employee._id,
-        employeeId: employee.employeeId,
-        name: employee.name,
-        email: employee.email,
-        mobile: employee.mobile,
-        department: employee.departmentName,
-        designation: employee.designation,
-        role: employee.role,
-        username: employee.username,
-        profileImage: employee.profileImage,
-        joiningDate: employee.joiningDate,
-        lastLogin: employee.lastLogin
-      }
+      data: userObj,
+      user: userObj
     });
   } catch (err) {
     console.error('Login error:', err);

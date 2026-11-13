@@ -84,8 +84,7 @@ export default function EmployeeLoginModule({
 
     try {
       setIsLoading(true);
-      await onLogin?.(username, password);
-      showToast?.(`Logged in successfully as @${username}!`, 'success');
+      await onLogin?.({ username, password });
       setUsername('');
       setPassword('');
     } catch (err) {
@@ -98,8 +97,7 @@ export default function EmployeeLoginModule({
   const handleQuickLogin = async (acc) => {
     try {
       setIsLoading(true);
-      await onLogin?.(acc.username, acc.pass);
-      showToast?.(`Switched session to ${acc.title} (@${acc.username})`, 'success');
+      await onLogin?.({ username: acc.username, password: acc.pass });
     } catch (err) {
       showToast?.(err.message || 'Error switching account', 'error');
     } finally {

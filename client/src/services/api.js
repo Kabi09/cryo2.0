@@ -619,12 +619,16 @@ export const api = {
   // ==========================================
 
   // Authentication
-  loginEmployee: (credentials) =>
-    fetch(`${API_BASE}/employees/login`, {
+  loginEmployee: (credentials) => {
+    const payload = typeof credentials === 'string'
+      ? { username: credentials }
+      : (credentials || {});
+    return fetch(`${API_BASE}/employees/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(credentials)
-    }).then(handleResponse),
+      body: JSON.stringify(payload)
+    }).then(handleResponse);
+  },
 
   getCurrentUser: (token) =>
     fetch(`${API_BASE}/employees/me`, {
