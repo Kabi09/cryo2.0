@@ -1,33 +1,60 @@
-# Cryo SCM 2.0 — Supply Chain Management MERN Stack Web Application
+# Cryo Enterprise 2.0 — Unified SCM, Sales & Production ERP System
 
-A full-stack, responsive Supply Chain Management web application built with the MERN stack (MongoDB, Express, React, Node.js) in vanilla JavaScript (no TypeScript) with modern UI and responsive multi-device support.
-
----
-
-## 1. Design & Architecture Principles
-
-- **Bilingual & Intuitive Workflow**: Designed following the 10 core industrial factory modules.
-- **Strict Stock Conservation**: Available stock is system-calculated. No manual "Add Stock" button. Goods inward via GRN sits in `QC Pending` quarantine. Stock increases **only** when items pass `QC Tests` (`QC Pass`), and decreases **only** upon `Material Issue to Production` or `Returns to Supplier`.
-- **Reusable Component Architecture**: Reusable `DataTable`, `Modal`, `Drawer`, `KpiCard`, `StatusBadge`, `FormField`, `Header`, `Sidebar`, and notification snackbars (`Toast`).
-- **All-Device Support**: Mobile navigation drawer, tablet/desktop sidebar, responsive table cards, touch-friendly inputs.
-- **Database Backed**: MongoDB schemas with compound unique index guards (e.g. duplicate supplier-material link prevention), automated balance tracking, and immutable audit stock ledgers.
+A full-stack enterprise web application built on the MERN stack (MongoDB, Express, React, Node.js) with vanilla JavaScript (`.jsx` / `.js`, **no TypeScript**). Features an obsidian dark precision design with vibrant cyan/indigo/emerald accents and a pixel-perfect **3-tier tree-branch expandable accordion sidebar (`└→`)**.
 
 ---
 
-## 2. The 10 Core SCM Modules
+## 1. System Architecture & Suites (32 Total Modules)
 
-| # | Module | Key Features & Responsibilities |
-|---|---|---|
-| **01** | **Raw Material Master** | Catalog factory raw materials (Steel, Plastic, Chemicals) with UOM, minimum safety stock, and reorder alerts. |
-| **02** | **Suppliers** | Maintain vendor profiles, contact personnel, GSTIN, payment terms, and geographical locations. |
-| **03** | **Supplier Material Link** | Contract price agreements, MOQs, lead times, and preferred vendor mapping (prevents duplicate mappings). |
-| **04** | **Purchase Orders (PO)** | Multi-row procurement orders with automated subtotal, GST, freight, and grand total computation. Lifecycle: `Draft` → `Approved` → `Partially Received` → `Completed` / `Cancelled`. |
-| **05** | **GRN (Goods Receipt Note)** | Factory gate inwarding against approved POs. Items placed in `QC Pending` quarantine status without entering live stock. |
-| **06** | **QC Tests** | Quality inspection against dimensional, tensile, and visual parameters. Automatically routes accepted quantity to available stock and rejected quantity to return queue. |
-| **07** | **Raw Material Inventory** | Real-time available stock balance, status health, and complete chronological stock ledger movement passbook. |
-| **08** | **Material Issue to Production**| Requisition by shopfloor work orders. Validates against available stock (blocks overdrafts) and immediately debits inventory. |
-| **09** | **Returns to Supplier** | Outward dispatch gate pass and debit note generation for QC-rejected materials. |
-| **10** | **Inventory Report & Analytics** | Executive dashboard KPI cards, net stock valuation (₹), category/status filtering, and export to CSV / print. |
+```
+Cryo Enterprise 2.0
+├── 📦 Supply Chain Management (10 Modules)
+│   ├── Raw Material Master
+│   ├── Suppliers
+│   ├── Supplier Material Link
+│   ├── Purchase Orders (PO)
+│   ├── GRN – Goods Receipt
+│   ├── QC Tests
+│   ├── Raw Material Inventory
+│   ├── Material Issue to Production
+│   ├── Returns to Supplier
+│   └── Inventory Report
+│
+├── 💼 Sales Management CRM (10 Modules)
+│   ├── Dashboard
+│   ├── Customer Enquiries
+│   ├── Customers & Leads
+│   ├── Follow-ups
+│   ├── Quotations (V1/V2/V3 Negotiation Versioning)
+│   ├── Proforma Invoices (PI)
+│   ├── Customer Purchase Orders
+│   ├── Payments
+│   ├── Sales Orders (SO)
+│   └── Sales Reports
+│
+└── 🏭 Production Management (12 Modules)
+    ├── Dashboard
+    ├── Production Planning (Work Orders)
+    ├── BOM – Bill of Materials
+    ├── Production Schedule
+    ├── Material Requests (Requisition to Company Store)
+    ├── Material Issue (Store Verification & Stock Ledger Audit)
+    ├── Production Execution (Start / Pause / Resume / Hold)
+    ├── Production Updates (Daily / Weekly Cumulative Progress)
+    ├── Production Completion
+    ├── Quality Assurance (QA: Sensor, Heat, Electrical)
+    ├── Rework / Rebuild (Closed-loop Repair Bay)
+    └── Finished Goods (QA-Guaranteed Serialized Warehouse)
+```
+
+---
+
+## 2. Documentation Index (In `docs/`)
+- [`docs/workflows.md`](file:///k:/cryo2.0/docs/workflows.md) — Comprehensive workflow diagrams and operational step-by-step guides for SCM, Sales, and Production.
+- [`docs/api-documentation.md`](file:///k:/cryo2.0/docs/api-documentation.md) — Complete REST API reference for all 32 endpoints with methods, query parameters, payloads, and response structures.
+- [`docs/business-logic.md`](file:///k:/cryo2.0/docs/business-logic.md) — Strict business logic, quarantine rules, inventory conservation, deduplication, quotation versioning, and QA decision gates.
+- [`docs/task-tracker.md`](file:///k:/cryo2.0/docs/task-tracker.md) — Milestone and verification register.
+- [`project.md`](file:///k:/cryo2.0/project.md) — High-level system architecture and module breakdown.
 
 ---
 
@@ -35,20 +62,30 @@ A full-stack, responsive Supply Chain Management web application built with the 
 
 ### Prerequisites
 - Node.js (v18+)
-- MongoDB running locally at `mongodb://127.0.0.1:27017`
+- MongoDB running locally on `mongodb://127.0.0.1:27017`
 
-### Running the Backend Server
+### Backend Server Setup
 ```bash
 cd server
 npm install
-node seed/seedData.js   # Optional: Seeds sample factory data
-npm run dev             # Starts API at http://localhost:5000
+node seed/seedData.js       # Seeds SCM sample data
+node seed/salesSeed.js      # Seeds Sales CRM sample data
+node seed/productionSeed.js # Seeds Production 10-Machine sample data
+node server.js              # Starts API server on http://localhost:5000
 ```
 
-### Running the Frontend Client
+### Frontend Client Setup
 ```bash
 cd client
 npm install
-npm run dev             # Starts React UI at http://localhost:3000
+npm run dev                 # Starts Vite React on http://localhost:3000
 ```
 
+---
+
+## 4. Key Business Safeguards
+1. **Stock Conservation**: Stock cannot be manually created; it increases only via approved `QC Pass` and decreases via store issues or supplier returns.
+2. **Quarantine Inward**: GRN items enter `QC Pending` quarantine without directly entering available stock.
+3. **Quotation History**: Commercial negotiations increment versions (`V1` → `V2` → `V3`) while preserving immutable history.
+4. **Company Store Integration**: Production draws directly from SCM inventory with automated Stock Ledger audit trails.
+5. **QA Gating**: Completed production batches cannot enter Finished Goods until passing Quality Assurance testing. Failed units are routed to Rework and re-tested via Re-QA.

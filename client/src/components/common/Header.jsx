@@ -1,6 +1,6 @@
 import React from 'react';
-import { Menu, RefreshCw, Package, Briefcase } from 'lucide-react';
-import { SCM_MODULES, SALES_MODULES } from './Sidebar';
+import { Menu, RefreshCw, Package, Briefcase, Factory } from 'lucide-react';
+import { SCM_MODULES, SALES_MODULES, PRODUCTION_MODULES } from './Sidebar';
 
 export default function Header({
   activeDomain,
@@ -10,8 +10,14 @@ export default function Header({
   onRefresh,
   isRefreshing
 }) {
-  const allModules = [...SCM_MODULES, ...SALES_MODULES];
+  const allModules = [...SCM_MODULES, ...SALES_MODULES, ...PRODUCTION_MODULES];
   const currentModule = allModules.find(m => m.id === activeModule) || allModules[0];
+
+  const getDomainLabel = () => {
+    if (activeDomain === 'scm') return 'Supply Chain';
+    if (activeDomain === 'sales') return 'Sales CRM';
+    return 'Production';
+  };
 
   return (
     <header className="top-header">
@@ -22,7 +28,7 @@ export default function Header({
 
         <div className="page-title-box">
           <span className="page-tag">
-            {activeDomain === 'scm' ? 'Supply Chain' : 'Sales'} • {currentModule.num}
+            {getDomainLabel()} • {currentModule.num}
           </span>
           <h1 className="page-title">{currentModule.title}</h1>
         </div>
@@ -45,8 +51,8 @@ export default function Header({
               display: 'flex',
               alignItems: 'center',
               gap: 5,
-              padding: '5px 12px',
-              fontSize: '0.76rem',
+              padding: '5px 10px',
+              fontSize: '0.74rem',
               fontWeight: 700,
               border: 'none',
               borderRadius: 6,
@@ -57,7 +63,7 @@ export default function Header({
               boxShadow: activeDomain === 'scm' ? '0 2px 8px rgba(99, 102, 241, 0.4)' : 'none'
             }}
           >
-            <Package size={13} /> Supply Chain (10)
+            <Package size={13} /> SCM (10)
           </button>
           <button
             onClick={() => onSelectDomain('sales')}
@@ -65,8 +71,8 @@ export default function Header({
               display: 'flex',
               alignItems: 'center',
               gap: 5,
-              padding: '5px 12px',
-              fontSize: '0.76rem',
+              padding: '5px 10px',
+              fontSize: '0.74rem',
               fontWeight: 700,
               border: 'none',
               borderRadius: 6,
@@ -77,7 +83,27 @@ export default function Header({
               boxShadow: activeDomain === 'sales' ? '0 2px 8px rgba(6, 182, 212, 0.4)' : 'none'
             }}
           >
-            <Briefcase size={13} /> Sales CRM (10)
+            <Briefcase size={13} /> Sales (10)
+          </button>
+          <button
+            onClick={() => onSelectDomain('production')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 5,
+              padding: '5px 10px',
+              fontSize: '0.74rem',
+              fontWeight: 700,
+              border: 'none',
+              borderRadius: 6,
+              cursor: 'pointer',
+              transition: 'all 0.18s ease',
+              background: activeDomain === 'production' ? 'linear-gradient(135deg, #059669, #10B981)' : 'transparent',
+              color: activeDomain === 'production' ? '#fff' : 'var(--text-secondary)',
+              boxShadow: activeDomain === 'production' ? '0 2px 8px rgba(16, 185, 129, 0.4)' : 'none'
+            }}
+          >
+            <Factory size={13} /> Production (12)
           </button>
         </div>
 

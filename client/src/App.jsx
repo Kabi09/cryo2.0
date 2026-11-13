@@ -26,20 +26,34 @@ import PaymentsModule from './components/sales/PaymentsModule';
 import SalesOrdersModule from './components/sales/SalesOrdersModule';
 import SalesReportsModule from './components/sales/SalesReportsModule';
 
+// Production Management Modules (12 Modules)
+import ProductionDashboardModule from './components/production/ProductionDashboardModule';
+import ProductionPlanningModule from './components/production/ProductionPlanningModule';
+import BOMModule from './components/production/BOMModule';
+import ProductionScheduleModule from './components/production/ProductionScheduleModule';
+import MaterialRequestsModule from './components/production/MaterialRequestsModule';
+import ProductionMaterialIssueModule from './components/production/ProductionMaterialIssueModule';
+import ProductionExecutionModule from './components/production/ProductionExecutionModule';
+import ProductionUpdatesModule from './components/production/ProductionUpdatesModule';
+import ProductionCompletionModule from './components/production/ProductionCompletionModule';
+import ProductionQAModule from './components/production/ProductionQAModule';
+import ReworkModule from './components/production/ReworkModule';
+import FinishedGoodsModule from './components/production/FinishedGoodsModule';
+
 import { api } from './services/api';
 import { CheckCircle2, AlertCircle, Info } from 'lucide-react';
 
 export default function App() {
-  const [activeDomain, setActiveDomain] = useState('scm'); // 'scm' or 'sales'
+  const [activeDomain, setActiveDomain] = useState('scm'); // 'scm' | 'sales' | 'production'
   const [activeModule, setActiveModule] = useState('scm-materials');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [toasts, setToasts] = useState([]);
 
-  // Cross-module state (SCM GRN to QC navigation)
+  // Cross-module state
   const [preSelectedGRNForQC, setPreSelectedGRNForQC] = useState(null);
 
-  // SCM State
+  // 1. SCM State
   const [materials, setMaterials] = useState([]);
   const [scmSuppliers, setScmSuppliers] = useState([]);
   const [supplierLinks, setSupplierLinks] = useState([]);
@@ -51,7 +65,7 @@ export default function App() {
   const [supplierReturns, setSupplierReturns] = useState([]);
   const [scmReportsData, setScmReportsData] = useState(null);
 
-  // Sales State
+  // 2. Sales State
   const [products, setProducts] = useState([]);
   const [salesCustomers, setSalesCustomers] = useState([]);
   const [enquiries, setEnquiries] = useState([]);
@@ -64,6 +78,20 @@ export default function App() {
   const [salesOrders, setSalesOrders] = useState([]);
   const [salesDashboardData, setSalesDashboardData] = useState(null);
   const [salesReportsData, setSalesReportsData] = useState(null);
+
+  // 3. Production State
+  const [productionDashboardData, setProductionDashboardData] = useState(null);
+  const [workOrders, setWorkOrders] = useState([]);
+  const [boms, setBoms] = useState([]);
+  const [schedules, setSchedules] = useState([]);
+  const [materialRequests, setMaterialRequests] = useState([]);
+  const [productionMaterialIssues, setProductionMaterialIssues] = useState([]);
+  const [executions, setExecutions] = useState([]);
+  const [productionUpdates, setProductionUpdates] = useState([]);
+  const [completions, setCompletions] = useState([]);
+  const [productionQATests, setProductionQATests] = useState([]);
+  const [reworkOrders, setReworkOrders] = useState([]);
+  const [finishedGoods, setFinishedGoods] = useState([]);
 
   const showToast = (message, type = 'info') => {
     const id = Date.now() + Math.random();
@@ -88,6 +116,7 @@ export default function App() {
         issueRes,
         retRes,
         scmRepRes,
+
         // Sales Calls
         prodRes,
         custRes,
@@ -100,8 +129,23 @@ export default function App() {
         payRes,
         soRes,
         salesDashRes,
-        salesRepRes
+        salesRepRes,
+
+        // Production Calls
+        prodDashRes,
+        woRes,
+        bomRes,
+        schRes,
+        mrRes,
+        pmiRes,
+        execRes,
+        puRes,
+        compRes,
+        pqaRes,
+        rwRes,
+        fgRes
       ] = await Promise.all([
+        // SCM
         api.getMaterials().catch(() => ({ data: [] })),
         api.getSuppliers().catch(() => ({ data: [] })),
         api.getSupplierMaterialLinks().catch(() => ({ data: [] })),
@@ -111,7 +155,9 @@ export default function App() {
         api.getInventory().catch(() => ({ data: [] })),
         api.getMaterialIssues().catch(() => ({ data: [] })),
         api.getSupplierReturns().catch(() => ({ data: [] })),
-        api.getReports().catch(() => null),
+        api.getInventoryReport().catch(() => null),
+
+        // Sales
         api.getProducts().catch(() => ({ data: [] })),
         api.getCustomers().catch(() => ({ data: [] })),
         api.getEnquiries().catch(() => ({ data: [] })),
@@ -123,7 +169,21 @@ export default function App() {
         api.getPayments().catch(() => ({ data: [] })),
         api.getSalesOrders().catch(() => ({ data: [] })),
         api.getDashboardSummary().catch(() => null),
-        api.getSalesReports().catch(() => null)
+        api.getSalesReports().catch(() => null),
+
+        // Production
+        api.getProductionDashboard().catch(() => null),
+        api.getWorkOrders().catch(() => ({ data: [] })),
+        api.getBOMs().catch(() => ({ data: [] })),
+        api.getSchedules().catch(() => ({ data: [] })),
+        api.getMaterialRequests().catch(() => ({ data: [] })),
+        api.getProductionMaterialIssues().catch(() => ({ data: [] })),
+        api.getExecutions().catch(() => ({ data: [] })),
+        api.getProductionUpdates().catch(() => ({ data: [] })),
+        api.getCompletions().catch(() => ({ data: [] })),
+        api.getProductionQATests().catch(() => ({ data: [] })),
+        api.getReworkOrders().catch(() => ({ data: [] })),
+        api.getFinishedGoods().catch(() => ({ data: [] }))
       ]);
 
       // Populate SCM
@@ -151,6 +211,20 @@ export default function App() {
       setSalesOrders(soRes.data || []);
       setSalesDashboardData(salesDashRes || null);
       setSalesReportsData(salesRepRes || null);
+
+      // Populate Production
+      setProductionDashboardData(prodDashRes || null);
+      setWorkOrders(woRes.data || []);
+      setBoms(bomRes.data || []);
+      setSchedules(schRes.data || []);
+      setMaterialRequests(mrRes.data || []);
+      setProductionMaterialIssues(pmiRes.data || []);
+      setExecutions(execRes.data || []);
+      setProductionUpdates(puRes.data || []);
+      setCompletions(compRes.data || []);
+      setProductionQATests(pqaRes.data || []);
+      setReworkOrders(rwRes.data || []);
+      setFinishedGoods(fgRes.data || []);
     } catch (err) {
       console.error('Error fetching data:', err);
       showToast(err.message || 'Error connecting to backend services', 'error');
@@ -167,8 +241,10 @@ export default function App() {
     setActiveDomain(domain);
     if (domain === 'scm') {
       setActiveModule('scm-materials');
-    } else {
+    } else if (domain === 'sales') {
       setActiveModule('sales-dashboard');
+    } else if (domain === 'production') {
+      setActiveModule('production-dashboard');
     }
   };
 
@@ -235,14 +311,14 @@ export default function App() {
     await api.createEnquiry(data);
     await loadAllData();
   };
-  const handleConvertToLead = async (id) => {
-    await api.convertEnquiryToLead(id);
+  const handleConvertToLead = async (enquiryId) => {
+    await api.convertEnquiryToLead(enquiryId);
     await loadAllData();
+    showToast('Enquiry successfully converted to Lead without duplicate customer entry', 'success');
   };
   const handleSaveSalesCustomer = async (data) => {
-    const res = await api.createCustomer(data);
+    await api.createCustomer(data);
     await loadAllData();
-    return res;
   };
   const handleSaveLead = async (data) => {
     await api.createLead(data);
@@ -267,6 +343,7 @@ export default function App() {
   const handleReviseQuotation = async (id, data) => {
     await api.reviseQuotation(id, data);
     await loadAllData();
+    showToast('Quotation revised successfully with incremented version', 'success');
   };
   const handleUpdateQuotationStatus = async (id, status) => {
     await api.updateQuotationStatus(id, status);
@@ -299,11 +376,76 @@ export default function App() {
   const handleSendSOToProduction = async (id, data) => {
     await api.sendSOToProduction(id, data);
     await loadAllData();
+    showToast('Sales Order approved and handed over to Production Planning!', 'success');
+    setActiveDomain('production');
+    setActiveModule('production-planning');
+  };
+
+  // Production Handlers
+  const handleSaveWorkOrder = async (data) => {
+    await api.createWorkOrder(data);
+    await loadAllData();
+  };
+  const handleUpdateWorkOrderStatus = async (id, status) => {
+    await api.updateWorkOrderStatus(id, status);
+    await loadAllData();
+  };
+  const handleSaveBOM = async (data) => {
+    await api.createBOM(data);
+    await loadAllData();
+  };
+  const handleSaveSchedule = async (data) => {
+    await api.createSchedule(data);
+    await loadAllData();
+  };
+  const handleSaveMaterialRequest = async (data) => {
+    await api.createMaterialRequest(data);
+    await loadAllData();
+  };
+  const handleSaveProductionMaterialIssue = async (data) => {
+    await api.createProductionMaterialIssue(data);
+    await loadAllData();
+  };
+  const handleStartExecution = async (data) => {
+    await api.startExecution(data);
+    await loadAllData();
+  };
+  const handleUpdateExecutionStatus = async (id, status) => {
+    await api.updateExecutionStatus(id, status);
+    await loadAllData();
+  };
+  const handleSaveProductionUpdate = async (data) => {
+    await api.createProductionUpdate(data);
+    await loadAllData();
+  };
+  const handleSaveCompletion = async (data) => {
+    await api.createCompletion(data);
+    await loadAllData();
+  };
+  const handleSaveProductionQA = async (data) => {
+    await api.createProductionQATest(data);
+    await loadAllData();
+  };
+  const handleSaveReworkOrder = async (data) => {
+    await api.createReworkOrder(data);
+    await loadAllData();
+  };
+  const handleUpdateReworkStatus = async (id, data) => {
+    await api.updateReworkStatus(id, data);
+    await loadAllData();
+  };
+  const handleSaveFinishedGood = async (data) => {
+    await api.createFinishedGood(data);
+    await loadAllData();
+  };
+  const handleUpdateFinishedGoodStatus = async (id, status) => {
+    await api.updateFinishedGoodStatus(id, status);
+    await loadAllData();
   };
 
   return (
     <div className="app-container">
-      {/* Dynamic Unified Sidebar */}
+      {/* Unified Tree Accordion Sidebar */}
       <Sidebar
         activeDomain={activeDomain}
         onSelectDomain={handleDomainChange}
@@ -316,6 +458,8 @@ export default function App() {
             setActiveDomain('scm');
           } else if (mod.startsWith('sales-')) {
             setActiveDomain('sales');
+          } else if (mod.startsWith('production-')) {
+            setActiveDomain('production');
           }
           setPreSelectedGRNForQC(null);
         }}
@@ -336,7 +480,7 @@ export default function App() {
 
         <main className="content-body">
           {/* ========================================= */}
-          {/* SUPPLY CHAIN MANAGEMENT MODULES (10 MENUS) */}
+          {/* 1. SUPPLY CHAIN MANAGEMENT (10 MENUS)     */}
           {/* ========================================= */}
           {activeModule === 'scm-materials' && (
             <MaterialMasterModule
@@ -434,7 +578,7 @@ export default function App() {
           )}
 
           {/* ========================================= */}
-          {/* SALES MANAGEMENT MODULES (10 MENUS)        */}
+          {/* 2. SALES MANAGEMENT (10 MENUS)            */}
           {/* ========================================= */}
           {activeModule === 'sales-dashboard' && (
             <DashboardModule
@@ -540,6 +684,130 @@ export default function App() {
           {activeModule === 'sales-reports' && (
             <SalesReportsModule
               reportsData={salesReportsData}
+              showToast={showToast}
+            />
+          )}
+
+          {/* ========================================= */}
+          {/* 3. PRODUCTION MANAGEMENT (12 MENUS)       */}
+          {/* ========================================= */}
+          {activeModule === 'production-dashboard' && (
+            <ProductionDashboardModule
+              dashboardData={productionDashboardData}
+              onNavigateModule={(mod) => setActiveModule(`production-${mod}`)}
+            />
+          )}
+
+          {activeModule === 'production-planning' && (
+            <ProductionPlanningModule
+              workOrders={workOrders}
+              salesOrders={salesOrders}
+              products={products}
+              boms={boms}
+              onSave={handleSaveWorkOrder}
+              onUpdateStatus={handleUpdateWorkOrderStatus}
+              showToast={showToast}
+            />
+          )}
+
+          {activeModule === 'production-bom' && (
+            <BOMModule
+              boms={boms}
+              products={products}
+              materials={materials}
+              onSave={handleSaveBOM}
+              showToast={showToast}
+            />
+          )}
+
+          {activeModule === 'production-schedule' && (
+            <ProductionScheduleModule
+              schedules={schedules}
+              workOrders={workOrders}
+              onSave={handleSaveSchedule}
+              showToast={showToast}
+            />
+          )}
+
+          {activeModule === 'production-material-requests' && (
+            <MaterialRequestsModule
+              materialRequests={materialRequests}
+              workOrders={workOrders}
+              materials={materials}
+              boms={boms}
+              inventory={inventory}
+              onSave={handleSaveMaterialRequest}
+              showToast={showToast}
+            />
+          )}
+
+          {activeModule === 'production-material-issue' && (
+            <ProductionMaterialIssueModule
+              materialIssues={productionMaterialIssues}
+              materialRequests={materialRequests}
+              inventory={inventory}
+              onSave={handleSaveProductionMaterialIssue}
+              showToast={showToast}
+            />
+          )}
+
+          {activeModule === 'production-execution' && (
+            <ProductionExecutionModule
+              executions={executions}
+              workOrders={workOrders}
+              onStart={handleStartExecution}
+              onUpdateStatus={handleUpdateExecutionStatus}
+              showToast={showToast}
+            />
+          )}
+
+          {activeModule === 'production-updates' && (
+            <ProductionUpdatesModule
+              productionUpdates={productionUpdates}
+              workOrders={workOrders}
+              onSave={handleSaveProductionUpdate}
+              showToast={showToast}
+            />
+          )}
+
+          {activeModule === 'production-completion' && (
+            <ProductionCompletionModule
+              completions={completions}
+              workOrders={workOrders}
+              onSave={handleSaveCompletion}
+              onNavigateToQA={() => setActiveModule('production-qa')}
+              showToast={showToast}
+            />
+          )}
+
+          {activeModule === 'production-qa' && (
+            <ProductionQAModule
+              qaTests={productionQATests}
+              workOrders={workOrders}
+              completions={completions}
+              onSave={handleSaveProductionQA}
+              onNavigateToRework={() => setActiveModule('production-rework')}
+              showToast={showToast}
+            />
+          )}
+
+          {activeModule === 'production-rework' && (
+            <ReworkModule
+              reworkOrders={reworkOrders}
+              workOrders={workOrders}
+              onSave={handleSaveReworkOrder}
+              onUpdateStatus={handleUpdateReworkStatus}
+              showToast={showToast}
+            />
+          )}
+
+          {activeModule === 'production-finished-goods' && (
+            <FinishedGoodsModule
+              finishedGoods={finishedGoods}
+              workOrders={workOrders}
+              qaTests={productionQATests}
+              onSave={handleSaveFinishedGood}
+              onUpdateStatus={handleUpdateFinishedGoodStatus}
               showToast={showToast}
             />
           )}

@@ -1,13 +1,17 @@
 import React, { useState, useMemo } from 'react';
-import { Search, ChevronLeft, ChevronRight, Inbox } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, Inbox, Plus } from 'lucide-react';
 
 export default function DataTable({
-  columns,
+  title = null,
+  subtitle = null,
+  columns = [],
   data = [],
   searchPlaceholder = 'Search records...',
   searchField = null,
   filters = null,
   actions = null,
+  onAdd = null,
+  addLabel = 'Add New',
   pageSize = 8,
   onRowClick = null
 }) {
@@ -43,8 +47,44 @@ export default function DataTable({
     return filteredData.slice(start, start + pageSize);
   }, [filteredData, currentPage, pageSize]);
 
+  // Safe cell renderer supporting both (row) and (val, row) signatures
+  const renderCell = (col, row) => {
+    if (!col.render) {
+      const val = col.accessor ? row[col.accessor] : undefined;
+      return val !== undefined && val !== null ? val : '-';
+    }
+
+    try {
+      // First try standard row signature
+      const out = col.render(row);
+      if (out !== undefined) return out;
+      // Fallback to val, row
+      return col.render(col.accessor ? row[col.accessor] : row, row);
+    } catch {
+      return col.render(col.accessor ? row[col.accessor] : row, row);
+    }
+  };
+
   return (
     <div className="table-card">
+      {/* Optional Card Title & Subtitle */}
+      {(title || subtitle) && (
+        <div style={{
+          padding: '16px 20px',
+          borderBottom: '1px solid var(--border-subtle)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: 12
+        }}>
+          <div>
+            {title && <h3 style={{ fontSize: '0.98rem', fontWeight: 700, color: 'var(--text-primary)' }}>{title}</h3>}
+            {subtitle && <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: 2 }}>{subtitle}</p>}
+          </div>
+        </div>
+      )}
+
       {/* Table Toolbar */}
       <div className="toolbar" style={{ border: 'none', borderRadius: 0, borderBottom: '1px solid var(--border-subtle)' }}>
         <div className="toolbar-left">
@@ -63,8 +103,13 @@ export default function DataTable({
           </div>
           {filters}
         </div>
-        <div className="toolbar-right">
+        <div className="toolbar-right" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {actions}
+          {onAdd && (
+            <button className="btn btn-primary" onClick={onAdd}>
+              <Plus size={16} /> {addLabel}
+            </button>
+          )}
         </div>
       </div>
 
@@ -90,7 +135,7 @@ export default function DataTable({
                 >
                   {columns.map((col, colIdx) => (
                     <td key={colIdx} style={{ textAlign: col.align || 'left' }}>
-                      {col.render ? col.render(row) : row[col.accessor]}
+                      {renderCell(col, row)}
                     </td>
                   ))}
                 </tr>
@@ -99,11 +144,9 @@ export default function DataTable({
               <tr>
                 <td colSpan={columns.length}>
                   <div className="empty-state">
-                    <Inbox className="empty-state-icon" size={40} />
+                    <Inbox className="empty-state-icon" size={32} />
                     <h4>No records found</h4>
-                    <p style={{ fontSize: '0.8rem' }}>
-                      {searchTerm ? 'Try adjusting your search query or filters.' : 'Click "Add New" to create the first record.'}
-                    </p>
+                    <p>Try adjusting your search criteria or register a new record.</p>
                   </div>
                 </td>
               </tr>
@@ -112,44 +155,32 @@ export default function DataTable({
         </table>
       </div>
 
-      {/* Pagination Footer */}
-      {filteredData.length > 0 && (
-        <div style={{
-          padding: '12px 18px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          borderTop: '1px solid var(--border-subtle)',
-          fontSize: '0.8rem',
-          color: 'var(--text-muted)'
-        }}>
-          <div>
-            Showing <strong style={{ color: '#fff' }}>{Math.min(filteredData.length, (currentPage - 1) * pageSize + 1)}</strong> to{' '}
-            <strong style={{ color: '#fff' }}>{Math.min(filteredData.length, currentPage * pageSize)}</strong> of{' '}
-            <strong style={{ color: '#fff' }}>{filteredData.length}</strong> records
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <button
-              className="btn btn-secondary btn-sm"
-              disabled={currentPage === 1}
-              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-            >
-              <ChevronLeft size={14} /> Prev
-            </button>
-            <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>
-              Page {currentPage} of {totalPages}
-            </span>
-            <button
-              className="btn btn-secondary btn-sm"
-              disabled={currentPage === totalPages}
-              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-            >
-              Next <ChevronRight size={14} />
-            </button>
-          </div>
+      {/* Table Pagination */}
+      <div className="pagination">
+        <div className="pagination-info">
+          Showing <span>{filteredData.length > 0 ? (currentPage - 1) * pageSize + 1 : 0}</span> to{' '}
+          <span>{Math.min(currentPage * pageSize, filteredData.length)}</span> of <span>{filteredData.length}</span> entries
         </div>
-      )}
+        <div className="pagination-controls">
+          <button
+            className="page-btn"
+            disabled={currentPage === 1}
+            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+          >
+            <ChevronLeft size={16} />
+          </button>
+          <span style={{ fontSize: '0.8rem', padding: '0 8px', color: 'var(--text-secondary)' }}>
+            Page {currentPage} of {totalPages}
+          </span>
+          <button
+            className="page-btn"
+            disabled={currentPage === totalPages}
+            onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+          >
+            <ChevronRight size={16} />
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
-

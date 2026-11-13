@@ -4,6 +4,7 @@ const cors = require('cors');
 const connectDB = require('./config/db');
 const scmRoutes = require('./routes/scmRoutes');
 const salesRoutes = require('./routes/salesRoutes');
+const productionRoutes = require('./routes/productionRoutes');
 
 const app = express();
 
@@ -21,12 +22,13 @@ app.use(express.urlencoded({ extended: true }));
 
 // Health Check
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'UP', message: 'Cryo 2.0 SCM & Sales API is running smoothly' });
+  res.json({ status: 'UP', message: 'Cryo 2.0 SCM, Sales & Production API is running smoothly' });
 });
 
 // API Routes
 app.use('/api', scmRoutes);
 app.use('/api/sales', salesRoutes);
+app.use('/api/production', productionRoutes);
 
 // Error Handling Middleware
 app.use((err, req, res, next) => {

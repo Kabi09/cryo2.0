@@ -311,5 +311,186 @@ export const api = {
       body: JSON.stringify(data)
     }).then(handleResponse),
 
-  getSalesReports: () => fetch(`${API_BASE}/sales/sales-reports`).then(handleResponse)
+  getSalesReports: () => fetch(`${API_BASE}/sales/sales-reports`).then(handleResponse),
+
+  // ==========================================
+  // PRODUCTION MANAGEMENT ENDPOINTS (12 MENUS)
+  // ==========================================
+
+  // 01. Dashboard
+  getProductionDashboard: () => fetch(`${API_BASE}/production/dashboard-summary`).then(handleResponse),
+
+  // 02. Production Planning
+  getWorkOrders: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return fetch(`${API_BASE}/production/work-orders?${query}`).then(handleResponse);
+  },
+  createWorkOrder: (data) =>
+    fetch(`${API_BASE}/production/work-orders`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    }).then(handleResponse),
+  updateWorkOrderStatus: (id, status) =>
+    fetch(`${API_BASE}/production/work-orders/${id}/status`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status })
+    }).then(handleResponse),
+
+  // 03. BOM – Bill of Materials
+  getBOMs: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return fetch(`${API_BASE}/production/boms?${query}`).then(handleResponse);
+  },
+  createBOM: (data) =>
+    fetch(`${API_BASE}/production/boms`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    }).then(handleResponse),
+  updateBOM: (id, data) =>
+    fetch(`${API_BASE}/production/boms/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    }).then(handleResponse),
+
+  // 04. Production Schedule
+  getSchedules: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return fetch(`${API_BASE}/production/schedules?${query}`).then(handleResponse);
+  },
+  createSchedule: (data) =>
+    fetch(`${API_BASE}/production/schedules`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    }).then(handleResponse),
+  updateSchedule: (id, data) =>
+    fetch(`${API_BASE}/production/schedules/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    }).then(handleResponse),
+
+  // 05. Material Requests
+  getMaterialRequests: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return fetch(`${API_BASE}/production/material-requests?${query}`).then(handleResponse);
+  },
+  createMaterialRequest: (data) =>
+    fetch(`${API_BASE}/production/material-requests`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    }).then(handleResponse),
+  updateMaterialRequestStatus: (id, status) =>
+    fetch(`${API_BASE}/production/material-requests/${id}/status`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status })
+    }).then(handleResponse),
+
+  // 06. Material Issue
+  getProductionMaterialIssues: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return fetch(`${API_BASE}/production/material-issues?${query}`).then(handleResponse);
+  },
+  createProductionMaterialIssue: (data) =>
+    fetch(`${API_BASE}/production/material-issues`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    }).then(handleResponse),
+
+  // 07. Production Execution
+  getExecutions: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return fetch(`${API_BASE}/production/executions?${query}`).then(handleResponse);
+  },
+  startExecution: (data) =>
+    fetch(`${API_BASE}/production/executions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    }).then(handleResponse),
+  updateExecutionStatus: (id, status) =>
+    fetch(`${API_BASE}/production/executions/${id}/status`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status })
+    }).then(handleResponse),
+
+  // 08. Production Updates (Daily / Weekly)
+  getProductionUpdates: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return fetch(`${API_BASE}/production/production-updates?${query}`).then(handleResponse);
+  },
+  createProductionUpdate: (data) =>
+    fetch(`${API_BASE}/production/production-updates`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    }).then(handleResponse),
+
+  // 09. Production Completion
+  getCompletions: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return fetch(`${API_BASE}/production/completions?${query}`).then(handleResponse);
+  },
+  createCompletion: (data) =>
+    fetch(`${API_BASE}/production/completions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    }).then(handleResponse),
+
+  // 10. Quality Assurance (QA)
+  getProductionQATests: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return fetch(`${API_BASE}/production/qa-tests?${query}`).then(handleResponse);
+  },
+  createProductionQATest: (data) =>
+    fetch(`${API_BASE}/production/qa-tests`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    }).then(handleResponse),
+
+  // 11. Rework / Rebuild
+  getReworkOrders: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return fetch(`${API_BASE}/production/rework-orders?${query}`).then(handleResponse);
+  },
+  createReworkOrder: (data) =>
+    fetch(`${API_BASE}/production/rework-orders`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    }).then(handleResponse),
+  updateReworkStatus: (id, data) =>
+    fetch(`${API_BASE}/production/rework-orders/${id}/status`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    }).then(handleResponse),
+
+  // 12. Finished Goods
+  getFinishedGoods: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return fetch(`${API_BASE}/production/finished-goods?${query}`).then(handleResponse);
+  },
+  createFinishedGood: (data) =>
+    fetch(`${API_BASE}/production/finished-goods`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    }).then(handleResponse),
+  updateFinishedGoodStatus: (id, stockStatus) =>
+    fetch(`${API_BASE}/production/finished-goods/${id}/status`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ stockStatus })
+    }).then(handleResponse)
 };

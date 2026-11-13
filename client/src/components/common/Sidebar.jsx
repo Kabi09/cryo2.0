@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import {
   Boxes,
   Briefcase,
+  Factory,
   ChevronDown,
   ChevronUp,
   Package,
@@ -33,6 +34,21 @@ export const SALES_MODULES = [
   { id: 'sales-payments', num: '08', title: 'Payments' },
   { id: 'sales-sales-orders', num: '09', title: 'Sales Orders (SO)' },
   { id: 'sales-reports', num: '10', title: 'Sales Reports' }
+];
+
+export const PRODUCTION_MODULES = [
+  { id: 'production-dashboard', num: '01', title: 'Dashboard' },
+  { id: 'production-planning', num: '02', title: 'Production Planning' },
+  { id: 'production-bom', num: '03', title: 'BOM – Bill of Materials' },
+  { id: 'production-schedule', num: '04', title: 'Production Schedule' },
+  { id: 'production-material-requests', num: '05', title: 'Material Requests' },
+  { id: 'production-material-issue', num: '06', title: 'Material Issue' },
+  { id: 'production-execution', num: '07', title: 'Production Execution' },
+  { id: 'production-updates', num: '08', title: 'Production Updates' },
+  { id: 'production-completion', num: '09', title: 'Production Completion' },
+  { id: 'production-qa', num: '10', title: 'Quality Assurance (QA)' },
+  { id: 'production-rework', num: '11', title: 'Rework / Rebuild' },
+  { id: 'production-finished-goods', num: '12', title: 'Finished Goods' }
 ];
 
 /**
@@ -87,16 +103,16 @@ export default function Sidebar({
   isOpen,
   onClose
 }) {
-  // Accordion state: both can be expanded or collapsed independently
+  // Accordion state: SCM, Sales, and Production can be expanded/collapsed independently
   const [openDropdowns, setOpenDropdowns] = useState({
     scm: true,
-    sales: true
+    sales: true,
+    production: true
   });
 
   const toggleDropdown = (key, defaultModule) => {
     setOpenDropdowns((prev) => {
       const willOpen = !prev[key];
-      // If opening and not currently on this domain, optionally activate default module
       if (willOpen && activeDomain !== key && defaultModule) {
         onSelectDomain(key);
         onSelectModule(defaultModule, key);
@@ -130,7 +146,7 @@ export default function Sidebar({
           <div className="sidebar-logo">C</div>
           <div className="sidebar-brand">
             <h2>Cryo Enterprise</h2>
-            <p>Unified SCM & Sales</p>
+            <p>SCM • Sales • Production</p>
           </div>
           <button 
             className="mobile-menu-btn" 
@@ -145,14 +161,13 @@ export default function Sidebar({
         <div className="sidebar-nav">
           <div className="nav-section-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span>Enterprise Modules</span>
-            <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)' }}>20 TABS</span>
+            <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)' }}>32 TABS</span>
           </div>
 
           {/* ======================================================== */}
           {/* 1. SUPPLY CHAIN MANAGEMENT DROPDOWN GROUP                */}
           {/* ======================================================== */}
           <div className="tree-dropdown-group">
-            {/* Parent Header */}
             <div
               className={`tree-parent-header ${activeDomain === 'scm' ? 'active-parent' : ''}`}
               onClick={() => toggleDropdown('scm', 'scm-materials')}
@@ -176,7 +191,6 @@ export default function Sidebar({
               </div>
             </div>
 
-            {/* Tree Branch Child List */}
             {openDropdowns.scm && (
               <div className="tree-child-container">
                 {SCM_MODULES.map((mod, index) => {
@@ -203,8 +217,7 @@ export default function Sidebar({
           {/* ======================================================== */}
           {/* 2. SALES MANAGEMENT DROPDOWN GROUP                       */}
           {/* ======================================================== */}
-          <div className="tree-dropdown-group" style={{ marginTop: 12 }}>
-            {/* Parent Header */}
+          <div className="tree-dropdown-group" style={{ marginTop: 10 }}>
             <div
               className={`tree-parent-header ${activeDomain === 'sales' ? 'active-parent' : ''}`}
               onClick={() => toggleDropdown('sales', 'sales-dashboard')}
@@ -228,7 +241,6 @@ export default function Sidebar({
               </div>
             </div>
 
-            {/* Tree Branch Child List */}
             {openDropdowns.sales && (
               <div className="tree-child-container">
                 {SALES_MODULES.map((mod, index) => {
@@ -240,6 +252,56 @@ export default function Sidebar({
                       key={mod.id}
                       className={`tree-child-item ${isActive ? 'active' : ''}`}
                       onClick={() => handleModuleClick(mod.id, 'sales')}
+                    >
+                      <TreeBranchArrow isLast={isLast} isActive={isActive} />
+                      <div className="tree-child-label-box">
+                        <span className="tree-child-text">{mod.title}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* ======================================================== */}
+          {/* 3. PRODUCTION MANAGEMENT DROPDOWN GROUP                  */}
+          {/* ======================================================== */}
+          <div className="tree-dropdown-group" style={{ marginTop: 10 }}>
+            <div
+              className={`tree-parent-header ${activeDomain === 'production' ? 'active-parent' : ''}`}
+              onClick={() => toggleDropdown('production', 'production-dashboard')}
+            >
+              <div className="tree-parent-left">
+                <div className="tree-parent-icon production-icon-box">
+                  <Factory size={18} />
+                </div>
+                <div className="tree-parent-text">
+                  <span className="tree-parent-title">Production</span>
+                  <span className="tree-parent-subtitle">12 Modules</span>
+                </div>
+              </div>
+              <div className="tree-parent-right">
+                <span className="tree-badge">12</span>
+                {openDropdowns.production ? (
+                  <ChevronUp size={16} className="tree-chevron open" />
+                ) : (
+                  <ChevronDown size={16} className="tree-chevron" />
+                )}
+              </div>
+            </div>
+
+            {openDropdowns.production && (
+              <div className="tree-child-container">
+                {PRODUCTION_MODULES.map((mod, index) => {
+                  const isActive = activeModule === mod.id;
+                  const isLast = index === PRODUCTION_MODULES.length - 1;
+
+                  return (
+                    <div
+                      key={mod.id}
+                      className={`tree-child-item ${isActive ? 'active' : ''}`}
+                      onClick={() => handleModuleClick(mod.id, 'production')}
                     >
                       <TreeBranchArrow isLast={isLast} isActive={isActive} />
                       <div className="tree-child-label-box">
