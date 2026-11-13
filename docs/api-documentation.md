@@ -132,3 +132,25 @@ All endpoints run on Express.js (`http://localhost:5000`) and Vite development p
 | 08 | `/api/logistics/installation-completions` | `POST` | Submit 7-point mandatory checklist & telemetry | `{ installation, checklist: { productFixedProperly, electricalConnection, powerSupplyTest, sensorConnection, temperatureTest, softwareConfiguration, overallWorkingCondition }, testingDetails: [...], customerConfirmation: { customerName, customerFeedback, customerSignature } }` |
 | 09 | `/api/logistics/reports` | `GET` | Delivery SLA, carrier speed, and quality ratios | Returns onTimeRate, delayCauses, carrierComparison, firstTimeInstallPassRate |
 
+---
+
+## 5. Employee Management & RBAC Endpoints (`/api/employees/*`)
+
+| # | Endpoint | Method | Description | Sample Request / Query |
+|---|---|---|---|---|
+| 01 | `/api/employees/dashboard` | `GET` | Executive HR KPIs, headcount, and recent audits | Returns `{ kpis: { totalEmployees, activeEmployees, inactiveEmployees, departmentsCount, rolesCount }, recentEmployees, recentAuditLogs }` |
+| 02 | `/api/employees` | `GET` | Staff directory with department & role filters | `?department=...` or `?status=Active` or `?search=Kumar` |
+| 02 | `/api/employees` | `POST` | Create new staff account with hashed password | `{ name, email, mobile, department, designation, role, reportingManager, username, password }` |
+| 02 | `/api/employees/:id` | `PUT` | Update employee information or designation | `{ name, email, mobile, department, designation, role, reportingManager }` |
+| 02 | `/api/employees/:id/reset-password` | `PUT` | Secure administrative password reset | `{ newPassword: 'NewSecurePassword123' }` |
+| 02 | `/api/employees/:id/toggle-status` | `PUT` | Activate or deactivate staff login capability | Toggles `status: 'Active'` / `'Inactive'` |
+| 03 | `/api/employees/roles` | `GET` | List all roles with 13-module permission matrices | Returns array of roles with embedded `permissions` object |
+| 03 | `/api/employees/roles` | `POST` | Create custom organizational role | `{ roleName, description, department, permissions: [...] }` |
+| 03 | `/api/employees/roles/:id` | `PUT` | Update role permissions (protected for Super Admin) | `{ permissions: [{ module: 'Sales', access: true, view: true, add: true, edit: true, delete: false, export: true, approve: true }, ...] }` |
+| 04 | `/api/employees/departments` | `GET` | List all corporate departments & head of dept | Returns `{ data: [{ departmentCode, name, description, headOfDepartment, employeeCount }] }` |
+| 04 | `/api/employees/departments` | `POST` | Create new company department | `{ name, description, headOfDepartment }` |
+| 05 | `/api/employees/login` | `POST` | Authenticate staff credentials & issue JWT | `{ username, password }` -> Returns `{ success: true, token, user }` |
+| 05 | `/api/employees/me` | `GET` | Retrieve logged-in session user profile | Header: `Authorization: Bearer <token>` |
+| 06 | `/api/employees/reports` | `GET` | Workforce analytics, allocation & audit logs | Returns `{ totalStaff, activeStaff, inactiveStaff, departmentBreakdown, auditLogs }` |
+| 06 | `/api/employees/audit-logs` | `GET` | Real-time immutable security audit trail | Returns `{ data: [{ action, module, performedBy, details, timestamp, ipAddress }] }` |
+

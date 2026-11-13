@@ -4,6 +4,7 @@ import {
   Briefcase,
   Factory,
   Truck,
+  Users,
   ChevronDown,
   ChevronUp,
   Package,
@@ -64,6 +65,15 @@ export const LOGISTICS_MODULES = [
   { id: 'logistics-reports', num: '09', title: 'Logistics Reports' }
 ];
 
+export const EMPLOYEE_MODULES = [
+  { id: 'employee-dashboard', num: '01', title: 'Dashboard' },
+  { id: 'employee-directory', num: '02', title: 'Employees' },
+  { id: 'employee-roles-permissions', num: '03', title: 'Roles & Permissions' },
+  { id: 'employee-departments', num: '04', title: 'Departments' },
+  { id: 'employee-login', num: '05', title: 'Employee Login' },
+  { id: 'employee-reports', num: '06', title: 'Employee Reports' }
+];
+
 /**
  * Pixel-perfect SVG tree branch connector with curved drop and directional arrow
  * Matches the exact tree structure from user reference screenshot
@@ -116,12 +126,13 @@ export default function Sidebar({
   isOpen,
   onClose
 }) {
-  // Accordion state: SCM, Sales, Production, and Logistics can be expanded/collapsed independently
+  // Accordion state: SCM, Sales, Production, Logistics, and Employee can be expanded/collapsed independently
   const [openDropdowns, setOpenDropdowns] = useState({
     scm: true,
     sales: true,
     production: true,
-    logistics: true
+    logistics: true,
+    employee: true
   });
 
   const toggleDropdown = (key, defaultModule) => {
@@ -160,7 +171,7 @@ export default function Sidebar({
           <div className="sidebar-logo">C</div>
           <div className="sidebar-brand">
             <h2>Cryo Enterprise</h2>
-            <p>SCM • Sales • Production • Logistics</p>
+            <p>SCM • Sales • Prod • Log • HR</p>
           </div>
           <button 
             className="mobile-menu-btn" 
@@ -175,7 +186,7 @@ export default function Sidebar({
         <div className="sidebar-nav">
           <div className="nav-section-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span>Enterprise Modules</span>
-            <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)' }}>41 TABS</span>
+            <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)' }}>47 TABS</span>
           </div>
 
           {/* ======================================================== */}
@@ -366,6 +377,56 @@ export default function Sidebar({
                       key={mod.id}
                       className={`tree-child-item ${isActive ? 'active' : ''}`}
                       onClick={() => handleModuleClick(mod.id, 'logistics')}
+                    >
+                      <TreeBranchArrow isLast={isLast} isActive={isActive} />
+                      <div className="tree-child-label-box">
+                        <span className="tree-child-text">{mod.title}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* ======================================================== */}
+          {/* 5. EMPLOYEE MANAGEMENT & RBAC DROPDOWN GROUP             */}
+          {/* ======================================================== */}
+          <div className="tree-dropdown-group" style={{ marginTop: 10 }}>
+            <div
+              className={`tree-parent-header ${activeDomain === 'employee' ? 'active-parent' : ''}`}
+              onClick={() => toggleDropdown('employee', 'employee-dashboard')}
+            >
+              <div className="tree-parent-left">
+                <div className="tree-parent-icon employee-icon-box">
+                  <Users size={18} />
+                </div>
+                <div className="tree-parent-text">
+                  <span className="tree-parent-title">Employee Management</span>
+                  <span className="tree-parent-subtitle">6 Modules • RBAC</span>
+                </div>
+              </div>
+              <div className="tree-parent-right">
+                <span className="tree-badge">6</span>
+                {openDropdowns.employee ? (
+                  <ChevronUp size={16} className="tree-chevron open" />
+                ) : (
+                  <ChevronDown size={16} className="tree-chevron" />
+                )}
+              </div>
+            </div>
+
+            {openDropdowns.employee && (
+              <div className="tree-child-container">
+                {EMPLOYEE_MODULES.map((mod, index) => {
+                  const isActive = activeModule === mod.id;
+                  const isLast = index === EMPLOYEE_MODULES.length - 1;
+
+                  return (
+                    <div
+                      key={mod.id}
+                      className={`tree-child-item ${isActive ? 'active' : ''}`}
+                      onClick={() => handleModuleClick(mod.id, 'employee')}
                     >
                       <TreeBranchArrow isLast={isLast} isActive={isActive} />
                       <div className="tree-child-label-box">

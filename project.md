@@ -1,13 +1,14 @@
-# Project Overview — Cryo Enterprise 2.0 (SCM • Sales • Production • Logistics)
+# Project Overview — Cryo Enterprise 2.0 (SCM • Sales • Production • Logistics • HR/RBAC)
 
 ## 1. Overview
-A unified enterprise manufacturing ERP & CRM platform engineered on the MERN stack (MongoDB, Express, React, Node.js) with pure JavaScript (`.jsx` / `.js`, **no TypeScript**). Features an obsidian dark industrial interface with vibrant neon accents and a 4-tier tree-branch expandable accordion navigation (`└→`).
+A unified enterprise manufacturing ERP & CRM platform engineered on the MERN stack (MongoDB, Express, React, Node.js) with pure JavaScript (`.jsx` / `.js`, **no TypeScript**). Features an obsidian dark industrial interface with vibrant neon accents and a 5-tier tree-branch expandable accordion navigation (`└→`).
 
-The system integrates 41 comprehensive modules across 4 functional suites:
+The system integrates 47 comprehensive modules across 5 functional suites:
 1. **Supply Chain Management (10 Modules)**: From Raw Material Master to Supplier Linkage, PO, Inward Quarantine GRN, QC Tests, Stock Ledger, Production Issue, and Supplier Return.
 2. **Sales Management CRM (10 Modules)**: From Inbound Customer Enquiry to Lead Opportunity, Follow-up Tracking, Multi-Version Quotations (V1/V2/V3), Proforma Invoices, Customer PO Verification, Advance Payments, Sales Orders, and Analytical Reports.
 3. **Production Management (12 Modules)**: From Sales Order handover to Work Order Planning, BOM calculations, Scheduling, Company Store Requisitions, Stock-checked Material Issue, Shopfloor Execution, Daily/Weekly Progress Updates, Assembly Completion, Multilateral QA Testing, Closed-Loop Rework, and Serialized Finished Goods Warehouse admission.
 4. **Logistics & Delivery Management (9 Modules)**: From Delivery Planning and Company Fleet/Courier allocation to Warehouse Dispatch Gate passes, Serial Number reservation, Real-time Milestone Tracking, Proof of Delivery (POD) partial fulfillment, On-site Installation scheduling, Mandatory 7-Point Commissioning Checklist, and SLA analytics.
+5. **Employee Management & Role-Based Access Control (6 Modules)**: Comprehensive workforce directory, department administration, 13-module granular permission matrix (`Access`, `View`, `Add`, `Edit`, `Delete`, `Export`, `Approve`), protected Super Admin authority, active session management with multi-account simulation, and an immutable security audit trail.
 
 ---
 
@@ -70,3 +71,11 @@ The system integrates 41 comprehensive modules across 4 functional suites:
 7. `Installation` - On-site deployment scheduling, tool provisioning, and engineer assignment.
 8. `Installation Completion` - Mandatory 7-point technical verification checklist and customer sign-off certificate.
 9. `Logistics Reports` - End-to-end delivery metrics, SLA on-time rate, transit delay analysis, and CSV export.
+
+### Part E: Employee Management & RBAC (6 Modules)
+1. `Dashboard` - Workforce overview, active/inactive headcount, department breakdown, and recent security logs.
+2. `Employees` - Central staff directory, profile viewer, designation, reporting manager, and password reset modal.
+3. `Roles & Permissions` - 13-module permission matrix with 7 granular capability checkboxes, mobile-responsive sticky columns, and custom role builder.
+4. `Departments` - Company departmental hierarchy, descriptions, and designated heads of department.
+5. `Employee Login` - Active session status, credential sign-in, and instant role switcher simulation across 5 demo profiles.
+6. `Employee Reports` - Workforce roster, security audit trail, department allocation charts, and CSV data export.

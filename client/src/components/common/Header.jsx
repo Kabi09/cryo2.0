@@ -1,6 +1,6 @@
 import React from 'react';
-import { Menu, RefreshCw, Package, Briefcase, Factory, Truck } from 'lucide-react';
-import { SCM_MODULES, SALES_MODULES, PRODUCTION_MODULES, LOGISTICS_MODULES } from './Sidebar';
+import { Menu, RefreshCw, Package, Briefcase, Factory, Truck, Users, Database } from 'lucide-react';
+import { SCM_MODULES, SALES_MODULES, PRODUCTION_MODULES, LOGISTICS_MODULES, EMPLOYEE_MODULES } from './Sidebar';
 
 export default function Header({
   activeDomain,
@@ -8,9 +8,11 @@ export default function Header({
   activeModule,
   onToggleMobileMenu,
   onRefresh,
-  isRefreshing
+  isRefreshing,
+  currentUser,
+  dbHealth
 }) {
-  const allModules = [...SCM_MODULES, ...SALES_MODULES, ...PRODUCTION_MODULES, ...LOGISTICS_MODULES];
+  const allModules = [...SCM_MODULES, ...SALES_MODULES, ...PRODUCTION_MODULES, ...LOGISTICS_MODULES, ...EMPLOYEE_MODULES];
   const currentModule = allModules.find(m => m.id === activeModule) || allModules[0];
 
   const getDomainLabel = () => {
@@ -18,6 +20,7 @@ export default function Header({
     if (activeDomain === 'sales') return 'Sales CRM';
     if (activeDomain === 'production') return 'Production';
     if (activeDomain === 'logistics') return 'Logistics & Delivery';
+    if (activeDomain === 'employee') return 'Employee & RBAC';
     return 'Enterprise';
   };
 
@@ -127,6 +130,26 @@ export default function Header({
           >
             <Truck size={13} /> Logistics (9)
           </button>
+          <button
+            onClick={() => onSelectDomain('employee')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 5,
+              padding: '5px 10px',
+              fontSize: '0.74rem',
+              fontWeight: 700,
+              border: 'none',
+              borderRadius: 6,
+              cursor: 'pointer',
+              transition: 'all 0.18s ease',
+              background: activeDomain === 'employee' ? 'linear-gradient(135deg, #7C3AED, #A855F7)' : 'transparent',
+              color: activeDomain === 'employee' ? '#fff' : 'var(--text-secondary)',
+              boxShadow: activeDomain === 'employee' ? '0 2px 8px rgba(168, 85, 247, 0.4)' : 'none'
+            }}
+          >
+            <Users size={13} /> HR & RBAC (6)
+          </button>
         </div>
 
         <button
@@ -139,7 +162,29 @@ export default function Header({
           <span className="hide-sm">Sync</span>
         </button>
 
-        <div className="system-badge">
+        <div
+          className="system-badge"
+          title={`MongoDB: ${dbHealth?.host || '127.0.0.1'}:${dbHealth?.port || 27017} (${dbHealth?.name || 'cryo_scm'})`}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            background: dbHealth?.connected !== false ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.15)',
+            borderColor: dbHealth?.connected !== false ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.35)',
+            color: dbHealth?.connected !== false ? '#34D399' : '#F87171'
+          }}
+        >
+          <Database size={12} />
+          <span
+            className="pulse-dot"
+            style={{
+              backgroundColor: dbHealth?.connected !== false ? '#10B981' : '#EF4444'
+            }}
+          />
+          <span>DB: {dbHealth?.status || 'Connected'}</span>
+        </div>
+
+        <div className="system-badge hide-sm">
           <span className="pulse-dot" />
           <span>Live ERP</span>
         </div>

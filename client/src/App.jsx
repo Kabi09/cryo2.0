@@ -51,6 +51,14 @@ import InstallationModule from './components/logistics/InstallationModule';
 import InstallationCompletionModule from './components/logistics/InstallationCompletionModule';
 import LogisticsReportsModule from './components/logistics/LogisticsReportsModule';
 
+// Employee Management & RBAC Modules (6 Modules)
+import EmployeeDashboardModule from './components/employee/EmployeeDashboardModule';
+import EmployeesModule from './components/employee/EmployeesModule';
+import RolesPermissionsModule from './components/employee/RolesPermissionsModule';
+import DepartmentsModule from './components/employee/DepartmentsModule';
+import EmployeeLoginModule from './components/employee/EmployeeLoginModule';
+import EmployeeReportsModule from './components/employee/EmployeeReportsModule';
+
 import { api } from './services/api';
 import { CheckCircle2, AlertCircle, Info } from 'lucide-react';
 
@@ -115,6 +123,23 @@ export default function App() {
   const [installationCompletions, setInstallationCompletions] = useState([]);
   const [logisticsReportsData, setLogisticsReportsData] = useState(null);
 
+  // 5. Employee Management & RBAC State
+  const [currentUser, setCurrentUser] = useState(() => {
+    try {
+      const saved = localStorage.getItem('cryo_current_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [employeeDashboardData, setEmployeeDashboardData] = useState(null);
+  const [employees, setEmployees] = useState([]);
+  const [roles, setRoles] = useState([]);
+  const [departments, setDepartments] = useState([]);
+  const [employeeReportsData, setEmployeeReportsData] = useState(null);
+  const [auditLogs, setAuditLogs] = useState([]);
+  const [dbHealth, setDbHealth] = useState({ connected: true, status: 'Connected', host: '127.0.0.1', port: 27017, name: 'cryo_scm' });
+
   const showToast = (message, type = 'info') => {
     const id = Date.now() + Math.random();
     setToasts(prev => [...prev, { id, message, type }]);
@@ -176,7 +201,18 @@ export default function App() {
         confRes,
         instRes,
         icompRes,
-        logRepRes
+        logRepRes,
+
+        // Employee Calls
+        empDashRes,
+        empRes,
+        rolesRes,
+        deptRes,
+        empRepRes,
+        auditLogsRes,
+
+        // System Health Call
+        healthRes
       ] = await Promise.all([
         // SCM
         api.getMaterials().catch(() => ({ data: [] })),
@@ -227,7 +263,18 @@ export default function App() {
         api.getDeliveryConfirmations().catch(() => ({ data: [] })),
         api.getInstallations().catch(() => ({ data: [] })),
         api.getInstallationCompletions().catch(() => ({ data: [] })),
-        api.getLogisticsReports().catch(() => null)
+        api.getLogisticsReports().catch(() => null),
+
+        // Employee Management & RBAC
+        api.getEmployeeDashboard().catch(() => null),
+        api.getEmployees().catch(() => ({ data: [] })),
+        api.getRoles().catch(() => ({ data: [] })),
+        api.getDepartments().catch(() => ({ data: [] })),
+        api.getEmployeeReports().catch(() => null),
+        api.getAuditLogs().catch(() => ({ data: [] })),
+
+        // Health & DB Connection
+        api.getHealth().catch(() => null)
       ]);
 
       // Populate SCM
@@ -280,6 +327,21 @@ export default function App() {
       setInstallations(instRes.data || []);
       setInstallationCompletions(icompRes.data || []);
       setLogisticsReportsData(logRepRes || null);
+
+      // Populate Employee & RBAC
+      setEmployeeDashboardData(empDashRes || null);
+      setEmployees(empRes.data || []);
+      setRoles(rolesRes.data || []);
+      setDepartments(deptRes.data || []);
+      setEmployeeReportsData(empRepRes || null);
+      setAuditLogs(auditLogsRes.data || []);
+
+      // Populate Database & System Health
+      if (healthRes?.database) {
+        setDbHealth(healthRes.database);
+      } else {
+        setDbHealth({ connected: false, status: 'Disconnected' });
+      }
     } catch (err) {
       console.error('Error fetching data:', err);
       showToast(err.message || 'Error connecting to backend services', 'error');
@@ -302,6 +364,8 @@ export default function App() {
       setActiveModule('production-dashboard');
     } else if (domain === 'logistics') {
       setActiveModule('logistics-dashboard');
+    } else if (domain === 'employee') {
+      setActiveModule('employee-dashboard');
     }
   };
 
@@ -538,6 +602,61 @@ export default function App() {
     await loadAllData();
   };
 
+  // Employee & RBAC Handlers
+  const handleLogin = async (credentials) => {
+    const res = await api.loginEmployee(credentials);
+    if (res.user && res.token) {
+      setCurrentUser(res.user);
+      localStorage.setItem('cryo_auth_token', res.token);
+      localStorage.setItem('cryo_current_user', JSON.stringify(res.user));
+      showToast(`Welcome back, ${res.user.name} (${res.user.role?.roleName || 'Employee'})!`, 'success');
+      await loadAllData();
+    }
+    return res;
+  };
+
+  const handleLogout = () => {
+    setCurrentUser(null);
+    localStorage.removeItem('cryo_auth_token');
+    localStorage.removeItem('cryo_current_user');
+    showToast('Signed out of ERP session', 'info');
+  };
+
+  const handleSaveEmployee = async (data) => {
+    await api.createEmployee(data);
+    await loadAllData();
+  };
+
+  const handleUpdateEmployee = async (id, data) => {
+    await api.updateEmployee(id, data);
+    await loadAllData();
+  };
+
+  const handleResetPassword = async (id, newPassword) => {
+    await api.resetEmployeePassword(id, newPassword);
+    await loadAllData();
+  };
+
+  const handleToggleEmployeeStatus = async (id) => {
+    await api.toggleEmployeeStatus(id);
+    await loadAllData();
+  };
+
+  const handleSaveRole = async (data) => {
+    await api.createRole(data);
+    await loadAllData();
+  };
+
+  const handleUpdateRolePermissions = async (id, data) => {
+    await api.updateRolePermissions(id, data);
+    await loadAllData();
+  };
+
+  const handleSaveDepartment = async (data) => {
+    await api.createDepartment(data);
+    await loadAllData();
+  };
+
   return (
     <div className="app-container">
       {/* Unified Tree Accordion Sidebar */}
@@ -557,6 +676,8 @@ export default function App() {
             setActiveDomain('production');
           } else if (mod.startsWith('logistics-')) {
             setActiveDomain('logistics');
+          } else if (mod.startsWith('employee-')) {
+            setActiveDomain('employee');
           }
           setPreSelectedGRNForQC(null);
         }}
@@ -573,6 +694,8 @@ export default function App() {
           onToggleMobileMenu={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           onRefresh={loadAllData}
           isRefreshing={isRefreshing}
+          currentUser={currentUser}
+          dbHealth={dbHealth}
         />
 
         <main className="content-body">
@@ -996,6 +1119,71 @@ export default function App() {
               installations={installations}
               installationCompletions={installationCompletions}
               reportsData={logisticsReportsData}
+              showToast={showToast}
+            />
+          )}
+
+          {/* ========================================= */}
+          {/* 5. EMPLOYEE MANAGEMENT & RBAC (6 MENUS)   */}
+          {/* ========================================= */}
+          {activeModule === 'employee-dashboard' && (
+            <EmployeeDashboardModule
+              dashboardData={employeeDashboardData}
+              departments={departments}
+              roles={roles}
+              employees={employees}
+              onNavigateModule={(mod) => {
+                setActiveModule(mod);
+              }}
+            />
+          )}
+
+          {activeModule === 'employee-directory' && (
+            <EmployeesModule
+              employees={employees}
+              roles={roles}
+              departments={departments}
+              onSaveEmployee={handleSaveEmployee}
+              onUpdateEmployee={handleUpdateEmployee}
+              onResetPassword={handleResetPassword}
+              onToggleStatus={handleToggleEmployeeStatus}
+              showToast={showToast}
+            />
+          )}
+
+          {activeModule === 'employee-roles-permissions' && (
+            <RolesPermissionsModule
+              roles={roles}
+              departments={departments}
+              onSaveRole={handleSaveRole}
+              onUpdateRolePermissions={handleUpdateRolePermissions}
+              showToast={showToast}
+            />
+          )}
+
+          {activeModule === 'employee-departments' && (
+            <DepartmentsModule
+              departments={departments}
+              onSaveDepartment={handleSaveDepartment}
+              showToast={showToast}
+            />
+          )}
+
+          {activeModule === 'employee-login' && (
+            <EmployeeLoginModule
+              currentUser={currentUser}
+              onLogin={handleLogin}
+              onLogout={handleLogout}
+              showToast={showToast}
+            />
+          )}
+
+          {activeModule === 'employee-reports' && (
+            <EmployeeReportsModule
+              reportsData={employeeReportsData}
+              employees={employees}
+              departments={departments}
+              roles={roles}
               showToast={showToast}
             />
           )}

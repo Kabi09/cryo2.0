@@ -281,3 +281,72 @@ flowchart TD
    - Transit delay root cause breakdown.
    - First-time installation pass rate vs retest rate.
    - Instant export to CSV and printable handover sheets.
+
+---
+
+## 5. Employee Management & Role-Based Access Control (RBAC) Workflows
+
+```
+Super Admin / HR Manager
+       │
+       ├─► 1. Define Departmental Hierarchy (Departments Master)
+       │
+       ├─► 2. Create RBAC Roles & Set 13-Module Permission Matrix
+       │      ├─ Column 1: Access (Module Navigation)
+       │      ├─ Column 2: View (Data Table Records)
+       │      ├─ Column 3: Add (Create Dialog)
+       │      ├─ Column 4: Edit (Update Record)
+       │      ├─ Column 5: Delete (Archive/Remove)
+       │      ├─ Column 6: Export (CSV/Excel Download)
+       │      └─ Column 7: Approve (Financial / QC / Dispatch Sign-Off)
+       │
+       ├─► 3. Onboard Employee Profile
+       │      └─ Assign ID, Department, Designation, Reporting Manager & Role
+       │
+       └─► 4. Employee Authentication & Session Control
+              ├─ Bcrypt password hashing + JWT token verification
+              ├─ Security audit trail recording every login, update, and deletion
+              └─ Real-time instant role switching simulation for demo/testing
+```
+
+### Employee Workflow 1: Role Definition & Permission Matrix
+1. Super Admin navigates to **Roles & Permissions**.
+2. Selects an existing role (e.g. `Sales Executive`, `Production Manager`, `Store Keeper`, `QA Inspector`) or clicks **+ Add Custom Role**.
+3. Configures the 13-Module permission matrix:
+   - Module list: `Dashboard`, `Marketing`, `Sales`, `Purchase`, `Production`, `Supply Chain`, `Inventory`, `Quality Assurance`, `Logistics`, `Installation`, `Employee Management`, `Reports`, `Settings`.
+   - Checks permission flags: `Access`, `View`, `Add`, `Edit`, `Delete`, `Export`, `Approve`.
+   - **Security Rules**:
+     - `Super Admin` role has immutable, universal access across all 13 modules (lock protection).
+     - Disabling `Access` immediately clears and disables all 6 subsequent actions for that module.
+     - Enabling any action automatically checks `Access` and `View`.
+4. Saves permissions: Changes are immediately synced to MongoDB and logged to `AuditLog`.
+
+### Employee Workflow 2: Staff Onboarding & Account Management
+1. HR / Admin navigates to **Employees**.
+2. Clicks **+ Add Employee**:
+   - System auto-generates `Employee ID` (`EMP-007`).
+   - Fills Staff Details: Name, Email, Contact Mobile, Department (dropdown), Designation, Role (dropdown), Reporting Manager, and initial Password.
+3. Once created, employee record appears on the live staff table with Department badge and Role badge.
+4. Quick actions:
+   - **View Profile**: Inspect employee record, contact details, and assigned permissions.
+   - **Reset Password**: Admin can set a temporary password without seeing the existing hashed password.
+   - **Toggle Active / Inactive**: Deactivating an employee prevents future logins immediately.
+
+### Employee Workflow 3: Multi-Account Authentication & Instant Role Switching
+1. User navigates to **Employee Login**:
+   - Active session card displays the currently logged-in user profile, avatar, department, and role badge.
+   - Shows active permissions overview.
+2. Quick Switcher allows instantaneous login simulation across 5 preconfigured organizational accounts:
+   - `Super Admin` (`superadmin`) — Universal access across all 13 modules.
+   - `Admin (Operations)` (`admin.operations`) — Operational supervision with approvals.
+   - `Sales Executive` (`sales.kumar`) — Leads, quotes, enquiries.
+   - `Store Manager` (`store.suresh`) — SCM, inventory, material issuance.
+   - `QA Inspector` (`qa.kavitha`) — Quality assurance tests & rework sign-offs.
+3. Manual credentials login also supported with JWT bearer token verification.
+
+### Employee Workflow 4: Security Audit Trail & Workforce Intelligence
+1. Executives navigate to **Employee Reports**:
+   - **Workforce Roster**: Complete staff directory with department, role, contact info, and status.
+   - **Security Audit Trail**: Real-time immutable event log tracking who logged in, created records, modified roles, or deleted items.
+   - **Department Allocation**: Headcount distribution metrics by department.
+2. One-click CSV export downloads structured audit and roster reports.

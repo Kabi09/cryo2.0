@@ -1,14 +1,22 @@
 const API_BASE = '/api';
 
 const handleResponse = async (res) => {
-  const data = await res.json();
+  let data;
+  try {
+    data = await res.json();
+  } catch (err) {
+    throw new Error(`Server returned HTTP ${res.status}: ${res.statusText || 'Non-JSON response'}`);
+  }
   if (!res.ok) {
-    throw new Error(data.message || 'API request failed');
+    throw new Error(data.message || `API Error (${res.status}): ${res.statusText}`);
   }
   return data;
 };
 
 export const api = {
+  // System Health
+  getHealth: () => fetch(`${API_BASE}/health`).then(handleResponse),
+
   // ==========================================
   // SUPPLY CHAIN MANAGEMENT (SCM) ENDPOINTS
   // ==========================================
@@ -149,6 +157,10 @@ export const api = {
 
   // 10. SCM Inventory Report
   getReports: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return fetch(`${API_BASE}/reports?${query}`).then(handleResponse);
+  },
+  getInventoryReport: (params = {}) => {
     const query = new URLSearchParams(params).toString();
     return fetch(`${API_BASE}/reports?${query}`).then(handleResponse);
   },
@@ -600,5 +612,89 @@ export const api = {
 
   // 09. Logistics Reports
   getLogisticsReports: () =>
-    fetch(`${API_BASE}/logistics/reports`).then(handleResponse)
+    fetch(`${API_BASE}/logistics/reports`).then(handleResponse),
+
+  // ==========================================
+  // EMPLOYEE MANAGEMENT & RBAC ENDPOINTS
+  // ==========================================
+
+  // Authentication
+  loginEmployee: (credentials) =>
+    fetch(`${API_BASE}/employees/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(credentials)
+    }).then(handleResponse),
+
+  getCurrentUser: (token) =>
+    fetch(`${API_BASE}/employees/me`, {
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token || localStorage.getItem('cryo_auth_token')}`
+      }
+    }).then(handleResponse),
+
+  // Dashboard & Reports
+  getEmployeeDashboard: () =>
+    fetch(`${API_BASE}/employees/dashboard`).then(handleResponse),
+
+  getEmployeeReports: () =>
+    fetch(`${API_BASE}/employees/reports`).then(handleResponse),
+
+  getAuditLogs: () =>
+    fetch(`${API_BASE}/employees/audit-logs`).then(handleResponse),
+
+  // Employee CRUD
+  getEmployees: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return fetch(`${API_BASE}/employees?${query}`).then(handleResponse);
+  },
+  createEmployee: (data) =>
+    fetch(`${API_BASE}/employees`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    }).then(handleResponse),
+  updateEmployee: (id, data) =>
+    fetch(`${API_BASE}/employees/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    }).then(handleResponse),
+  resetEmployeePassword: (id, newPassword) =>
+    fetch(`${API_BASE}/employees/${id}/reset-password`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ newPassword })
+    }).then(handleResponse),
+  toggleEmployeeStatus: (id) =>
+    fetch(`${API_BASE}/employees/${id}/toggle-status`, {
+      method: 'PUT'
+    }).then(handleResponse),
+
+  // Roles & Permissions Matrix
+  getRoles: () =>
+    fetch(`${API_BASE}/employees/roles`).then(handleResponse),
+  createRole: (data) =>
+    fetch(`${API_BASE}/employees/roles`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    }).then(handleResponse),
+  updateRolePermissions: (id, data) =>
+    fetch(`${API_BASE}/employees/roles/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    }).then(handleResponse),
+
+  // Departments
+  getDepartments: () =>
+    fetch(`${API_BASE}/employees/departments`).then(handleResponse),
+  createDepartment: (data) =>
+    fetch(`${API_BASE}/employees/departments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    }).then(handleResponse)
 };

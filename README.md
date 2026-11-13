@@ -1,10 +1,10 @@
-# Cryo Enterprise 2.0 — Unified SCM, Sales, Production & Logistics ERP System
+# Cryo Enterprise 2.0 — Unified SCM, Sales, Production, Logistics & HR/RBAC ERP System
 
-A full-stack enterprise web application built on the MERN stack (MongoDB, Express, React, Node.js) with vanilla JavaScript (`.jsx` / `.js`, **no TypeScript**). Features an obsidian dark precision design with vibrant cyan/amber/emerald accents and a pixel-perfect **4-tier tree-branch expandable accordion sidebar (`└→`)**.
+A full-stack enterprise web application built on the MERN stack (MongoDB, Express, React, Node.js) with vanilla JavaScript (`.jsx` / `.js`, **no TypeScript**). Features an obsidian dark precision design with vibrant cyan/amber/emerald/purple accents and a pixel-perfect **5-tier tree-branch expandable accordion sidebar (`└→`)**.
 
 ---
 
-## 1. System Architecture & Suites (41 Total Modules)
+## 1. System Architecture & Suites (47 Total Modules)
 
 ```
 Cryo Enterprise 2.0
@@ -46,24 +46,32 @@ Cryo Enterprise 2.0
 │   ├── Rework / Rebuild (Closed-loop Repair Bay)
 │   └── Finished Goods (QA-Guaranteed Serialized Warehouse)
 │
-└── 🚚 Logistics & Delivery Management (9 Modules)
-    ├── Dashboard (Outbound Fulfillment KPIs)
-    ├── Delivery Planning (SO & Finished Goods Allocation)
-    ├── Vehicle & Courier (Company Fleet & Courier Partners)
-    ├── Dispatch (Gate Exit Slip & Serial Number Reservation)
-    ├── Delivery Tracking (GPS Checkpoints & Delay Reason Logging)
-    ├── Delivery Confirmation (Proof of Delivery POD & Partial Shipments)
-    ├── Installation (On-Site Deployment & Service Tech Scheduling)
-    ├── Installation Completion (Mandatory 7-Point Commissioning Checklist)
-    └── Logistics Reports (Delivery SLA, Transit Delays & First-Time Pass Rates)
+├── 🚚 Logistics & Delivery Management (9 Modules)
+│   ├── Dashboard (Outbound Fulfillment KPIs)
+│   ├── Delivery Planning (SO & Finished Goods Allocation)
+│   ├── Vehicle & Courier (Company Fleet & Courier Partners)
+│   ├── Dispatch (Gate Exit Slip & Serial Number Reservation)
+│   ├── Delivery Tracking (GPS Checkpoints & Delay Reason Logging)
+│   ├── Delivery Confirmation (Proof of Delivery POD & Partial Shipments)
+│   ├── Installation (On-Site Deployment & Service Tech Scheduling)
+│   ├── Installation Completion (Mandatory 7-Point Commissioning Checklist)
+│   └── Logistics Reports (Delivery SLA, Transit Delays & First-Time Pass Rates)
+│
+└── 👥 Employee Management & RBAC (6 Modules)
+    ├── Dashboard (Workforce KPIs, Dept Headcount & Recent Audits)
+    ├── Employees (Staff Directory, Profiles & Password Reset)
+    ├── Roles & Permissions (13-Module Permission Matrix with 7 Capability Checkboxes)
+    ├── Departments (Organizational Units & Head of Department Mapping)
+    ├── Employee Login (Active Session Status & Multi-Account Role Switcher)
+    └── Employee Reports (Workforce Roster, Immutable Audit Trail & CSV Export)
 ```
 
 ---
 
 ## 2. Documentation Index (In `docs/`)
-- [`docs/workflows.md`](file:///k:/cryo2.0/docs/workflows.md) — Comprehensive workflow diagrams and operational step-by-step guides for SCM, Sales, Production, and Logistics.
-- [`docs/api-documentation.md`](file:///k:/cryo2.0/docs/api-documentation.md) — Complete REST API reference for all 41 endpoints with methods, query parameters, payloads, and response structures.
-- [`docs/business-logic.md`](file:///k:/cryo2.0/docs/business-logic.md) — Strict business logic, quarantine rules, inventory conservation, deduplication, quotation versioning, QA decision gates, and mandatory 7-point installation checklists.
+- [`docs/workflows.md`](file:///k:/cryo2.0/docs/workflows.md) — Comprehensive workflow diagrams and operational step-by-step guides for SCM, Sales, Production, Logistics, and Employee RBAC.
+- [`docs/api-documentation.md`](file:///k:/cryo2.0/docs/api-documentation.md) — Complete REST API reference for all 47 endpoints with methods, query parameters, payloads, and response structures.
+- [`docs/business-logic.md`](file:///k:/cryo2.0/docs/business-logic.md) — Strict business logic, quarantine rules, inventory conservation, quotation versioning, QA decision gates, mandatory 7-point installation checklists, Super Admin inviolability, and cascading RBAC dependencies.
 - [`docs/task-tracker.md`](file:///k:/cryo2.0/docs/task-tracker.md) — Milestone and verification register.
 - [`project.md`](file:///k:/cryo2.0/project.md) — High-level system architecture and module breakdown.
 

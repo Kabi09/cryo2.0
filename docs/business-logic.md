@@ -127,3 +127,46 @@
 
 6. **Customer Acceptance & Warranty Commencement**:
    - Formal warranty coverage begins only upon mutual digital acknowledgment by both the Customer Site Engineer and the Certified Field Technician on the `InstallationCompletion` certificate.
+
+---
+
+## 5. Employee Management & Role-Based Access Control (RBAC) Rules
+
+1. **Role Hierarchy & Super Admin Inviolability**:
+   - **Super Admin (`isSuperAdmin: true`)**:
+     - Supreme system authority with universal access across all 13 modules (`Access`, `View`, `Add`, `Edit`, `Delete`, `Export`, `Approve`).
+     - **Inviolability Rule**: Super Admin permissions cannot be modified, restricted, or deleted through the UI or API endpoints. This prevents accidental system lockout.
+   - **Admin (`isAdmin: true`)**:
+     - Departmental or cross-departmental administrative privileges. Can manage staff, approve transactions, and generate reports, but cannot downgrade Super Admin privileges.
+   - **Employee / Custom Roles**:
+     - Restrictive permission profiles tailored to specific job titles (e.g., `Sales Executive`, `Store Manager`, `QA Inspector`).
+
+2. **13-Module Permission Matrix Structure**:
+   - Every role maintains a permission profile across 13 distinct ERP modules:
+     `Dashboard`, `Marketing`, `Sales`, `Purchase`, `Production`, `Supply Chain`, `Inventory`, `Quality Assurance`, `Logistics`, `Installation`, `Employee Management`, `Reports`, `Settings`.
+   - Each module contains 7 granular boolean capability flags:
+     - `access`: Permission to enter the module from navigation/sidebar.
+     - `view`: Permission to view listings, data tables, and records.
+     - `add`: Permission to open creation dialogs and post new records.
+     - `edit`: Permission to update or patch existing records.
+     - `delete`: Permission to delete or archive records.
+     - `export`: Permission to download CSV data exports or trigger print reports.
+     - `approve`: Permission to authorize critical transactions (PO sign-offs, QC approvals, dispatch releases).
+
+3. **Cascade Permission Dependency Rule**:
+   - **Downward Cascade**: If `access` is toggled off (`false`) for any module, all 6 operational actions (`view`, `add`, `edit`, `delete`, `export`, `approve`) are automatically cleared to `false` and locked.
+   - **Upward Cascade**: Enabling any action flag (`add`, `edit`, `delete`, `export`, `approve`) automatically sets `access` and `view` to `true`.
+
+4. **Security Audit Logging (`AuditLog`)**:
+   - Every security-sensitive transaction (Staff login, employee creation, password reset, role permission update, employee deactivation) creates an immutable record in `AuditLog` storing:
+     - `action`: E.g. `LOGIN`, `CREATE`, `UPDATE_PERMISSIONS`, `RESET_PASSWORD`.
+     - `module`: E.g. `Employee Management`, `Roles & Permissions`.
+     - `performedBy`: User ID, username, and role.
+     - `targetUser`: Target employee or role ID.
+     - `details`: Human-readable summary of the action.
+     - `ipAddress` & `userAgent`: Session telemetry.
+
+5. **Authentication Security**:
+   - Passwords hashed using `bcryptjs` with salt rounds = 10 before saving.
+   - Plaintext passwords never transmitted in responses or logged to console/files.
+   - JWT tokens signed with secure secrets for stateless request verification.
