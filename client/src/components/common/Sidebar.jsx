@@ -13,65 +13,46 @@ import {
 } from 'lucide-react';
 
 export const SCM_MODULES = [
-  { id: 'scm-materials', num: '01', title: 'Raw Material Master' },
-  { id: 'scm-suppliers', num: '02', title: 'Suppliers' },
-  { id: 'scm-supplier-links', num: '03', title: 'Supplier Material Link' },
-  { id: 'scm-purchase-orders', num: '04', title: 'Purchase Orders (PO)' },
-  { id: 'scm-grn', num: '05', title: 'GRN – Goods Receipt' },
-  { id: 'scm-qc-tests', num: '06', title: 'QC Tests' },
-  { id: 'scm-inventory', num: '07', title: 'Raw Material Inventory' },
-  { id: 'scm-material-issues', num: '08', title: 'Material Issue to Production' },
-  { id: 'scm-supplier-returns', num: '09', title: 'Returns to Supplier' },
-  { id: 'scm-reports', num: '10', title: 'Inventory Report' }
+  { id: 'scm-dashboard', num: '01', title: 'Dashboard' },
+  { id: 'scm-materials', num: '02', title: 'Materials' },
+  { id: 'scm-suppliers', num: '03', title: 'Suppliers' },
+  { id: 'scm-purchasing', num: '04', title: 'Purchasing' },
+  { id: 'scm-quality-inventory', num: '05', title: 'Quality & Inventory' },
+  { id: 'scm-material-requests', num: '06', title: 'Material Requests' }
 ];
 
 export const SALES_MODULES = [
   { id: 'sales-dashboard', num: '01', title: 'Dashboard' },
-  { id: 'sales-enquiries', num: '02', title: 'Customer Enquiries' },
-  { id: 'sales-customers-leads', num: '03', title: 'Customers & Leads' },
-  { id: 'sales-follow-ups', num: '04', title: 'Follow-ups' },
-  { id: 'sales-quotations', num: '05', title: 'Quotations' },
-  { id: 'sales-proforma-invoices', num: '06', title: 'Proforma Invoices (PI)' },
-  { id: 'sales-customer-pos', num: '07', title: 'Customer Purchase Orders' },
-  { id: 'sales-payments', num: '08', title: 'Payments' },
-  { id: 'sales-sales-orders', num: '09', title: 'Sales Orders (SO)' },
-  { id: 'sales-reports', num: '10', title: 'Sales Reports' }
+  { id: 'sales-customers-enquiries', num: '02', title: 'Customers & Enquiries' },
+  { id: 'sales-follow-ups', num: '03', title: 'Follow-ups' },
+  { id: 'sales-quotations-pi', num: '04', title: 'Quotations & PI' },
+  { id: 'sales-orders-payments', num: '05', title: 'Orders & Payments' },
+  { id: 'sales-reports', num: '06', title: 'Sales Reports' }
 ];
 
 export const PRODUCTION_MODULES = [
   { id: 'production-dashboard', num: '01', title: 'Dashboard' },
-  { id: 'production-planning', num: '02', title: 'Production Planning' },
-  { id: 'production-bom', num: '03', title: 'BOM – Bill of Materials' },
-  { id: 'production-schedule', num: '04', title: 'Production Schedule' },
-  { id: 'production-material-requests', num: '05', title: 'Material Requests' },
-  { id: 'production-material-issue', num: '06', title: 'Material Issue' },
-  { id: 'production-execution', num: '07', title: 'Production Execution' },
-  { id: 'production-updates', num: '08', title: 'Production Updates' },
-  { id: 'production-completion', num: '09', title: 'Production Completion' },
-  { id: 'production-qa', num: '10', title: 'Quality Assurance (QA)' },
-  { id: 'production-rework', num: '11', title: 'Rework / Rebuild' },
-  { id: 'production-finished-goods', num: '12', title: 'Finished Goods' }
+  { id: 'production-orders', num: '02', title: 'Production Orders' },
+  { id: 'production-bom', num: '03', title: 'BOM' },
+  { id: 'production-material-requests', num: '04', title: 'Material Requests' },
+  { id: 'production-tracking', num: '05', title: 'Production Tracking' },
+  { id: 'production-quality-rework', num: '06', title: 'Quality & Rework' },
+  { id: 'production-finished-goods', num: '07', title: 'Finished Goods' }
 ];
 
 export const LOGISTICS_MODULES = [
   { id: 'logistics-dashboard', num: '01', title: 'Dashboard' },
   { id: 'logistics-planning', num: '02', title: 'Delivery Planning' },
-  { id: 'logistics-vehicles-couriers', num: '03', title: 'Vehicle & Courier' },
-  { id: 'logistics-dispatch', num: '04', title: 'Dispatch' },
-  { id: 'logistics-tracking', num: '05', title: 'Delivery Tracking' },
-  { id: 'logistics-confirmation', num: '06', title: 'Delivery Confirmation' },
-  { id: 'logistics-installation', num: '07', title: 'Installation' },
-  { id: 'logistics-installation-completion', num: '08', title: 'Installation Completion' },
-  { id: 'logistics-reports', num: '09', title: 'Logistics Reports' }
+  { id: 'logistics-dispatch-tracking', num: '03', title: 'Dispatch & Tracking' },
+  { id: 'logistics-delivery-installation', num: '04', title: 'Delivery & Installation' },
+  { id: 'logistics-reports', num: '05', title: 'Logistics Reports' }
 ];
 
 export const EMPLOYEE_MODULES = [
   { id: 'employee-dashboard', num: '01', title: 'Dashboard' },
   { id: 'employee-directory', num: '02', title: 'Employees' },
   { id: 'employee-roles-permissions', num: '03', title: 'Roles & Permissions' },
-  { id: 'employee-departments', num: '04', title: 'Departments' },
-  { id: 'employee-login', num: '05', title: 'Employee Login' },
-  { id: 'employee-reports', num: '06', title: 'Employee Reports' }
+  { id: 'employee-departments-reports', num: '04', title: 'Departments & Reports' }
 ];
 
 /**
@@ -186,7 +167,7 @@ export default function Sidebar({
         <div className="sidebar-nav">
           <div className="nav-section-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span>Enterprise Modules</span>
-            <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)' }}>47 TABS</span>
+            <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)' }}>28 TABS</span>
           </div>
 
           {/* ======================================================== */}
@@ -195,7 +176,7 @@ export default function Sidebar({
           <div className="tree-dropdown-group">
             <div
               className={`tree-parent-header ${activeDomain === 'scm' ? 'active-parent' : ''}`}
-              onClick={() => toggleDropdown('scm', 'scm-materials')}
+              onClick={() => toggleDropdown('scm', 'scm-dashboard')}
             >
               <div className="tree-parent-left">
                 <div className="tree-parent-icon scm-icon-box">
@@ -203,11 +184,11 @@ export default function Sidebar({
                 </div>
                 <div className="tree-parent-text">
                   <span className="tree-parent-title">Supply Chain</span>
-                  <span className="tree-parent-subtitle">10 Modules</span>
+                  <span className="tree-parent-subtitle">6 Modules</span>
                 </div>
               </div>
               <div className="tree-parent-right">
-                <span className="tree-badge">10</span>
+                <span className="tree-badge">6</span>
                 {openDropdowns.scm ? (
                   <ChevronUp size={16} className="tree-chevron open" />
                 ) : (
@@ -253,11 +234,11 @@ export default function Sidebar({
                 </div>
                 <div className="tree-parent-text">
                   <span className="tree-parent-title">Sales Management</span>
-                  <span className="tree-parent-subtitle">10 Modules</span>
+                  <span className="tree-parent-subtitle">6 Modules</span>
                 </div>
               </div>
               <div className="tree-parent-right">
-                <span className="tree-badge">10</span>
+                <span className="tree-badge">6</span>
                 {openDropdowns.sales ? (
                   <ChevronUp size={16} className="tree-chevron open" />
                 ) : (
@@ -303,11 +284,11 @@ export default function Sidebar({
                 </div>
                 <div className="tree-parent-text">
                   <span className="tree-parent-title">Production</span>
-                  <span className="tree-parent-subtitle">12 Modules</span>
+                  <span className="tree-parent-subtitle">7 Modules</span>
                 </div>
               </div>
               <div className="tree-parent-right">
-                <span className="tree-badge">12</span>
+                <span className="tree-badge">7</span>
                 {openDropdowns.production ? (
                   <ChevronUp size={16} className="tree-chevron open" />
                 ) : (
@@ -353,11 +334,11 @@ export default function Sidebar({
                 </div>
                 <div className="tree-parent-text">
                   <span className="tree-parent-title">Logistics & Delivery</span>
-                  <span className="tree-parent-subtitle">9 Modules</span>
+                  <span className="tree-parent-subtitle">5 Modules</span>
                 </div>
               </div>
               <div className="tree-parent-right">
-                <span className="tree-badge">9</span>
+                <span className="tree-badge">5</span>
                 {openDropdowns.logistics ? (
                   <ChevronUp size={16} className="tree-chevron open" />
                 ) : (
@@ -403,11 +384,11 @@ export default function Sidebar({
                 </div>
                 <div className="tree-parent-text">
                   <span className="tree-parent-title">Employee Management</span>
-                  <span className="tree-parent-subtitle">6 Modules • RBAC</span>
+                  <span className="tree-parent-subtitle">4 Modules • RBAC</span>
                 </div>
               </div>
               <div className="tree-parent-right">
-                <span className="tree-badge">6</span>
+                <span className="tree-badge">4</span>
                 {openDropdowns.employee ? (
                   <ChevronUp size={16} className="tree-chevron open" />
                 ) : (

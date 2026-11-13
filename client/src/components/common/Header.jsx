@@ -98,11 +98,11 @@ export default function Header({
       {/* Center: Department Switcher Pills (Desktop only) */}
       <div className="header-dept-pills">
         {[
-          { key: 'scm', label: 'SCM (10)', icon: Package },
-          { key: 'sales', label: 'Sales (10)', icon: Briefcase },
-          { key: 'production', label: 'Production (12)', icon: Factory },
-          { key: 'logistics', label: 'Logistics (9)', icon: Truck },
-          { key: 'employee', label: 'HR & RBAC (6)', icon: Users }
+          { key: 'scm', label: 'SCM (6)', icon: Package },
+          { key: 'sales', label: 'Sales (6)', icon: Briefcase },
+          { key: 'production', label: 'Production (7)', icon: Factory },
+          { key: 'logistics', label: 'Logistics (5)', icon: Truck },
+          { key: 'employee', label: 'HR & RBAC (4)', icon: Users }
         ].map(dept => {
           const Icon = dept.icon;
           const isActive = activeDomain === dept.key;

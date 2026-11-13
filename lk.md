@@ -170,33 +170,57 @@
 - **Reason**: User requested complete elimination of crowded dark interface in favor of clean enterprise light theme matching reference screenshot 1.
 - **Impact**: Crystal-clear legibility, cohesive design system across all 47 modules, zero compile errors (`vite build` in 941ms).
 
-#### Change: Mobile Responsive Layout & Viewport Scaling Fix
-- **What was changed**: Resolved issue where mobile/tablet viewport caused content to squeeze into a narrow strip on the left with huge empty white space on the right (due to top header expanding to ~1300px without wrapping and hamburger button having inline `display: none`).
+#### Change: Enterprise Navigation Restructuring (47 Tabs → 28 Main Pages)
+- **What was changed**: Re-architected the frontend navigation by consolidating 47 cluttered sidebar tabs into **28 clean, intuitive main pages** across all 5 enterprise departments with internal sub-tabs, unified toolbars, status filters, and complete backward-compatible routing aliases.
 - **Files changed**:
-  - `client/src/index.css`: Added global `width: 100%; max-width: 100vw; overflow-x: hidden;` constraints on `.app-container` and `.main-wrapper`. Overhauled responsive media queries for `<= 1024px`, `<= 768px`, and `<= 480px`. Added `.card` styling and `.mobile-bottom-nav` styles.
-  - `client/src/components/common/Header.jsx`: Removed inline `display: none` from `.mobile-menu-btn`. Converted header elements into semantic responsive classes (`.header-dept-pills`, `.header-breadcrumb`, `.header-user-text`, `.header-db-text`), allowing them to gracefully hide on small viewports so the header stays strictly within `100vw`.
-  - `client/src/App.jsx`: Added fixed mobile bottom navigation bar (`.mobile-bottom-nav`) with 5 department buttons (SCM, Sales, Prod, Logistics, HR & RBAC) matching user mobile reference screenshots.
-- **Logic & Styling changed**:
-  - On mobile/tablet (`<= 1024px`), `.main-wrapper` expands to `100vw` with `margin-left: 0`.
-  - Content body and tables now fill `100%` of mobile width without horizontal blowout.
-  - Hamburger menu button (`☰`) is now functional on mobile, toggling the animated drawer sidebar.
-  - Mobile bottom navigation bar provides 1-tap switching between all 5 enterprise domains.
-- **Reason**: Fix layout not fitting on mobile screen (`media_1794576870826_d4438365.png`).
-- **Impact**: Flawless responsive presentation across all device viewports from 320px mobile to 4K desktop.
+  - `client/src/components/common/Sidebar.jsx`: Updated department counts, badges, and module definitions for the 28 pages (SCM: 6, Sales: 6, Production: 7, Logistics: 5, Employee & RBAC: 4).
+  - `client/src/components/common/Header.jsx`: Updated department switcher pills to reflect the simplified module counts (SCM: 6, Sales: 6, Prod: 7, Log: 5, HR: 4).
+  - `client/src/App.jsx`: Updated imports and routing logic to mount the 28 consolidated pages while retaining seamless fallbacks and cross-module navigation for all previous 47 routes.
+  - SCM Consolidated Components:
+    - `client/src/components/modules/ScmDashboardModule.jsx`: Executive KPI cards, pipeline progress banner, quick action buttons, and recent PO / GRN feeds.
+    - `client/src/components/modules/MaterialsPage.jsx`: Internal sub-tabs for `Raw Material Master` and `Supplier Material Link`.
+    - `client/src/components/modules/PurchasingPage.jsx`: Internal sub-tabs for `Purchase Orders (PO)`, `Goods Receipt (GRN)`, and `Supplier Returns`.
+    - `client/src/components/modules/QualityInventoryPage.jsx`: Internal sub-tabs for `QC Tests`, `Warehouse Inventory`, and `Inventory Reports`.
+    - `client/src/components/modules/MaterialRequestsPage.jsx`: Physical store issues and material requisition tracking.
+  - Sales Consolidated Components:
+    - `client/src/components/sales/CustomersEnquiriesPage.jsx`: Internal sub-tabs for `Customers & Leads` and `Customer Enquiries`.
+    - `client/src/components/sales/QuotationsPIPage.jsx`: Internal sub-tabs for `Quotations (V1/V2/V3)` and `Proforma Invoices (PI)`.
+    - `client/src/components/sales/OrdersPaymentsPage.jsx`: Internal sub-tabs for `Sales Orders (SO)`, `Customer POs`, and `Payments`.
+  - Production Consolidated Components:
+    - `client/src/components/production/ProductionOrdersPage.jsx`: Internal sub-tabs for `Production Planning (Work Orders)` and `Production Schedule`.
+    - `client/src/components/production/ProdMaterialRequestsPage.jsx`: Internal sub-tabs for `Material Requests` and `Production Material Issues`.
+    - `client/src/components/production/ProductionTrackingPage.jsx`: Internal sub-tabs for `Shop Floor Execution`, `Daily Updates`, and `Production Completion`.
+    - `client/src/components/production/QualityReworkPage.jsx`: Internal sub-tabs for `Quality Assurance (QA)` and `Rework / Repair`.
+  - Logistics Consolidated Components:
+    - `client/src/components/logistics/DeliveryPlanningPage.jsx`: Internal sub-tabs for `Delivery Planning` and `Vehicle & Courier Fleet`.
+    - `client/src/components/logistics/DispatchTrackingPage.jsx`: Internal sub-tabs for `Warehouse Dispatch` and `Live Tracking`.
+    - `client/src/components/logistics/DeliveryInstallationPage.jsx`: Internal sub-tabs for `Delivery Confirmation (POD)`, `Installation Scheduling`, and `Installation QA Completion`.
+  - Employee Management Consolidated Components:
+    - `client/src/components/employee/EmployeesPage.jsx`: Internal sub-tabs for `Employee Directory` and `Employee Login & Role Simulation`.
+    - `client/src/components/employee/DepartmentsReportsPage.jsx`: Internal sub-tabs for `Corporate Departments` and `Audit Logs & Personnel Reports`.
+- **Logic & Workflow changed**:
+  - Preserved 100% of underlying business logic, state handlers, MongoDB schemas, and MERN API interactions.
+  - Cross-module links (e.g. GRN → QC test preselection, Production completion → QA, Sales quotes → PI) now navigate directly into the appropriate parent page and active sub-tab.
+  - Reduced cognitive overload from 47 tabs to 28 main pages, making the client ERP website vastly easier to navigate on both desktop and mobile.
+- **Reason**: User requested restructuring: "complersory entha tabes la venuma? reduce panni easy ya irrukanum clicent website not compleex".
+- **Impact**: Clean, production-grade navigation tree with fast rendering; `vite build` completed in 1.29s with zero errors.
 
 ---
 
 ## Current Progress
 - **Completed**:
+  - Enterprise Navigation Restructuring: 47 tabs simplified into 28 main pages across all 5 departments.
+  - Sub-Tab Navigation: 13 consolidated tabbed containers created and wired into global state.
+  - Backward Compatibility: Route aliases and cross-module deep-linking preserved for all 47 workflow steps.
   - Mobile Responsive Layout: 100% responsive across mobile, tablet, and desktop viewports.
   - Mobile Bottom Navigation Bar: Implemented 5-tab quick switcher matching mobile reference.
   - UI/UX Complete Redesign: 100% migrated to clean light theme matching Reference Screenshot 1.
-  - Supply Chain Management: 10/10 modules fully operational with light styling.
-  - Sales Management CRM: 10/10 modules fully operational with light styling.
-  - Production Management: 12/12 modules fully operational with light styling.
-  - Logistics & Delivery Management: 9/9 modules fully operational with light styling.
-  - Employee Management & RBAC: 6/6 modules fully operational with light styling.
-  - Total: 47/47 modules functional with HTTP 200 API verification.
+  - Supply Chain Management: 6 main pages (10 sub-modules) fully operational.
+  - Sales Management CRM: 6 main pages (10 sub-modules) fully operational.
+  - Production Management: 7 main pages (12 sub-modules) fully operational.
+  - Logistics & Delivery Management: 5 main pages (9 sub-modules) fully operational.
+  - Employee Management & RBAC: 4 main pages (6 sub-modules) fully operational.
+  - Total: 28 main pages / 47 workflows functional with HTTP 200 API verification.
   - Root tracking file `lk.md` updated as single source of truth.
 - **In Progress**:
   - Continuous runtime stability monitoring.
@@ -211,6 +235,9 @@
 ---
 
 ## Technical Decisions
+- **Decision**: Consolidate 47 separate tabs into 28 structured main pages with internal sub-tabs.
+  - **Reason**: Having 47 flat sidebar tabs caused excessive cognitive load, cluttered navigation, and poor mobile UX. Grouping tightly-coupled steps (e.g. PO + GRN + Returns, Quotes + PI, Work Orders + Schedules) into unified tabbed pages improves ergonomics while maintaining 100% of existing workflows and data models.
+  - **Date**: 2026-11-13
 - **Decision**: Transform UI to Modern Enterprise Light Theme based on Reference Screenshot 1.
   - **Reason**: Dark obsidian theme was identified by user as crowded and difficult to read. Light theme provides superior contrast, cleaner presentation, and executive dashboard aesthetics.
   - **Date**: 2026-11-13

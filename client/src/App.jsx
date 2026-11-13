@@ -2,69 +2,50 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Sidebar from './components/common/Sidebar';
 import Header from './components/common/Header';
 
-// Supply Chain Management Modules
-import MaterialMasterModule from './components/modules/MaterialMasterModule';
+// 1. Supply Chain Management (6 Pages)
+import ScmDashboardModule from './components/modules/ScmDashboardModule';
+import MaterialsPage from './components/modules/MaterialsPage';
 import SuppliersModule from './components/modules/SuppliersModule';
-import SupplierMaterialLinkModule from './components/modules/SupplierMaterialLinkModule';
-import PurchaseOrdersModule from './components/modules/PurchaseOrdersModule';
-import GRNModule from './components/modules/GRNModule';
-import QCTestsModule from './components/modules/QCTestsModule';
-import InventoryModule from './components/modules/InventoryModule';
-import MaterialIssueModule from './components/modules/MaterialIssueModule';
-import SupplierReturnsModule from './components/modules/SupplierReturnsModule';
-import InventoryReportModule from './components/modules/InventoryReportModule';
+import PurchasingPage from './components/modules/PurchasingPage';
+import QualityInventoryPage from './components/modules/QualityInventoryPage';
+import MaterialRequestsPage from './components/modules/MaterialRequestsPage';
 
-// Sales Management Modules
+// 2. Sales Management (6 Pages)
 import DashboardModule from './components/sales/DashboardModule';
-import EnquiriesModule from './components/sales/EnquiriesModule';
-import CustomersLeadsModule from './components/sales/CustomersLeadsModule';
+import CustomersEnquiriesPage from './components/sales/CustomersEnquiriesPage';
 import FollowUpsModule from './components/sales/FollowUpsModule';
-import QuotationsModule from './components/sales/QuotationsModule';
-import ProformaInvoicesModule from './components/sales/ProformaInvoicesModule';
-import CustomerPOsModule from './components/sales/CustomerPOsModule';
-import PaymentsModule from './components/sales/PaymentsModule';
-import SalesOrdersModule from './components/sales/SalesOrdersModule';
+import QuotationsPIPage from './components/sales/QuotationsPIPage';
+import OrdersPaymentsPage from './components/sales/OrdersPaymentsPage';
 import SalesReportsModule from './components/sales/SalesReportsModule';
 
-// Production Management Modules (12 Modules)
+// 3. Production Management (7 Pages)
 import ProductionDashboardModule from './components/production/ProductionDashboardModule';
-import ProductionPlanningModule from './components/production/ProductionPlanningModule';
+import ProductionOrdersPage from './components/production/ProductionOrdersPage';
 import BOMModule from './components/production/BOMModule';
-import ProductionScheduleModule from './components/production/ProductionScheduleModule';
-import MaterialRequestsModule from './components/production/MaterialRequestsModule';
-import ProductionMaterialIssueModule from './components/production/ProductionMaterialIssueModule';
-import ProductionExecutionModule from './components/production/ProductionExecutionModule';
-import ProductionUpdatesModule from './components/production/ProductionUpdatesModule';
-import ProductionCompletionModule from './components/production/ProductionCompletionModule';
-import ProductionQAModule from './components/production/ProductionQAModule';
-import ReworkModule from './components/production/ReworkModule';
+import ProdMaterialRequestsPage from './components/production/ProdMaterialRequestsPage';
+import ProductionTrackingPage from './components/production/ProductionTrackingPage';
+import QualityReworkPage from './components/production/QualityReworkPage';
 import FinishedGoodsModule from './components/production/FinishedGoodsModule';
 
-// Logistics & Delivery Management Modules (9 Modules)
+// 4. Logistics & Delivery Management (5 Pages)
 import LogisticsDashboardModule from './components/logistics/LogisticsDashboardModule';
-import DeliveryPlanningModule from './components/logistics/DeliveryPlanningModule';
-import VehicleCourierModule from './components/logistics/VehicleCourierModule';
-import DispatchModule from './components/logistics/DispatchModule';
-import DeliveryTrackingModule from './components/logistics/DeliveryTrackingModule';
-import DeliveryConfirmationModule from './components/logistics/DeliveryConfirmationModule';
-import InstallationModule from './components/logistics/InstallationModule';
-import InstallationCompletionModule from './components/logistics/InstallationCompletionModule';
+import DeliveryPlanningPage from './components/logistics/DeliveryPlanningPage';
+import DispatchTrackingPage from './components/logistics/DispatchTrackingPage';
+import DeliveryInstallationPage from './components/logistics/DeliveryInstallationPage';
 import LogisticsReportsModule from './components/logistics/LogisticsReportsModule';
 
-// Employee Management & RBAC Modules (6 Modules)
+// 5. Employee Management & RBAC (4 Pages)
 import EmployeeDashboardModule from './components/employee/EmployeeDashboardModule';
-import EmployeesModule from './components/employee/EmployeesModule';
+import EmployeesPage from './components/employee/EmployeesPage';
 import RolesPermissionsModule from './components/employee/RolesPermissionsModule';
-import DepartmentsModule from './components/employee/DepartmentsModule';
-import EmployeeLoginModule from './components/employee/EmployeeLoginModule';
-import EmployeeReportsModule from './components/employee/EmployeeReportsModule';
+import DepartmentsReportsPage from './components/employee/DepartmentsReportsPage';
 
 import { api } from './services/api';
 import { CheckCircle2, AlertCircle, Info, Package, Briefcase, Factory, Truck, Users } from 'lucide-react';
 
 export default function App() {
-  const [activeDomain, setActiveDomain] = useState('scm'); // 'scm' | 'sales' | 'production'
-  const [activeModule, setActiveModule] = useState('scm-materials');
+  const [activeDomain, setActiveDomain] = useState('scm'); // 'scm' | 'sales' | 'production' | 'logistics' | 'employee'
+  const [activeModule, setActiveModule] = useState('scm-dashboard');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [toasts, setToasts] = useState([]);
@@ -357,7 +338,7 @@ export default function App() {
   const handleDomainChange = (domain) => {
     setActiveDomain(domain);
     if (domain === 'scm') {
-      setActiveModule('scm-materials');
+      setActiveModule('scm-dashboard');
     } else if (domain === 'sales') {
       setActiveModule('sales-dashboard');
     } else if (domain === 'production') {
@@ -424,7 +405,7 @@ export default function App() {
   };
   const handleNavigateToQC = (grn) => {
     setPreSelectedGRNForQC(grn);
-    setActiveModule('scm-qc-tests');
+    setActiveModule('scm-quality-inventory');
   };
 
   // Sales Handlers
@@ -704,15 +685,31 @@ export default function App() {
         />
 
         <main className="content-body">
-          {/* ========================================= */}
-          {/* 1. SUPPLY CHAIN MANAGEMENT (10 MENUS)     */}
-          {/* ========================================= */}
-          {activeModule === 'scm-materials' && (
-            <MaterialMasterModule
+          {/* ======================================================== */}
+          {/* 1. SUPPLY CHAIN MANAGEMENT (6 PAGES)                     */}
+          {/* ======================================================== */}
+          {activeModule === 'scm-dashboard' && (
+            <ScmDashboardModule
               materials={materials}
-              onSave={handleSaveMaterial}
-              onUpdate={handleUpdateMaterial}
+              scmPurchaseOrders={scmPurchaseOrders}
+              grns={grns}
+              inventory={inventory}
+              qcTests={qcTests}
+              onNavigateModule={(mod) => setActiveModule(mod)}
+            />
+          )}
+
+          {(activeModule === 'scm-materials' || activeModule === 'scm-material-master' || activeModule === 'scm-supplier-links') && (
+            <MaterialsPage
+              materials={materials}
+              suppliers={scmSuppliers}
+              supplierLinks={supplierLinks}
+              onSaveMaterial={handleSaveMaterial}
+              onUpdateMaterial={handleUpdateMaterial}
+              onSaveSupplierLink={handleSaveSupplierLink}
+              onUpdateSupplierLink={handleUpdateSupplierLink}
               showToast={showToast}
+              defaultTab={activeModule === 'scm-supplier-links' ? 'links' : 'materials'}
             />
           )}
 
@@ -725,113 +722,82 @@ export default function App() {
             />
           )}
 
-          {activeModule === 'scm-supplier-links' && (
-            <SupplierMaterialLinkModule
-              links={supplierLinks}
-              suppliers={scmSuppliers}
-              materials={materials}
-              onSave={handleSaveSupplierLink}
-              onUpdate={handleUpdateSupplierLink}
-              showToast={showToast}
-            />
-          )}
-
-          {activeModule === 'scm-purchase-orders' && (
-            <PurchaseOrdersModule
+          {(activeModule === 'scm-purchasing' || activeModule === 'scm-purchase-orders' || activeModule === 'scm-grn' || activeModule === 'scm-supplier-returns') && (
+            <PurchasingPage
               purchaseOrders={scmPurchaseOrders}
               suppliers={scmSuppliers}
               materials={materials}
               supplierLinks={supplierLinks}
-              onSave={handleSaveScmPO}
-              onUpdateStatus={handleUpdateScmPOStatus}
-              showToast={showToast}
-            />
-          )}
-
-          {activeModule === 'scm-grn' && (
-            <GRNModule
               grns={grns}
-              purchaseOrders={scmPurchaseOrders}
-              onSave={handleSaveGRN}
-              showToast={showToast}
+              qcTests={qcTests}
+              supplierReturns={supplierReturns}
+              onSavePO={handleSaveScmPO}
+              onUpdatePOStatus={handleUpdateScmPOStatus}
+              onSaveGRN={handleSaveGRN}
               onNavigateToQC={handleNavigateToQC}
+              onSaveSupplierReturn={handleSaveSupplierReturn}
+              showToast={showToast}
+              defaultTab={activeModule === 'scm-grn' ? 'grn' : activeModule === 'scm-supplier-returns' ? 'returns' : 'po'}
             />
           )}
 
-          {activeModule === 'scm-qc-tests' && (
-            <QCTestsModule
+          {(activeModule === 'scm-quality-inventory' || activeModule === 'scm-qc-tests' || activeModule === 'scm-inventory' || activeModule === 'scm-reports') && (
+            <QualityInventoryPage
               qcTests={qcTests}
               grns={grns}
-              onSave={handleSaveQCTest}
-              showToast={showToast}
-              preSelectedGRN={preSelectedGRNForQC}
-            />
-          )}
-
-          {activeModule === 'scm-inventory' && (
-            <InventoryModule
               inventory={inventory}
+              reportsData={scmReportsData}
+              onSaveQCTest={handleSaveQCTest}
               onAdjustStock={handleAdjustStock}
+              preSelectedGRN={preSelectedGRNForQC}
               showToast={showToast}
+              defaultTab={activeModule === 'scm-inventory' ? 'inventory' : activeModule === 'scm-reports' ? 'reports' : 'qc'}
             />
           )}
 
-          {activeModule === 'scm-material-issues' && (
-            <MaterialIssueModule
+          {(activeModule === 'scm-material-requests' || activeModule === 'scm-material-issues') && (
+            <MaterialRequestsPage
               materialIssues={materialIssues}
               materials={materials}
               inventory={inventory}
-              onSave={handleSaveMaterialIssue}
+              onSaveMaterialIssue={handleSaveMaterialIssue}
               showToast={showToast}
             />
           )}
 
-          {activeModule === 'scm-supplier-returns' && (
-            <SupplierReturnsModule
-              supplierReturns={supplierReturns}
-              qcTests={qcTests}
-              onSave={handleSaveSupplierReturn}
-              showToast={showToast}
-            />
-          )}
-
-          {activeModule === 'scm-reports' && (
-            <InventoryReportModule
-              reportsData={scmReportsData}
-              showToast={showToast}
-            />
-          )}
-
-          {/* ========================================= */}
-          {/* 2. SALES MANAGEMENT (10 MENUS)            */}
-          {/* ========================================= */}
+          {/* ======================================================== */}
+          {/* 2. SALES MANAGEMENT (6 PAGES)                            */}
+          {/* ======================================================== */}
           {activeModule === 'sales-dashboard' && (
             <DashboardModule
               dashboardData={salesDashboardData}
-              onNavigateModule={(mod) => setActiveModule(`sales-${mod}`)}
+              onNavigateModule={(mod) => {
+                if (mod === 'enquiries' || mod === 'customers-leads' || mod === 'leads' || mod === 'customers') {
+                  setActiveModule('sales-customers-enquiries');
+                } else if (mod === 'quotations' || mod === 'proforma-invoices') {
+                  setActiveModule('sales-quotations-pi');
+                } else if (mod === 'customer-pos' || mod === 'payments' || mod === 'sales-orders') {
+                  setActiveModule('sales-orders-payments');
+                } else {
+                  setActiveModule(`sales-${mod}`);
+                }
+              }}
             />
           )}
 
-          {activeModule === 'sales-enquiries' && (
-            <EnquiriesModule
+          {(activeModule === 'sales-customers-enquiries' || activeModule === 'sales-enquiries' || activeModule === 'sales-customers-leads') && (
+            <CustomersEnquiriesPage
               enquiries={enquiries}
               products={products}
               customers={salesCustomers}
-              onSave={handleSaveEnquiry}
-              onConvertToLead={handleConvertToLead}
-              showToast={showToast}
-            />
-          )}
-
-          {activeModule === 'sales-customers-leads' && (
-            <CustomersLeadsModule
-              customers={salesCustomers}
               leads={leads}
-              products={products}
+              onSaveEnquiry={handleSaveEnquiry}
+              onConvertToLead={handleConvertToLead}
               onSaveCustomer={handleSaveSalesCustomer}
               onSaveLead={handleSaveLead}
               onUpdateLeadStatus={handleUpdateLeadStatus}
               showToast={showToast}
+              defaultTab={activeModule === 'sales-enquiries' ? 'enquiries' : 'customers'}
             />
           )}
 
@@ -847,62 +813,39 @@ export default function App() {
             />
           )}
 
-          {activeModule === 'sales-quotations' && (
-            <QuotationsModule
+          {(activeModule === 'sales-quotations-pi' || activeModule === 'sales-quotations' || activeModule === 'sales-proforma-invoices') && (
+            <QuotationsPIPage
               quotations={quotations}
+              proformaInvoices={proformaInvoices}
               customers={salesCustomers}
               leads={leads}
               products={products}
-              onSave={handleSaveQuotation}
-              onRevise={handleReviseQuotation}
-              onUpdateStatus={handleUpdateQuotationStatus}
+              onSaveQuotation={handleSaveQuotation}
+              onReviseQuotation={handleReviseQuotation}
+              onUpdateQuotationStatus={handleUpdateQuotationStatus}
+              onSavePI={handleSavePI}
               showToast={showToast}
+              defaultTab={activeModule === 'sales-proforma-invoices' ? 'pi' : 'quotations'}
             />
           )}
 
-          {activeModule === 'sales-proforma-invoices' && (
-            <ProformaInvoicesModule
-              proformaInvoices={proformaInvoices}
-              quotations={quotations}
-              onSave={handleSavePI}
-              showToast={showToast}
-            />
-          )}
-
-          {activeModule === 'sales-customer-pos' && (
-            <CustomerPOsModule
+          {(activeModule === 'sales-orders-payments' || activeModule === 'sales-customer-pos' || activeModule === 'sales-payments' || activeModule === 'sales-sales-orders') && (
+            <OrdersPaymentsPage
+              salesOrders={salesOrders}
               customerPOs={customerPOs}
-              customers={salesCustomers}
-              proformaInvoices={proformaInvoices}
-              quotations={quotations}
-              onSave={handleSaveCustomerPO}
-              onVerify={handleVerifyCustomerPO}
-              showToast={showToast}
-            />
-          )}
-
-          {activeModule === 'sales-payments' && (
-            <PaymentsModule
               payments={payments}
               customers={salesCustomers}
-              proformaInvoices={proformaInvoices}
-              onSave={handleSavePayment}
-              onVerify={handleVerifyPayment}
-              showToast={showToast}
-            />
-          )}
-
-          {activeModule === 'sales-sales-orders' && (
-            <SalesOrdersModule
-              salesOrders={salesOrders}
-              customers={salesCustomers}
-              customerPOs={customerPOs}
               quotations={quotations}
               proformaInvoices={proformaInvoices}
               products={products}
-              onSave={handleSaveSalesOrder}
+              onSaveCustomerPO={handleSaveCustomerPO}
+              onVerifyCustomerPO={handleVerifyCustomerPO}
+              onSaveSalesOrder={handleSaveSalesOrder}
               onSendToProduction={handleSendSOToProduction}
+              onSavePayment={handleSavePayment}
+              onVerifyPayment={handleVerifyPayment}
               showToast={showToast}
+              defaultTab={activeModule === 'sales-customer-pos' ? 'customer-pos' : activeModule === 'sales-payments' ? 'payments' : 'orders'}
             />
           )}
 
@@ -913,25 +856,40 @@ export default function App() {
             />
           )}
 
-          {/* ========================================= */}
-          {/* 3. PRODUCTION MANAGEMENT (12 MENUS)       */}
-          {/* ========================================= */}
+          {/* ======================================================== */}
+          {/* 3. PRODUCTION MANAGEMENT (7 PAGES)                       */}
+          {/* ======================================================== */}
           {activeModule === 'production-dashboard' && (
             <ProductionDashboardModule
               dashboardData={productionDashboardData}
-              onNavigateModule={(mod) => setActiveModule(`production-${mod}`)}
+              onNavigateModule={(mod) => {
+                if (mod === 'planning' || mod === 'schedule' || mod === 'work-orders') {
+                  setActiveModule('production-orders');
+                } else if (mod === 'material-requests' || mod === 'material-issue') {
+                  setActiveModule('production-material-requests');
+                } else if (mod === 'execution' || mod === 'updates' || mod === 'completion') {
+                  setActiveModule('production-tracking');
+                } else if (mod === 'qa' || mod === 'rework') {
+                  setActiveModule('production-quality-rework');
+                } else {
+                  setActiveModule(`production-${mod}`);
+                }
+              }}
             />
           )}
 
-          {activeModule === 'production-planning' && (
-            <ProductionPlanningModule
+          {(activeModule === 'production-orders' || activeModule === 'production-planning' || activeModule === 'production-schedule') && (
+            <ProductionOrdersPage
               workOrders={workOrders}
               salesOrders={salesOrders}
               products={products}
               boms={boms}
-              onSave={handleSaveWorkOrder}
-              onUpdateStatus={handleUpdateWorkOrderStatus}
+              schedules={schedules}
+              onSaveWorkOrder={handleSaveWorkOrder}
+              onUpdateWorkOrderStatus={handleUpdateWorkOrderStatus}
+              onSaveSchedule={handleSaveSchedule}
               showToast={showToast}
+              defaultTab={activeModule === 'production-schedule' ? 'schedule' : 'orders'}
             />
           )}
 
@@ -945,84 +903,48 @@ export default function App() {
             />
           )}
 
-          {activeModule === 'production-schedule' && (
-            <ProductionScheduleModule
-              schedules={schedules}
-              workOrders={workOrders}
-              onSave={handleSaveSchedule}
-              showToast={showToast}
-            />
-          )}
-
-          {activeModule === 'production-material-requests' && (
-            <MaterialRequestsModule
+          {(activeModule === 'production-material-requests' || activeModule === 'production-material-issue') && (
+            <ProdMaterialRequestsPage
               materialRequests={materialRequests}
+              productionMaterialIssues={productionMaterialIssues}
               workOrders={workOrders}
               materials={materials}
               boms={boms}
               inventory={inventory}
-              onSave={handleSaveMaterialRequest}
+              onSaveMaterialRequest={handleSaveMaterialRequest}
+              onSaveProductionMaterialIssue={handleSaveProductionMaterialIssue}
               showToast={showToast}
+              defaultTab={activeModule === 'production-material-issue' ? 'issues' : 'requests'}
             />
           )}
 
-          {activeModule === 'production-material-issue' && (
-            <ProductionMaterialIssueModule
-              materialIssues={productionMaterialIssues}
-              materialRequests={materialRequests}
-              inventory={inventory}
-              onSave={handleSaveProductionMaterialIssue}
-              showToast={showToast}
-            />
-          )}
-
-          {activeModule === 'production-execution' && (
-            <ProductionExecutionModule
+          {(activeModule === 'production-tracking' || activeModule === 'production-execution' || activeModule === 'production-updates' || activeModule === 'production-completion') && (
+            <ProductionTrackingPage
               executions={executions}
-              workOrders={workOrders}
-              onStart={handleStartExecution}
-              onUpdateStatus={handleUpdateExecutionStatus}
-              showToast={showToast}
-            />
-          )}
-
-          {activeModule === 'production-updates' && (
-            <ProductionUpdatesModule
               productionUpdates={productionUpdates}
-              workOrders={workOrders}
-              onSave={handleSaveProductionUpdate}
-              showToast={showToast}
-            />
-          )}
-
-          {activeModule === 'production-completion' && (
-            <ProductionCompletionModule
               completions={completions}
               workOrders={workOrders}
-              onSave={handleSaveCompletion}
-              onNavigateToQA={() => setActiveModule('production-qa')}
+              onStartExecution={handleStartExecution}
+              onUpdateExecutionStatus={handleUpdateExecutionStatus}
+              onSaveProductionUpdate={handleSaveProductionUpdate}
+              onSaveCompletion={handleSaveCompletion}
+              onNavigateToQA={() => setActiveModule('production-quality-rework')}
               showToast={showToast}
+              defaultTab={activeModule === 'production-updates' ? 'updates' : activeModule === 'production-completion' ? 'completion' : 'execution'}
             />
           )}
 
-          {activeModule === 'production-qa' && (
-            <ProductionQAModule
+          {(activeModule === 'production-quality-rework' || activeModule === 'production-qa' || activeModule === 'production-rework') && (
+            <QualityReworkPage
               qaTests={productionQATests}
-              workOrders={workOrders}
-              completions={completions}
-              onSave={handleSaveProductionQA}
-              onNavigateToRework={() => setActiveModule('production-rework')}
-              showToast={showToast}
-            />
-          )}
-
-          {activeModule === 'production-rework' && (
-            <ReworkModule
               reworkOrders={reworkOrders}
               workOrders={workOrders}
-              onSave={handleSaveReworkOrder}
-              onUpdateStatus={handleUpdateReworkStatus}
+              completions={completions}
+              onSaveQA={handleSaveProductionQA}
+              onSaveReworkOrder={handleSaveReworkOrder}
+              onUpdateReworkStatus={handleUpdateReworkStatus}
               showToast={showToast}
+              defaultTab={activeModule === 'production-rework' ? 'rework' : 'qa'}
             />
           )}
 
@@ -1037,81 +959,67 @@ export default function App() {
             />
           )}
 
-          {/* ========================================= */}
-          {/* 4. LOGISTICS & DELIVERY (9 MENUS)         */}
-          {/* ========================================= */}
+          {/* ======================================================== */}
+          {/* 4. LOGISTICS & DELIVERY MANAGEMENT (5 PAGES)             */}
+          {/* ======================================================== */}
           {activeModule === 'logistics-dashboard' && (
             <LogisticsDashboardModule
               dashboardData={logisticsDashboardData}
               deliveryPlans={deliveryPlans}
-              onNavigateModule={(mod) => setActiveModule(`logistics-${mod}`)}
+              onNavigateModule={(mod) => {
+                if (mod === 'planning' || mod === 'vehicles-couriers' || mod === 'fleet') {
+                  setActiveModule('logistics-planning');
+                } else if (mod === 'dispatch' || mod === 'tracking') {
+                  setActiveModule('logistics-dispatch-tracking');
+                } else if (mod === 'confirmation' || mod === 'installation' || mod === 'installation-completion') {
+                  setActiveModule('logistics-delivery-installation');
+                } else {
+                  setActiveModule(`logistics-${mod}`);
+                }
+              }}
             />
           )}
 
-          {activeModule === 'logistics-planning' && (
-            <DeliveryPlanningModule
+          {(activeModule === 'logistics-planning' || activeModule === 'logistics-vehicles-couriers') && (
+            <DeliveryPlanningPage
               deliveryPlans={deliveryPlans}
               salesOrders={salesOrders}
               finishedGoods={finishedGoods}
-              onSave={handleSaveDeliveryPlan}
+              vehiclesCouriers={vehiclesCouriers}
+              onSaveDeliveryPlan={handleSaveDeliveryPlan}
+              onSaveVehicleCourier={handleSaveVehicleCourier}
+              onUpdateVehicleCourier={handleUpdateVehicleCourier}
               showToast={showToast}
+              defaultTab={activeModule === 'logistics-vehicles-couriers' ? 'fleet' : 'planning'}
             />
           )}
 
-          {activeModule === 'logistics-vehicles-couriers' && (
-            <VehicleCourierModule
-              items={vehiclesCouriers}
-              onSave={handleSaveVehicleCourier}
-              onUpdate={handleUpdateVehicleCourier}
-              showToast={showToast}
-            />
-          )}
-
-          {activeModule === 'logistics-dispatch' && (
-            <DispatchModule
+          {(activeModule === 'logistics-dispatch-tracking' || activeModule === 'logistics-dispatch' || activeModule === 'logistics-tracking') && (
+            <DispatchTrackingPage
               dispatches={dispatches}
               deliveryPlans={deliveryPlans}
               vehiclesCouriers={vehiclesCouriers}
               finishedGoods={finishedGoods}
-              onSave={handleSaveDispatch}
-              showToast={showToast}
-            />
-          )}
-
-          {activeModule === 'logistics-tracking' && (
-            <DeliveryTrackingModule
               trackingRecords={trackingRecords}
-              deliveryPlans={deliveryPlans}
-              onSave={handleSaveTrackingMilestone}
+              onSaveDispatch={handleSaveDispatch}
+              onSaveTrackingMilestone={handleSaveTrackingMilestone}
               showToast={showToast}
+              defaultTab={activeModule === 'logistics-tracking' ? 'tracking' : 'dispatch'}
             />
           )}
 
-          {activeModule === 'logistics-confirmation' && (
-            <DeliveryConfirmationModule
+          {(activeModule === 'logistics-delivery-installation' || activeModule === 'logistics-confirmation' || activeModule === 'logistics-installation' || activeModule === 'logistics-installation-completion') && (
+            <DeliveryInstallationPage
               confirmations={confirmations}
-              deliveryPlans={deliveryPlans}
-              onSave={handleSaveDeliveryConfirmation}
-              showToast={showToast}
-            />
-          )}
-
-          {activeModule === 'logistics-installation' && (
-            <InstallationModule
               installations={installations}
+              installationCompletions={installationCompletions}
               deliveryPlans={deliveryPlans}
-              onSave={handleSaveInstallation}
-              onUpdateStatus={handleUpdateInstallationStatus}
+              onSaveDeliveryConfirmation={handleSaveDeliveryConfirmation}
+              onSaveInstallation={handleSaveInstallation}
+              onUpdateInstallationStatus={handleUpdateInstallationStatus}
+              onSaveInstallationCompletion={handleSaveInstallationCompletion}
               showToast={showToast}
-            />
-          )}
-
-          {activeModule === 'logistics-installation-completion' && (
-            <InstallationCompletionModule
-              completions={installationCompletions}
-              installations={installations}
-              onSave={handleSaveInstallationCompletion}
-              showToast={showToast}
+              defaultTab={activeModule === 'logistics-installation' ? 'installation' : activeModule === 'logistics-installation-completion' ? 'completion' : 'confirmation'}
             />
           )}
 
@@ -1128,9 +1036,9 @@ export default function App() {
             />
           )}
 
-          {/* ========================================= */}
-          {/* 5. EMPLOYEE MANAGEMENT & RBAC (6 MENUS)   */}
-          {/* ========================================= */}
+          {/* ======================================================== */}
+          {/* 5. EMPLOYEE MANAGEMENT & RBAC (4 PAGES)                  */}
+          {/* ======================================================== */}
           {activeModule === 'employee-dashboard' && (
             <EmployeeDashboardModule
               dashboardData={employeeDashboardData}
@@ -1138,21 +1046,33 @@ export default function App() {
               roles={roles}
               employees={employees}
               onNavigateModule={(mod) => {
-                setActiveModule(mod);
+                if (mod === 'employees' || mod === 'employee-login') {
+                  setActiveModule('employee-directory');
+                } else if (mod === 'departments' || mod === 'reports') {
+                  setActiveModule('employee-departments-reports');
+                } else if (mod === 'roles-permissions' || mod === 'roles') {
+                  setActiveModule('employee-roles-permissions');
+                } else {
+                  setActiveModule(mod);
+                }
               }}
             />
           )}
 
-          {activeModule === 'employee-directory' && (
-            <EmployeesModule
+          {(activeModule === 'employee-directory' || activeModule === 'employee-login') && (
+            <EmployeesPage
               employees={employees}
               roles={roles}
               departments={departments}
+              currentUser={currentUser}
               onSaveEmployee={handleSaveEmployee}
               onUpdateEmployee={handleUpdateEmployee}
               onResetPassword={handleResetPassword}
               onToggleStatus={handleToggleEmployeeStatus}
+              onLogin={handleLogin}
+              onLogout={handleLogout}
               showToast={showToast}
+              defaultTab={activeModule === 'employee-login' ? 'login' : 'directory'}
             />
           )}
 
@@ -1166,30 +1086,16 @@ export default function App() {
             />
           )}
 
-          {activeModule === 'employee-departments' && (
-            <DepartmentsModule
+          {(activeModule === 'employee-departments-reports' || activeModule === 'employee-departments' || activeModule === 'employee-reports') && (
+            <DepartmentsReportsPage
               departments={departments}
-              onSaveDepartment={handleSaveDepartment}
-              showToast={showToast}
-            />
-          )}
-
-          {activeModule === 'employee-login' && (
-            <EmployeeLoginModule
-              currentUser={currentUser}
-              onLogin={handleLogin}
-              onLogout={handleLogout}
-              showToast={showToast}
-            />
-          )}
-
-          {activeModule === 'employee-reports' && (
-            <EmployeeReportsModule
               reportsData={employeeReportsData}
               employees={employees}
-              departments={departments}
               roles={roles}
+              auditLogs={auditLogs}
+              onSaveDepartment={handleSaveDepartment}
               showToast={showToast}
+              defaultTab={activeModule === 'employee-reports' ? 'reports' : 'departments'}
             />
           )}
         </main>
