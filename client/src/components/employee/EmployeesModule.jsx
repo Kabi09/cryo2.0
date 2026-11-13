@@ -137,7 +137,7 @@ export default function EmployeesModule({
             style={{ width: 34, height: 34, borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--border-subtle)' }}
           />
           <div>
-            <strong style={{ color: '#fff', fontSize: '0.84rem' }}>{row.name}</strong>
+            <strong style={{ color: 'var(--text-primary)', fontSize: '0.84rem' }}>{row.name}</strong>
             <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>@{row.username}</div>
           </div>
         </div>
@@ -578,8 +578,8 @@ export default function EmployeesModule({
                 style={{ width: 64, height: 64, borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--border-subtle)' }}
               />
               <div>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#fff' }}>{selectedEmployee.name}</h3>
-                <p style={{ fontSize: '0.8rem', color: 'var(--cyan)' }}>{selectedEmployee.designation}</p>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)' }}>{selectedEmployee.name}</h3>
+                <p style={{ fontSize: '0.8rem', color: 'var(--primary)' }}>{selectedEmployee.designation}</p>
                 <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
                   <StatusBadge status={selectedEmployee.status} />
                   <span className="badge badge-info">{selectedEmployee.roleName}</span>

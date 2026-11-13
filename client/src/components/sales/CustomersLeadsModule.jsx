@@ -146,7 +146,7 @@ export default function CustomersLeadsModule({ customers, leads, products, onSav
       accessor: 'customer',
       render: (row) => (
         <div>
-          <strong style={{ color: '#fff' }}>{row.customer?.companyName || '—'}</strong>
+          <strong style={{ color: 'var(--text-primary)' }}>{row.customer?.companyName || '—'}</strong>
           <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
             {row.customer?.customerCode} • {row.customer?.city}
           </div>
@@ -161,7 +161,7 @@ export default function CustomersLeadsModule({ customers, leads, products, onSav
       header: 'Interested Product',
       render: (row) => (
         <div>
-          <span style={{ color: '#C7D2FE', fontWeight: 500 }}>
+          <span style={{ color: 'var(--primary)', fontWeight: 500 }}>
             {row.interestedProduct?.productName || 'Equipment'}
           </span>
           <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
@@ -242,7 +242,7 @@ export default function CustomersLeadsModule({ customers, leads, products, onSav
       accessor: 'companyName',
       render: (row) => (
         <div>
-          <strong style={{ color: '#fff' }}>{row.companyName}</strong>
+          <strong style={{ color: 'var(--text-primary)' }}>{row.companyName}</strong>
           <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{row.city}, {row.state}</div>
         </div>
       )

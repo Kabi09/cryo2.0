@@ -14,9 +14,9 @@
 - **Important conventions**:
   - **NO TYPESCRIPT**: All files must strictly remain `.js` or `.jsx`.
   - **NO GIT PUSH**: All commits and working changes are retained locally on the machine.
-  - **OBSIDIAN DARK THEME**: Deep space dark industrial styling (`--bg-body: #080B11`, `--bg-surface: #0E131F`, `--bg-card: #161D2E`, `--cyan: #06B6D4`, `--emerald: #10B981`, `--amber: #F59E0B`, `--purple: #8B5CF6`).
+  - **ENTERPRISE LIGHT THEME**: Clean modern white and light-grey theme (`--bg-app: #F5F7FA`, `--bg-surface: #FFFFFF`, `--bg-card: #FFFFFF`, `--primary: #2451C5`, `--text-primary: #172033`, `--text-secondary: #64748B`, `--border-subtle: #E5EAF1`, `--success: #16A36A`, `--warning: #F59E0B`, `--danger: #EF4444`).
   - **SINGLE ACTION BUTTON**: Exactly one primary action button per data table toolbar (`+ [Action]`) to eliminate UI clutter.
-  - **WIDE MODALS**: All form dialogs utilize wide `size="lg"` dialog layouts with high contrast inputs and dark date-picker color schemes.
+  - **WIDE MODALS**: All form dialogs utilize wide `size="lg"` dialog layouts with high contrast inputs and clean light date-picker color schemes.
 
 ---
 
@@ -153,35 +153,56 @@
 - **Reason**: Fulfill user request to monitor live DB connectivity in health check and prevent server crashes on duplicate department names.
 - **Impact**: Live visual DB connection indicator in header and clean toast notifications.
 
+#### Change: Complete Frontend UI/UX Redesign – Enterprise Light Theme
+- **What was changed**: Transformed the complete frontend application from the obsidian dark theme into a clean, modern, professional light-theme ERP system matching the user's reference design ("VairaWorks ADMIN - Duty Management System").
+- **Files changed**:
+  - Global CSS: `client/src/index.css` (Complete design token overhaul: `#2451C5` primary, `#F5F7FA` page background, `#FFFFFF` cards, `#172033` primary text, `#64748B` secondary text, `#E5EAF1` borders).
+  - Common Components: `client/src/components/common/Header.jsx`, `client/src/components/common/Sidebar.jsx`, `client/src/components/common/KpiCard.jsx`, `client/src/components/common/StatusBadge.jsx`.
+  - SCM Modules: `InventoryModule.jsx`, `InventoryReportModule.jsx`, `MaterialIssueModule.jsx`, `PurchaseOrdersModule.jsx`, `QCTestsModule.jsx`, `SupplierMaterialLinkModule.jsx`, `SupplierReturnsModule.jsx`.
+  - Sales Modules: `DashboardModule.jsx`, `SalesReportsModule.jsx`, `CustomerPOsModule.jsx`, `CustomersLeadsModule.jsx`, `EnquiriesModule.jsx`, `FollowUpsModule.jsx`, `PaymentsModule.jsx`, `ProformaInvoicesModule.jsx`, `QuotationsModule.jsx`, `SalesOrdersModule.jsx`.
+  - Production Modules: `MaterialRequestsModule.jsx`, `ProductionMaterialIssueModule.jsx`.
+  - Logistics Modules: `InstallationCompletionModule.jsx`, `InstallationModule.jsx`, `LogisticsDashboardModule.jsx`, `LogisticsReportsModule.jsx`, `VehicleCourierModule.jsx`.
+  - Employee & RBAC: `EmployeeDashboardModule.jsx`, `EmployeeLoginModule.jsx`, `EmployeeReportsModule.jsx`, `EmployeesModule.jsx`, `DepartmentsModule.jsx`, `RolesPermissionsModule.jsx`.
+- **Logic & Styling changed**:
+  - Replaced all 60+ hardcoded dark/white inline text styles (`color: '#fff'`) with semantic light tokens (`var(--text-primary)`, `var(--primary)`, `code-badge`).
+  - Audited and updated tables, modal overlays, form input controls, select dropdowns (`color-scheme: light !important;`), squircle KPI cards, and sub-table lists.
+  - Implemented top header brand identity with gradient icon, **CryoWorks** brand name, **ADMIN** badge, department quick-switch pills, circular sync button, live `DB: Connected` status pill, and user profile pill with initials avatar (`AV`/`DE`).
+- **Reason**: User requested complete elimination of crowded dark interface in favor of clean enterprise light theme matching reference screenshot 1.
+- **Impact**: Crystal-clear legibility, cohesive design system across all 47 modules, zero compile errors (`vite build` in 941ms).
+
 ---
 
 ## Current Progress
 - **Completed**:
-  - Supply Chain Management: 10/10 modules fully operational with seed data.
-  - Sales Management CRM: 10/10 modules fully operational with seed data.
-  - Production Management: 12/12 modules fully operational with seed data.
-  - Logistics & Delivery Management: 9/9 modules fully operational with seed data.
-  - Employee Management & RBAC: 6/6 modules fully operational with seed data.
+  - UI/UX Complete Redesign: 100% migrated to clean light theme matching Reference Screenshot 1.
+  - Supply Chain Management: 10/10 modules fully operational with light styling.
+  - Sales Management CRM: 10/10 modules fully operational with light styling.
+  - Production Management: 12/12 modules fully operational with light styling.
+  - Logistics & Delivery Management: 9/9 modules fully operational with light styling.
+  - Employee Management & RBAC: 6/6 modules fully operational with light styling.
   - Total: 47/47 modules functional with HTTP 200 API verification.
-  - Root tracking file `lk.md` created.
+  - Root tracking file `lk.md` updated as single source of truth.
 - **In Progress**:
-  - Ongoing system stability monitoring and continuous verification.
+  - Continuous runtime stability monitoring.
 - **Pending**:
-  - Additional automated end-to-end regression test scripts.
+  - User feedback and acceptance testing.
 
 ---
 
 ## Known Issues
-- *None currently open.* All 50 API endpoints and frontend modules are verified with zero compile errors.
+- *None.* All 50 API endpoints and frontend modules compile and render cleanly with zero errors.
 
 ---
 
 ## Technical Decisions
+- **Decision**: Transform UI to Modern Enterprise Light Theme based on Reference Screenshot 1.
+  - **Reason**: Dark obsidian theme was identified by user as crowded and difficult to read. Light theme provides superior contrast, cleaner presentation, and executive dashboard aesthetics.
+  - **Date**: 2026-11-13
 - **Decision**: Avoid TypeScript and keep pure JavaScript (`.js` / `.jsx`).
   - **Reason**: Explicit user constraint and consistency with existing project configuration.
   - **Date**: 2026-11-13
-- **Decision**: Avoid Tailwind CSS and Material UI in favor of custom obsidian dark design tokens.
-  - **Reason**: Matches user-approved industrial UI specifications and prevents style conflicts.
+- **Decision**: Avoid Tailwind CSS and Material UI in favor of custom light-theme design tokens.
+  - **Reason**: Preserves custom CSS architecture and avoids utility-class bloat or Material UI runtime overhead.
   - **Date**: 2026-11-13
 - **Decision**: Zero `git push` command execution.
   - **Reason**: Safety constraint to maintain local branch control without remote interference.

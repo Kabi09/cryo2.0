@@ -105,7 +105,7 @@ export default function SupplierReturnsModule({ supplierReturns, qcTests, onSave
       accessor: 'supplier',
       render: (row) => (
         <div>
-          <strong style={{ color: '#fff' }}>{row.supplier?.supplierName || '—'}</strong>
+          <strong style={{ color: 'var(--text-primary)' }}>{row.supplier?.supplierName || '—'}</strong>
           <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{row.supplier?.supplierCode}</div>
         </div>
       )
@@ -113,11 +113,11 @@ export default function SupplierReturnsModule({ supplierReturns, qcTests, onSave
     {
       header: 'QC Ref',
       accessor: 'qcReference',
-      render: (row) => (
-        <span style={{ fontFamily: 'var(--font-mono)', color: '#60A5FA' }}>
-          {row.qcReference?.qcNumber || '—'}
+      render: (row) => row.qcReference?.qcNumber ? (
+        <span className="code-badge">
+          {row.qcReference.qcNumber}
         </span>
-      )
+      ) : '—'
     },
     {
       header: 'Material',

@@ -303,7 +303,7 @@ export default function ProductionMaterialIssueModule({
                           return (
                             <tr key={idx}>
                               <td>
-                                <strong style={{ color: '#fff' }}>{row.materialName}</strong>
+                                <strong style={{ color: 'var(--text-primary)' }}>{row.materialName}</strong>
                                 <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
                                   {row.materialCode}
                                 </div>

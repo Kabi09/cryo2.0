@@ -103,24 +103,24 @@ export default function PaymentsModule({ payments, customers, proformaInvoices, 
       accessor: 'customer',
       render: (row) => (
         <div>
-          <strong style={{ color: '#fff' }}>{row.customer?.companyName || '—'}</strong>
+          <strong style={{ color: 'var(--text-primary)' }}>{row.customer?.companyName || '—'}</strong>
           <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{row.customer?.contactPerson}</div>
         </div>
       )
     },
     {
       header: 'PI Ref',
-      render: (row) => (
-        <span style={{ fontFamily: 'var(--font-mono)', color: '#818CF8' }}>
-          {row.piReference?.piNumber || '—'}
+      render: (row) => row.piReference?.piNumber ? (
+        <span className="code-badge">
+          {row.piReference.piNumber}
         </span>
-      )
+      ) : '—'
     },
     {
       header: 'Amount Received',
       accessor: 'amountReceived',
       render: (row) => (
-        <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 800, color: '#34D399' }}>
+        <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 800, color: '#16A36A' }}>
           ₹{row.amountReceived?.toLocaleString('en-IN')}
         </span>
       )

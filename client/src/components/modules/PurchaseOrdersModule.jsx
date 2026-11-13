@@ -190,7 +190,7 @@ export default function PurchaseOrdersModule({ purchaseOrders, suppliers, materi
       accessor: 'supplier',
       render: (row) => (
         <div>
-          <strong style={{ color: '#fff' }}>{row.supplier?.supplierName || '—'}</strong>
+          <strong style={{ color: 'var(--text-primary)' }}>{row.supplier?.supplierName || '—'}</strong>
           <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{row.supplier?.supplierCode}</div>
         </div>
       )
@@ -504,13 +504,13 @@ export default function PurchaseOrdersModule({ purchaseOrders, suppliers, materi
                 justifyContent: 'space-between',
                 fontSize: '1.05rem',
                 fontWeight: 700,
-                color: '#fff',
+                color: 'var(--text-primary)',
                 borderTop: '1px solid var(--border-subtle)',
                 paddingTop: 8,
                 marginTop: 4
               }}>
                 <span>Grand Total:</span>
-                <span style={{ color: '#34D399', fontFamily: 'var(--font-mono)' }}>
+                <span style={{ color: '#16A36A', fontFamily: 'var(--font-mono)' }}>
                   ₹{Math.round(grandTotal).toLocaleString('en-IN')}
                 </span>
               </div>

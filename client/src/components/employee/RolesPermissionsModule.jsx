@@ -378,15 +378,15 @@ export default function RolesPermissionsModule({
             marginTop: 16,
             padding: '10px 14px',
             borderRadius: 8,
-            background: 'rgba(99, 102, 241, 0.1)',
-            border: '1px solid rgba(99, 102, 241, 0.25)',
+            background: '#EFF6FF',
+            border: '1px solid #BFDBFE',
             display: 'flex',
             alignItems: 'center',
             gap: 10,
             fontSize: '0.78rem',
-            color: '#C7D2FE'
+            color: '#1E40AF'
           }}>
-            <Lock size={15} style={{ color: '#818CF8', shrink: 0 }} />
+            <Lock size={15} style={{ color: '#2451C5', shrink: 0 }} />
             <span>
               <strong>Super Admin Policy:</strong> This role possesses immutable universal authorization across all current and future ERP modules. Privileges cannot be restricted.
             </span>
@@ -398,10 +398,10 @@ export default function RolesPermissionsModule({
             marginTop: 12,
             padding: '8px 12px',
             borderRadius: 6,
-            background: 'rgba(245, 158, 11, 0.1)',
-            border: '1px solid rgba(245, 158, 11, 0.25)',
+            background: '#FFFBEB',
+            border: '1px solid #FDE68A',
             fontSize: '0.74rem',
-            color: '#FBBF24',
+            color: '#B45309',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between'
@@ -424,10 +424,10 @@ export default function RolesPermissionsModule({
           gap: 10
         }}>
           <div>
-            <h3 style={{ fontSize: '0.98rem', fontWeight: 700, color: '#fff' }}>
+            <h3 style={{ fontSize: '0.98rem', fontWeight: 700, color: '#172033' }}>
               Permission Matrix: {selectedRole?.name}
             </h3>
-            <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+            <p style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
               Horizontally scrollable table with sticky left Module column. All 7 authorization vectors.
             </p>
           </div>
@@ -450,7 +450,7 @@ export default function RolesPermissionsModule({
           }}>
             <thead>
               <tr style={{
-                background: 'var(--bg-surface-elevated)',
+                background: '#F8FAFC',
                 borderBottom: '1px solid var(--border-subtle)'
               }}>
                 {/* Sticky Left Column for Module */}
@@ -458,14 +458,14 @@ export default function RolesPermissionsModule({
                   padding: '14px 18px',
                   fontSize: '0.76rem',
                   fontWeight: 700,
-                  color: 'var(--text-muted)',
+                  color: '#475569',
                   textTransform: 'uppercase',
                   letterSpacing: '0.06em',
                   position: 'sticky',
                   left: 0,
-                  background: 'var(--bg-surface-elevated)',
+                  background: '#F8FAFC',
                   zIndex: 2,
-                  boxShadow: '2px 0 6px rgba(0,0,0,0.3)',
+                  boxShadow: '2px 0 4px rgba(0,0,0,0.04)',
                   minWidth: 200
                 }}>
                   Module Name
@@ -478,7 +478,7 @@ export default function RolesPermissionsModule({
                       padding: '14px 16px',
                       fontSize: '0.76rem',
                       fontWeight: 700,
-                      color: 'var(--text-muted)',
+                      color: '#475569',
                       textTransform: 'uppercase',
                       letterSpacing: '0.06em',
                       textAlign: 'center',
@@ -494,7 +494,7 @@ export default function RolesPermissionsModule({
                   padding: '14px 16px',
                   fontSize: '0.76rem',
                   fontWeight: 700,
-                  color: 'var(--text-muted)',
+                  color: '#475569',
                   textTransform: 'uppercase',
                   textAlign: 'center',
                   minWidth: 90
@@ -515,7 +515,7 @@ export default function RolesPermissionsModule({
                     key={mod.id}
                     style={{
                       borderBottom: '1px solid var(--border-subtle)',
-                      background: idx % 2 === 0 ? 'transparent' : 'rgba(255, 255, 255, 0.01)',
+                      background: idx % 2 === 0 ? '#FFFFFF' : '#FBFDFE',
                       transition: 'background 0.15s ease'
                     }}
                   >
@@ -524,15 +524,15 @@ export default function RolesPermissionsModule({
                       padding: '12px 18px',
                       position: 'sticky',
                       left: 0,
-                      background: 'var(--bg-surface)',
+                      background: '#FFFFFF',
                       zIndex: 1,
-                      boxShadow: '2px 0 6px rgba(0,0,0,0.3)'
+                      boxShadow: '2px 0 4px rgba(0,0,0,0.04)'
                     }}>
                       <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        <span style={{ fontWeight: 700, fontSize: '0.84rem', color: hasAccess || isSuper ? '#fff' : 'var(--text-muted)' }}>
+                        <span style={{ fontWeight: 700, fontSize: '0.86rem', color: hasAccess || isSuper ? '#172033' : '#94A3B8' }}>
                           {mod.name}
                         </span>
-                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                        <span style={{ fontSize: '0.72rem', color: '#64748B' }}>
                           {mod.desc}
                         </span>
                       </div>
@@ -571,19 +571,16 @@ export default function RolesPermissionsModule({
                               height: 22,
                               borderRadius: 6,
                               border: `1.5px solid ${
-                                isChecked
-                                  ? (col.key === 'access' ? 'var(--cyan)' : '#10B981')
-                                  : 'rgba(255, 255, 255, 0.2)'
+                                isChecked ? '#2451C5' : '#CBD5E1'
                               }`,
-                              background: isChecked
-                                ? (col.key === 'access' ? 'rgba(6, 182, 212, 0.25)' : 'rgba(16, 185, 129, 0.25)')
-                                : 'var(--bg-surface-elevated)',
+                              background: isChecked ? '#2451C5' : '#FFFFFF',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
-                              color: isChecked ? (col.key === 'access' ? 'var(--cyan)' : '#34D399') : 'transparent',
+                              color: isChecked ? '#FFFFFF' : 'transparent',
                               opacity: isDisabled && !isSuper ? 0.35 : 1,
-                              transition: 'all 0.15s ease'
+                              transition: 'all 0.15s ease',
+                              boxShadow: isChecked ? '0 1px 3px rgba(36, 81, 197, 0.3)' : 'none'
                             }}>
                               <Check size={14} strokeWidth={3} />
                             </div>

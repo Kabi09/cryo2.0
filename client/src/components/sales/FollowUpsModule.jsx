@@ -102,7 +102,7 @@ export default function FollowUpsModule({ followUps, customers, leads, quotation
       accessor: 'customer',
       render: (row) => (
         <div>
-          <strong style={{ color: '#fff' }}>{row.customer?.companyName || '—'}</strong>
+          <strong style={{ color: 'var(--text-primary)' }}>{row.customer?.companyName || '—'}</strong>
           <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
             {row.customer?.contactPerson} • {row.customer?.mobileNumber}
           </div>
@@ -112,7 +112,7 @@ export default function FollowUpsModule({ followUps, customers, leads, quotation
     {
       header: 'Related Lead',
       render: (row) => row.relatedLead?.leadNumber ? (
-        <span style={{ color: '#818CF8', fontFamily: 'var(--font-mono)', fontSize: '0.8rem' }}>
+        <span className="code-badge">
           {row.relatedLead?.leadNumber}
         </span>
       ) : '—'

@@ -124,7 +124,7 @@ export default function SalesReportsModule({ reportsData, showToast }) {
   // Columns for each tab
   const enquiryCols = [
     { header: 'Enquiry No', accessor: 'enquiryNumber', render: (r) => <span className="code-badge">{r.enquiryNumber}</span> },
-    { header: 'Customer', accessor: 'companyName', render: (r) => <strong style={{ color: '#fff' }}>{r.companyName}</strong> },
+    { header: 'Customer', accessor: 'companyName', render: (r) => <strong style={{ color: 'var(--text-primary)' }}>{r.companyName}</strong> },
     { header: 'Product', render: (r) => r.product?.productName },
     { header: 'Quantity', accessor: 'quantity', render: (r) => `${r.quantity} ${r.unit}` },
     { header: 'Source', accessor: 'enquirySource', render: (r) => <span className="nav-badge-pill">{r.enquirySource}</span> },
@@ -133,7 +133,7 @@ export default function SalesReportsModule({ reportsData, showToast }) {
 
   const leadCols = [
     { header: 'Lead No', accessor: 'leadNumber', render: (r) => <span className="code-badge">{r.leadNumber}</span> },
-    { header: 'Customer', render: (r) => <strong style={{ color: '#fff' }}>{r.customer?.companyName}</strong> },
+    { header: 'Customer', render: (r) => <strong style={{ color: 'var(--text-primary)' }}>{r.customer?.companyName}</strong> },
     { header: 'Interested Product', render: (r) => r.interestedProduct?.productName },
     { header: 'Expected Value', accessor: 'expectedOrderValue', render: (r) => `₹${r.expectedOrderValue?.toLocaleString('en-IN')}` },
     { header: 'Lead Status', accessor: 'leadStatus', render: (r) => <StatusBadge status={r.leadStatus} /> },
@@ -143,16 +143,16 @@ export default function SalesReportsModule({ reportsData, showToast }) {
   const quotationCols = [
     { header: 'Quote No', accessor: 'quotationNumber', render: (r) => <span className="code-badge">{r.quotationNumber}</span> },
     { header: 'Version', accessor: 'version', render: (r) => <span className="badge badge-info">{r.version}</span> },
-    { header: 'Customer', render: (r) => <strong style={{ color: '#fff' }}>{r.customer?.companyName}</strong> },
+    { header: 'Customer', render: (r) => <strong style={{ color: 'var(--text-primary)' }}>{r.customer?.companyName}</strong> },
     { header: 'Date', render: (r) => new Date(r.quotationDate).toLocaleDateString('en-GB') },
-    { header: 'Grand Total', accessor: 'grandTotal', render: (r) => <span style={{ fontFamily: 'var(--font-mono)', color: '#34D399', fontWeight: 700 }}>₹{r.grandTotal?.toLocaleString('en-IN')}</span> },
+    { header: 'Grand Total', accessor: 'grandTotal', render: (r) => <span style={{ fontFamily: 'var(--font-mono)', color: '#16A36A', fontWeight: 700 }}>₹{r.grandTotal?.toLocaleString('en-IN')}</span> },
     { header: 'Status', accessor: 'status', render: (r) => <StatusBadge status={r.status} /> }
   ];
 
   const soCols = [
     { header: 'SO No', accessor: 'soNumber', render: (r) => <span className="code-badge">{r.soNumber}</span> },
-    { header: 'Customer', render: (r) => <strong style={{ color: '#fff' }}>{r.customer?.companyName}</strong> },
-    { header: 'Total Value', accessor: 'orderAmount', render: (r) => <span style={{ fontFamily: 'var(--font-mono)', color: '#34D399', fontWeight: 700 }}>₹{r.orderAmount?.toLocaleString('en-IN')}</span> },
+    { header: 'Customer', render: (r) => <strong style={{ color: 'var(--text-primary)' }}>{r.customer?.companyName}</strong> },
+    { header: 'Total Value', accessor: 'orderAmount', render: (r) => <span style={{ fontFamily: 'var(--font-mono)', color: '#16A36A', fontWeight: 700 }}>₹{r.orderAmount?.toLocaleString('en-IN')}</span> },
     { header: 'Advance Recv', accessor: 'advanceReceived', render: (r) => `₹${r.advanceReceived?.toLocaleString('en-IN')}` },
     { header: 'Target Delivery', render: (r) => new Date(r.expectedDeliveryDate).toLocaleDateString('en-GB') },
     { header: 'Status', accessor: 'status', render: (r) => <StatusBadge status={r.status} /> }
@@ -160,7 +160,7 @@ export default function SalesReportsModule({ reportsData, showToast }) {
 
   const customerCols = [
     { header: 'Code', accessor: 'customerCode', render: (r) => <span className="code-badge">{r.customerCode}</span> },
-    { header: 'Company Name', accessor: 'companyName', render: (r) => <strong style={{ color: '#fff' }}>{r.companyName}</strong> },
+    { header: 'Company Name', accessor: 'companyName', render: (r) => <strong style={{ color: 'var(--text-primary)' }}>{r.companyName}</strong> },
     { header: 'Contact Person', accessor: 'contactPerson' },
     { header: 'Mobile', accessor: 'mobileNumber' },
     { header: 'City', accessor: 'city' },
@@ -169,9 +169,9 @@ export default function SalesReportsModule({ reportsData, showToast }) {
 
   const paymentCols = [
     { header: 'Payment No', accessor: 'paymentNumber', render: (r) => <span className="code-badge">{r.paymentNumber}</span> },
-    { header: 'Customer', render: (r) => <strong style={{ color: '#fff' }}>{r.customer?.companyName}</strong> },
+    { header: 'Customer', render: (r) => <strong style={{ color: 'var(--text-primary)' }}>{r.customer?.companyName}</strong> },
     { header: 'PI Ref', render: (r) => r.piReference?.piNumber },
-    { header: 'Amount Received', accessor: 'amountReceived', render: (r) => <span style={{ fontFamily: 'var(--font-mono)', color: '#34D399', fontWeight: 700 }}>₹{r.amountReceived?.toLocaleString('en-IN')}</span> },
+    { header: 'Amount Received', accessor: 'amountReceived', render: (r) => <span style={{ fontFamily: 'var(--font-mono)', color: '#16A36A', fontWeight: 700 }}>₹{r.amountReceived?.toLocaleString('en-IN')}</span> },
     { header: 'Channel', accessor: 'paymentMethod' },
     { header: 'Status', accessor: 'status', render: (r) => <StatusBadge status={r.status} /> }
   ];

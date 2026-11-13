@@ -123,12 +123,12 @@ export default function LogisticsReportsModule({
     {
       header: 'SO Ref',
       accessor: 'soNumber',
-      render: (r) => <span className="font-mono" style={{ color: '#818CF8' }}>{r.soNumber || 'SO-001'}</span>
+      render: (r) => <span className="code-badge">{r.soNumber || 'SO-001'}</span>
     },
     {
       header: 'Customer',
       accessor: 'customerName',
-      render: (r) => <strong style={{ color: '#fff' }}>{r.customerName}</strong>
+      render: (r) => <strong style={{ color: 'var(--text-primary)' }}>{r.customerName}</strong>
     },
     {
       header: 'Product & Qty',
@@ -165,17 +165,17 @@ export default function LogisticsReportsModule({
     {
       header: 'Tracking No',
       accessor: 'trackingNumber',
-      render: (r) => <span className="font-mono text-cyan" style={{ fontWeight: 700 }}>{r.trackingNumber}</span>
+      render: (r) => <span className="code-badge">{r.trackingNumber}</span>
     },
     {
       header: 'Delivery Ref',
       accessor: 'deliveryNumber',
-      render: (r) => <span className="font-mono" style={{ color: '#818CF8' }}>{r.deliveryNumber}</span>
+      render: (r) => <span className="code-badge">{r.deliveryNumber}</span>
     },
     {
       header: 'Current Location',
       accessor: 'currentLocation',
-      render: (r) => <strong style={{ color: '#fff' }}>{r.currentLocation}</strong>
+      render: (r) => <strong style={{ color: 'var(--text-primary)' }}>{r.currentLocation}</strong>
     },
     {
       header: 'Delay Status',
@@ -198,12 +198,12 @@ export default function LogisticsReportsModule({
     {
       header: 'Completion No',
       accessor: 'completionNumber',
-      render: (r) => <span className="font-mono text-cyan" style={{ fontWeight: 700 }}>{r.completionNumber}</span>
+      render: (r) => <span className="code-badge">{r.completionNumber}</span>
     },
     {
       header: 'Customer',
       accessor: 'customerName',
-      render: (r) => <strong style={{ color: '#fff' }}>{r.customerName}</strong>
+      render: (r) => <strong style={{ color: 'var(--text-primary)' }}>{r.customerName}</strong>
     },
     {
       header: 'Equipment',

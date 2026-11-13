@@ -170,7 +170,7 @@ export default function EnquiriesModule({ enquiries, products, customers, onSave
       accessor: 'companyName',
       render: (row) => (
         <div>
-          <strong style={{ color: '#fff' }}>{row.companyName}</strong>
+          <strong style={{ color: 'var(--text-primary)' }}>{row.companyName}</strong>
           <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{row.contactPerson}</div>
         </div>
       )
@@ -180,7 +180,7 @@ export default function EnquiriesModule({ enquiries, products, customers, onSave
       accessor: 'product',
       render: (row) => (
         <div>
-          <span style={{ fontWeight: 600, color: '#C7D2FE' }}>
+          <span style={{ fontWeight: 600, color: 'var(--primary)' }}>
             {row.product?.productName || 'Custom Product'}
           </span>
           <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>

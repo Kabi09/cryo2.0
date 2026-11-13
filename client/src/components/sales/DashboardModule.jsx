@@ -90,7 +90,7 @@ export default function DashboardModule({ dashboardData, onNavigateModule }) {
             justifyContent: 'space-between'
           }}>
             <div>
-              <h3 style={{ fontSize: '0.98rem', fontWeight: 700, color: '#fff' }}>Recent Customer Enquiries</h3>
+              <h3 style={{ fontSize: '0.98rem', fontWeight: 700, color: 'var(--text-primary)' }}>Recent Customer Enquiries</h3>
               <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>Latest incoming product requirements</p>
             </div>
             <button
@@ -119,13 +119,13 @@ export default function DashboardModule({ dashboardData, onNavigateModule }) {
                       style={{ cursor: 'pointer' }}
                     >
                       <td>
-                        <strong style={{ color: '#fff' }}>{enq.companyName}</strong>
+                        <strong style={{ color: 'var(--text-primary)' }}>{enq.companyName}</strong>
                         <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
                           {enq.contactPerson} • {enq.enquiryNumber}
                         </div>
                       </td>
                       <td>
-                        <span style={{ color: '#C7D2FE', fontWeight: 500 }}>
+                        <span style={{ color: 'var(--primary)', fontWeight: 600 }}>
                           {enq.product?.productName || 'Machine Part'}
                         </span>
                         <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
@@ -159,7 +159,7 @@ export default function DashboardModule({ dashboardData, onNavigateModule }) {
             justifyContent: 'space-between'
           }}>
             <div>
-              <h3 style={{ fontSize: '0.98rem', fontWeight: 700, color: '#fff' }}>Upcoming Follow-ups</h3>
+              <h3 style={{ fontSize: '0.98rem', fontWeight: 700, color: 'var(--text-primary)' }}>Upcoming Follow-ups</h3>
               <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>Scheduled interactions & discussions</p>
             </div>
             <button
@@ -194,7 +194,7 @@ export default function DashboardModule({ dashboardData, onNavigateModule }) {
                   >
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <strong style={{ color: '#fff', fontSize: '0.88rem' }}>
+                        <strong style={{ color: 'var(--text-primary)', fontSize: '0.88rem' }}>
                           {fu.customer?.companyName || 'Valued Client'}
                         </strong>
                         <span className="badge badge-info" style={{ fontSize: '0.66rem' }}>
@@ -227,34 +227,35 @@ export default function DashboardModule({ dashboardData, onNavigateModule }) {
       {/* Financial Summary Highlight Banner */}
       <div style={{
         marginTop: 20,
-        background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(6, 182, 212, 0.08))',
-        border: '1px solid rgba(99, 102, 241, 0.25)',
+        background: '#FFFFFF',
+        border: '1px solid var(--border-subtle)',
         borderRadius: 'var(--radius-md)',
         padding: '18px 24px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
         flexWrap: 'wrap',
-        gap: 16
+        gap: 16,
+        boxShadow: 'var(--shadow-sm)'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <div style={{
             width: 42,
             height: 42,
             borderRadius: 'var(--radius-sm)',
-            background: 'rgba(99, 102, 241, 0.2)',
+            background: 'var(--primary-light)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: '#A5B4FC'
+            color: 'var(--primary)'
           }}>
             <DollarSign size={22} />
           </div>
           <div>
-            <div style={{ fontSize: '0.78rem', color: '#C7D2FE', textTransform: 'uppercase', fontWeight: 600 }}>
+            <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 600 }}>
               Sales Order Pipeline Value
             </div>
-            <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#fff', fontFamily: 'var(--font-mono)' }}>
+            <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>
               ₹{(kpis.totalOrderValue || 2700000).toLocaleString('en-IN')}
             </div>
           </div>
@@ -262,7 +263,7 @@ export default function DashboardModule({ dashboardData, onNavigateModule }) {
 
         <div>
           <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)', marginRight: 10 }}>Pending Collections:</span>
-          <span style={{ fontSize: '1.1rem', fontWeight: 700, color: '#FBBF24', fontFamily: 'var(--font-mono)' }}>
+          <span style={{ fontSize: '1.1rem', fontWeight: 700, color: '#D97706', fontFamily: 'var(--font-mono)' }}>
             ₹{(kpis.pendingPayments || 950000).toLocaleString('en-IN')}
           </span>
         </div>

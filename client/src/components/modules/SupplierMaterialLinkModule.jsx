@@ -78,7 +78,7 @@ export default function SupplierMaterialLinkModule({ links, suppliers, materials
       accessor: 'supplier',
       render: (row) => (
         <div>
-          <strong style={{ color: '#fff' }}>{row.supplier?.supplierName || '—'}</strong>
+          <strong style={{ color: 'var(--text-primary)' }}>{row.supplier?.supplierName || '—'}</strong>
           <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{row.supplier?.supplierCode}</div>
         </div>
       )
@@ -89,7 +89,7 @@ export default function SupplierMaterialLinkModule({ links, suppliers, materials
       render: (row) => (
         <div>
           <span style={{ fontWeight: 600 }}>{row.material?.materialName || '—'}</span>
-          <div style={{ fontSize: '0.72rem', color: '#60A5FA' }}>{row.material?.materialCode}</div>
+          <div style={{ fontSize: '0.72rem', color: 'var(--primary)' }}>{row.material?.materialCode}</div>
         </div>
       )
     },

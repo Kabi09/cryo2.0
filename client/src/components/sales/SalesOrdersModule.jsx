@@ -110,7 +110,7 @@ export default function SalesOrdersModule({ salesOrders, customers, customerPOs,
       accessor: 'customer',
       render: (row) => (
         <div>
-          <strong style={{ color: '#fff' }}>{row.customer?.companyName || '—'}</strong>
+          <strong style={{ color: 'var(--text-primary)' }}>{row.customer?.companyName || '—'}</strong>
           <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{row.customer?.contactPerson}</div>
         </div>
       )
@@ -124,7 +124,7 @@ export default function SalesOrdersModule({ salesOrders, customers, customerPOs,
       render: (row) => (
         <div>
           {row.items?.map((it, idx) => (
-            <div key={idx} style={{ fontSize: '0.8rem', color: '#C7D2FE' }}>
+            <div key={idx} style={{ fontSize: '0.8rem', color: 'var(--primary)' }}>
               {it.product?.productName || 'Machine'}: <strong>{it.quantity} {it.unit}</strong>
             </div>
           ))}

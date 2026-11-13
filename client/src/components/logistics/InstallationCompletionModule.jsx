@@ -159,12 +159,12 @@ export default function InstallationCompletionModule({
     {
       header: 'Installation Ref',
       accessor: 'installationNumber',
-      render: (row) => <span className="font-mono" style={{ color: '#818CF8' }}>{row.installationNumber}</span>
+      render: (row) => <span className="code-badge">{row.installationNumber}</span>
     },
     {
       header: 'Customer',
       accessor: 'customerName',
-      render: (row) => <strong style={{ color: '#fff' }}>{row.customerName}</strong>
+      render: (row) => <strong style={{ color: 'var(--text-primary)' }}>{row.customerName}</strong>
     },
     {
       header: 'Equipment & Serial',
@@ -622,22 +622,22 @@ export default function InstallationCompletionModule({
             <div style={{ marginTop: 18, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
               <div style={{ background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-subtle)', borderRadius: 8, padding: 14 }}>
                 <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Customer Sign-Off</div>
-                <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#fff', marginTop: 4 }}>
+                <div style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text-primary)', marginTop: 4 }}>
                   {selectedItem.customerConfirmation?.customerName || selectedItem.customerName}
                 </div>
                 <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', fontStyle: 'italic', marginTop: 4 }}>
                   "{selectedItem.customerConfirmation?.customerFeedback}"
                 </div>
-                <div style={{ marginTop: 8, fontSize: '0.74rem', color: '#10B981', fontFamily: 'var(--font-mono)' }}>
+                <div style={{ marginTop: 8, fontSize: '0.74rem', color: '#16A36A', fontFamily: 'var(--font-mono)' }}>
                   ✓ {selectedItem.customerConfirmation?.customerSignature}
                 </div>
               </div>
 
               <div style={{ background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-subtle)', borderRadius: 8, padding: 14 }}>
                 <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Service Engineer Sign-Off</div>
-                <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#fff', marginTop: 4 }}>{selectedItem.technician}</div>
+                <div style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text-primary)', marginTop: 4 }}>{selectedItem.technician}</div>
                 <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', marginTop: 4 }}>Lead Field Service Engineer</div>
-                <div style={{ marginTop: 8, fontSize: '0.74rem', color: 'var(--cyan)', fontFamily: 'var(--font-mono)' }}>
+                <div style={{ marginTop: 8, fontSize: '0.74rem', color: 'var(--primary)', fontFamily: 'var(--font-mono)' }}>
                   ✓ {selectedItem.customerConfirmation?.technicianSignature}
                 </div>
               </div>

@@ -102,14 +102,14 @@ export default function CustomerPOsModule({ customerPOs, customers, proformaInvo
     {
       header: 'Customer PO No',
       accessor: 'customerPONumber',
-      render: (row) => <strong style={{ color: '#fff' }}>{row.customerPONumber}</strong>
+      render: (row) => <strong style={{ color: 'var(--text-primary)' }}>{row.customerPONumber}</strong>
     },
     {
       header: 'Customer',
       accessor: 'customer',
       render: (row) => (
         <div>
-          <strong style={{ color: '#C7D2FE' }}>{row.customer?.companyName || '—'}</strong>
+          <strong style={{ color: 'var(--primary)' }}>{row.customer?.companyName || '—'}</strong>
           <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{row.customer?.contactPerson}</div>
         </div>
       )

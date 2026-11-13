@@ -91,13 +91,13 @@ function TreeBranchArrow({ isLast, isActive }) {
         {/* Vertical trunk line */}
         <path
           d={isLast ? "M 3 0 V 15" : "M 3 0 V 36"}
-          stroke="rgba(255, 255, 255, 0.12)"
+          stroke="rgba(0, 0, 0, 0.12)"
           strokeWidth="1.5"
         />
         {/* Smooth curved branch leading into item */}
         <path
           d="M 3 0 V 13 C 3 18, 6 21, 11 21 H 17"
-          stroke={isActive ? "var(--cyan)" : "rgba(255, 255, 255, 0.24)"}
+          stroke={isActive ? "#2451C5" : "rgba(0, 0, 0, 0.22)"}
           strokeWidth="1.5"
           strokeLinecap="round"
           className="tree-branch-curve"
@@ -106,7 +106,7 @@ function TreeBranchArrow({ isLast, isActive }) {
         {/* Right-pointing arrow tip */}
         <path
           d="M 13 18 L 17 21 L 13 24"
-          stroke={isActive ? "var(--cyan)" : "rgba(255, 255, 255, 0.24)"}
+          stroke={isActive ? "#2451C5" : "rgba(0, 0, 0, 0.22)"}
           strokeWidth="1.5"
           strokeLinecap="round"
           strokeLinejoin="round"

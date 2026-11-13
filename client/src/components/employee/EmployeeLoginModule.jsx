@@ -141,7 +141,7 @@ export default function EmployeeLoginModule({
             }}>
               <Key size={18} />
             </span>
-            <h1 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#fff' }}>
+            <h1 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)' }}>
               Employee Login Management
             </h1>
           </div>
@@ -154,8 +154,8 @@ export default function EmployeeLoginModule({
         {currentUser ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: '0.86rem', fontWeight: 700, color: '#fff' }}>{currentUser.name}</div>
-              <div style={{ fontSize: '0.72rem', color: 'var(--cyan)' }}>
+              <div style={{ fontSize: '0.86rem', fontWeight: 700, color: 'var(--text-primary)' }}>{currentUser.name}</div>
+              <div style={{ fontSize: '0.72rem', color: 'var(--primary)' }}>
                 {currentUser.role?.name || currentUser.roleName || 'Employee'}
               </div>
             </div>
@@ -179,8 +179,8 @@ export default function EmployeeLoginModule({
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div className="table-card" style={{ padding: 20 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-              <Zap size={18} style={{ color: 'var(--cyan)' }} />
-              <h3 style={{ fontSize: '0.98rem', fontWeight: 700, color: '#fff' }}>
+              <Zap size={18} style={{ color: 'var(--primary)' }} />
+              <h3 style={{ fontSize: '0.98rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                 Instant Role Switcher (RBAC Simulation)
               </h3>
             </div>
@@ -199,8 +199,8 @@ export default function EmployeeLoginModule({
                     style={{
                       padding: '12px 16px',
                       borderRadius: 10,
-                      background: isCurrent ? 'rgba(6, 182, 212, 0.12)' : 'var(--bg-surface-elevated)',
-                      border: `1px solid ${isCurrent ? 'var(--cyan)' : 'var(--border-subtle)'}`,
+                      background: isCurrent ? 'var(--primary-light)' : '#FFFFFF',
+                      border: `1px solid ${isCurrent ? 'var(--primary)' : 'var(--border-subtle)'}`,
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
@@ -216,7 +216,7 @@ export default function EmployeeLoginModule({
                   >
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ fontWeight: 700, fontSize: '0.86rem', color: isCurrent ? 'var(--cyan)' : '#fff' }}>
+                        <span style={{ fontWeight: 700, fontSize: '0.86rem', color: isCurrent ? 'var(--primary)' : 'var(--text-primary)' }}>
                           {acc.title}
                         </span>
                         <span className="badge badge-info" style={{ fontSize: '0.68rem', background: `${acc.color}20`, color: acc.color, border: `1px solid ${acc.color}40` }}>
@@ -257,7 +257,7 @@ export default function EmployeeLoginModule({
             <div className="table-card" style={{ padding: 20 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
                 <ShieldCheck size={18} style={{ color: '#10B981' }} />
-                <h3 style={{ fontSize: '0.98rem', fontWeight: 700, color: '#fff' }}>
+                <h3 style={{ fontSize: '0.98rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                   Current Active Identity
                 </h3>
               </div>
@@ -266,11 +266,11 @@ export default function EmployeeLoginModule({
                 <img
                   src={currentUser.profileImage || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(currentUser.name || 'User')}`}
                   alt={currentUser.name}
-                  style={{ width: 52, height: 52, borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--cyan)' }}
+                  style={{ width: 52, height: 52, borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--primary)' }}
                 />
                 <div>
-                  <h4 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#fff' }}>{currentUser.name}</h4>
-                  <div style={{ fontSize: '0.76rem', color: 'var(--cyan)', marginTop: 2 }}>
+                  <h4 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)' }}>{currentUser.name}</h4>
+                  <div style={{ fontSize: '0.76rem', color: 'var(--primary)', marginTop: 2 }}>
                     {currentUser.designation || 'Staff'} • {currentUser.departmentName || currentUser.department || 'General'}
                   </div>
                   <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 2, fontFamily: 'var(--font-mono)' }}>
@@ -303,8 +303,8 @@ export default function EmployeeLoginModule({
           {/* Manual Login Form */}
           <div className="table-card" style={{ padding: 20 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-              <Lock size={18} style={{ color: 'var(--cyan)' }} />
-              <h3 style={{ fontSize: '0.98rem', fontWeight: 700, color: '#fff' }}>
+              <Lock size={18} style={{ color: 'var(--primary)' }} />
+              <h3 style={{ fontSize: '0.98rem', fontWeight: 700, color: 'var(--text-primary)' }}>
                 Secure Custom Sign In
               </h3>
             </div>

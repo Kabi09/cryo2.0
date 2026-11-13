@@ -96,7 +96,7 @@ export default function ProformaInvoicesModule({ proformaInvoices, quotations, o
       accessor: 'customer',
       render: (row) => (
         <div>
-          <strong style={{ color: '#fff' }}>{row.customer?.companyName || '—'}</strong>
+          <strong style={{ color: 'var(--text-primary)' }}>{row.customer?.companyName || '—'}</strong>
           <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{row.customer?.contactPerson}</div>
         </div>
       )
@@ -104,7 +104,7 @@ export default function ProformaInvoicesModule({ proformaInvoices, quotations, o
     {
       header: 'Quotation Ref',
       render: (row) => (
-        <span style={{ fontFamily: 'var(--font-mono)', color: '#818CF8' }}>
+        <span className="code-badge">
           {row.quotation?.quotationNumber} ({row.quotation?.version})
         </span>
       )
@@ -249,19 +249,19 @@ export default function ProformaInvoicesModule({ proformaInvoices, quotations, o
             }}>
               <div>
                 <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block' }}>Grand Total</span>
-                <strong style={{ fontSize: '1.1rem', color: '#fff', fontFamily: 'var(--font-mono)' }}>
+                <strong style={{ fontSize: '1.1rem', color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>
                   ₹{grandTotal.toLocaleString('en-IN')}
                 </strong>
               </div>
               <div>
                 <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block' }}>Advance Due ({formData.advancePercentage}%)</span>
-                <strong style={{ fontSize: '1.1rem', color: '#FBBF24', fontFamily: 'var(--font-mono)' }}>
+                <strong style={{ fontSize: '1.1rem', color: '#D97706', fontFamily: 'var(--font-mono)' }}>
                   ₹{advanceAmount.toLocaleString('en-IN')}
                 </strong>
               </div>
               <div>
                 <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block' }}>Remaining Balance</span>
-                <strong style={{ fontSize: '1.1rem', color: '#34D399', fontFamily: 'var(--font-mono)' }}>
+                <strong style={{ fontSize: '1.1rem', color: '#16A36A', fontFamily: 'var(--font-mono)' }}>
                   ₹{balanceAmount.toLocaleString('en-IN')}
                 </strong>
               </div>

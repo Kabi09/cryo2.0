@@ -97,7 +97,7 @@ export default function InstallationModule({
       accessor: 'customerName',
       render: (row) => (
         <div>
-          <strong style={{ color: '#fff' }}>{row.customerName}</strong>
+          <strong style={{ color: 'var(--text-primary)' }}>{row.customerName}</strong>
           <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
             {row.contactPerson || 'N/A'} • {row.mobileNumber || ''}
           </div>
@@ -110,7 +110,7 @@ export default function InstallationModule({
       render: (row) => (
         <div>
           <span>{row.productName}</span>
-          <div style={{ fontSize: '0.72rem', color: 'var(--cyan)', fontFamily: 'var(--font-mono)' }}>
+          <div style={{ fontSize: '0.72rem', color: 'var(--primary)', fontFamily: 'var(--font-mono)' }}>
             SN: {row.serialNumber || 'N/A'} ({row.installationQuantity || 1} Units)
           </div>
         </div>

@@ -160,7 +160,7 @@ export default function QCTestsModule({ qcTests, grns, onSave, showToast, preSel
       accessor: 'material',
       render: (row) => (
         <div>
-          <strong style={{ color: '#fff' }}>{row.material?.materialName || '—'}</strong>
+          <strong style={{ color: 'var(--text-primary)' }}>{row.material?.materialName || '—'}</strong>
           <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Batch: {row.batchNumber}</div>
         </div>
       )
@@ -511,9 +511,9 @@ export default function QCTestsModule({ qcTests, grns, onSave, showToast, preSel
               </div>
             </div>
 
-            <div style={{ marginTop: 14, padding: '12px 14px', background: 'rgba(255, 255, 255, 0.02)', borderRadius: 'var(--radius-sm)' }}>
+            <div style={{ marginTop: 14, padding: '12px 14px', background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)' }}>
               <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Remarks</div>
-              <div style={{ fontSize: '0.85rem', color: '#fff', marginTop: 4 }}>
+              <div style={{ fontSize: '0.85rem', color: 'var(--text-primary)', marginTop: 4 }}>
                 {selectedQC.remarks || 'Standard pass certificate issued.'}
               </div>
             </div>

@@ -100,7 +100,7 @@ export default function EmployeeReportsModule({
     {
       header: 'Name',
       accessor: 'name',
-      render: (r) => <strong style={{ color: '#fff' }}>{r.name}</strong>
+      render: (r) => <strong style={{ color: 'var(--text-primary)' }}>{r.name}</strong>
     },
     {
       header: 'Department',
@@ -139,7 +139,7 @@ export default function EmployeeReportsModule({
     {
       header: 'Actor (User)',
       accessor: 'performedBy',
-      render: (r) => <strong style={{ color: '#fff' }}>@{r.performedBy}</strong>
+      render: (r) => <strong style={{ color: 'var(--text-primary)' }}>@{r.performedBy}</strong>
     },
     {
       header: 'Actor Role',
@@ -266,7 +266,7 @@ export default function EmployeeReportsModule({
       {activeReportTab === 'departments' && (
         <div className="table-card">
           <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-subtle)' }}>
-            <h3 style={{ fontSize: '0.98rem', fontWeight: 700, color: '#fff' }}>Departmental Headcount Breakdown</h3>
+            <h3 style={{ fontSize: '0.98rem', fontWeight: 700, color: 'var(--text-primary)' }}>Departmental Headcount Breakdown</h3>
             <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Staffing capacity and management oversight per corporate unit</p>
           </div>
           <div style={{ overflowX: 'auto' }}>
@@ -283,8 +283,8 @@ export default function EmployeeReportsModule({
               <tbody>
                 {departments.map(d => (
                   <tr key={d._id}>
-                    <td><span className="font-mono text-cyan" style={{ fontWeight: 700 }}>{d.departmentCode}</span></td>
-                    <td><strong style={{ color: '#fff' }}>{d.name}</strong></td>
+                    <td><span className="code-badge">{d.departmentCode}</span></td>
+                    <td><strong style={{ color: 'var(--text-primary)' }}>{d.name}</strong></td>
                     <td>{d.headOfDepartment}</td>
                     <td><span className="badge badge-info">{d.staffCount || 0} Members</span></td>
                     <td><StatusBadge status={d.status || 'Active'} /></td>

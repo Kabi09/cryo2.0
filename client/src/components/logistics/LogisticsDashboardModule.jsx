@@ -136,9 +136,9 @@ export default function LogisticsDashboardModule({ dashboardData, onNavigateModu
             <div style={{ fontSize: '0.7rem', color: 'var(--success)', fontWeight: 700 }}>06. RECEIPT</div>
             <div style={{ fontSize: '0.8rem', fontWeight: 600, marginTop: 4 }}>Proof of Delivery</div>
           </div>
-          <div style={{ padding: '12px 14px', background: 'rgba(6, 182, 212, 0.12)', borderRadius: 8, border: '1px solid var(--cyan)', textAlign: 'center' }}>
-            <div style={{ fontSize: '0.7rem', color: 'var(--cyan)', fontWeight: 700 }}>07. INSTALL</div>
-            <div style={{ fontSize: '0.8rem', fontWeight: 700, marginTop: 4, color: '#fff' }}>7-Point QA Checklist</div>
+          <div style={{ padding: '12px 14px', background: 'var(--primary-light)', borderRadius: 8, border: '1px solid var(--primary)', textAlign: 'center' }}>
+            <div style={{ fontSize: '0.7rem', color: 'var(--primary)', fontWeight: 700 }}>07. INSTALL</div>
+            <div style={{ fontSize: '0.8rem', fontWeight: 700, marginTop: 4, color: 'var(--text-primary)' }}>7-Point QA Checklist</div>
           </div>
         </div>
       </div>

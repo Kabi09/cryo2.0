@@ -85,7 +85,7 @@ export default function EmployeeDashboardModule({
             justifyContent: 'space-between'
           }}>
             <div>
-              <h3 style={{ fontSize: '0.98rem', fontWeight: 700, color: '#fff' }}>Departmental Headcount</h3>
+              <h3 style={{ fontSize: '0.98rem', fontWeight: 700, color: 'var(--text-primary)' }}>Departmental Headcount</h3>
               <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Workforce distribution across divisions</p>
             </div>
             <button
@@ -111,7 +111,7 @@ export default function EmployeeDashboardModule({
                 }}
               >
                 <div>
-                  <strong style={{ fontSize: '0.84rem', color: '#fff' }}>{d.name}</strong>
+                  <strong style={{ fontSize: '0.84rem', color: 'var(--text-primary)' }}>{d.name}</strong>
                   <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Lead: {d.headOfDepartment}</div>
                 </div>
                 <span className="badge badge-info" style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>
@@ -132,7 +132,7 @@ export default function EmployeeDashboardModule({
             justifyContent: 'space-between'
           }}>
             <div>
-              <h3 style={{ fontSize: '0.98rem', fontWeight: 700, color: '#fff' }}>Access Control Matrix</h3>
+              <h3 style={{ fontSize: '0.98rem', fontWeight: 700, color: 'var(--text-primary)' }}>Access Control Matrix</h3>
               <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Role-based security configuration</p>
             </div>
             <button
@@ -159,7 +159,7 @@ export default function EmployeeDashboardModule({
               >
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <strong style={{ fontSize: '0.84rem', color: r.isSuperAdmin ? 'var(--cyan)' : '#fff' }}>
+                    <strong style={{ fontSize: '0.84rem', color: r.isSuperAdmin ? 'var(--primary)' : 'var(--text-primary)' }}>
                       {r.isSuperAdmin ? '👑 ' : ''}{r.name}
                     </strong>
                     <span className="badge badge-info" style={{ fontSize: '0.66rem' }}>{r.department}</span>
@@ -183,7 +183,7 @@ export default function EmployeeDashboardModule({
           justifyContent: 'space-between'
         }}>
           <div>
-            <h3 style={{ fontSize: '0.98rem', fontWeight: 700, color: '#fff' }}>Recent Personnel Profiles</h3>
+            <h3 style={{ fontSize: '0.98rem', fontWeight: 700, color: 'var(--text-primary)' }}>Recent Personnel Profiles</h3>
             <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Active employee credentials in ERP</p>
           </div>
           <button
@@ -209,8 +209,8 @@ export default function EmployeeDashboardModule({
             <tbody>
               {recentEmployees.map(emp => (
                 <tr key={emp._id}>
-                  <td><span className="font-mono text-cyan" style={{ fontWeight: 700 }}>{emp.employeeId}</span></td>
-                  <td><strong style={{ color: '#fff' }}>{emp.name}</strong></td>
+                  <td><span className="code-badge">{emp.employeeId}</span></td>
+                  <td><strong style={{ color: 'var(--text-primary)' }}>{emp.name}</strong></td>
                   <td>{emp.departmentName || 'General'}</td>
                   <td>{emp.designation}</td>
                   <td><span className="badge badge-info">{emp.roleName || emp.role?.name}</span></td>

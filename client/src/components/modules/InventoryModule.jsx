@@ -80,7 +80,7 @@ export default function InventoryModule({ inventory, onAdjustStock, showToast })
       accessor: 'materialName',
       render: (row) => (
         <div>
-          <strong style={{ color: '#fff' }}>{row.material?.materialName || '—'}</strong>
+          <strong style={{ color: 'var(--text-primary)' }}>{row.material?.materialName || '—'}</strong>
           <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{row.material?.category}</div>
         </div>
       )
@@ -213,14 +213,14 @@ export default function InventoryModule({ inventory, onAdjustStock, showToast })
               </div>
               <div>
                 <div className="detail-label">Current Available</div>
-                <div style={{ fontWeight: 800, fontSize: '1.2rem', color: '#60A5FA', fontFamily: 'var(--font-mono)' }}>
+                <div style={{ fontWeight: 800, fontSize: '1.2rem', color: 'var(--primary)', fontFamily: 'var(--font-mono)' }}>
                   {selectedItem.availableStock} {selectedItem.material?.unit}
                 </div>
               </div>
             </div>
 
             {/* Ledger Transactions */}
-            <div style={{ fontWeight: 700, fontSize: '0.85rem', color: '#fff', marginBottom: 8 }}>
+            <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-primary)', marginBottom: 8 }}>
               Chronological Movement History
             </div>
 

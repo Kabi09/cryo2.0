@@ -143,7 +143,7 @@ export default function MaterialIssueModule({ materialIssues, materials, invento
     {
       header: 'Work Order',
       accessor: 'workOrder',
-      render: (row) => <strong style={{ color: '#fff' }}>{row.workOrder}</strong>
+      render: (row) => <strong style={{ color: 'var(--text-primary)' }}>{row.workOrder}</strong>
     },
     {
       header: 'Department',
@@ -156,7 +156,7 @@ export default function MaterialIssueModule({ materialIssues, materials, invento
         <div>
           {row.items?.map((it, idx) => (
             <div key={idx} style={{ fontSize: '0.8rem' }}>
-              {it.material?.materialName}: <strong style={{ color: '#60A5FA' }}>{it.issueQuantity} {it.unit}</strong>
+              {it.material?.materialName}: <strong style={{ color: 'var(--primary)' }}>{it.issueQuantity} {it.unit}</strong>
             </div>
           ))}
         </div>

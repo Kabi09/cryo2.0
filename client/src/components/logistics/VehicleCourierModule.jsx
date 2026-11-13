@@ -63,13 +63,13 @@ export default function VehicleCourierModule({
     {
       header: 'Code',
       accessor: 'code',
-      render: (row) => <span className="font-mono text-cyan" style={{ fontWeight: 700 }}>{row.code}</span>
+      render: (row) => <span className="code-badge">{row.code}</span>
     },
     {
       header: 'Vehicle / Courier Partner',
       render: (row) => (
         <div>
-          <strong style={{ color: '#fff' }}>
+          <strong style={{ color: 'var(--text-primary)' }}>
             {row.entityType === 'Company Vehicle' ? row.vehicleNumber : row.courierPartner}
           </strong>
           <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>

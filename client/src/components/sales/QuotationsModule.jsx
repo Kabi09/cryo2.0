@@ -233,7 +233,7 @@ export default function QuotationsModule({ quotations, customers, leads, product
       accessor: 'customer',
       render: (row) => (
         <div>
-          <strong style={{ color: '#fff' }}>{row.customer?.companyName || '—'}</strong>
+          <strong style={{ color: 'var(--text-primary)' }}>{row.customer?.companyName || '—'}</strong>
           <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{row.customer?.contactPerson}</div>
         </div>
       )
@@ -551,12 +551,12 @@ export default function QuotationsModule({ quotations, customers, leads, product
                 justifyContent: 'space-between',
                 fontSize: '1.1rem',
                 fontWeight: 800,
-                color: '#fff',
+                color: 'var(--text-primary)',
                 borderTop: '1px solid var(--border-subtle)',
                 paddingTop: 8
               }}>
                 <span>Grand Total:</span>
-                <span style={{ color: '#34D399', fontFamily: 'var(--font-mono)' }}>
+                <span style={{ color: '#16A36A', fontFamily: 'var(--font-mono)' }}>
                   ₹{grandTotal.toLocaleString('en-IN')}
                 </span>
               </div>

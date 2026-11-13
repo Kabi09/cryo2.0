@@ -38,7 +38,7 @@ export default function DepartmentsModule({
       header: 'Dept Code',
       accessor: 'departmentCode',
       render: (row) => (
-        <span className="font-mono text-cyan" style={{ fontWeight: 700 }}>
+        <span className="code-badge">
           {row.departmentCode}
         </span>
       )
@@ -48,7 +48,7 @@ export default function DepartmentsModule({
       accessor: 'name',
       render: (row) => (
         <div>
-          <strong style={{ color: '#fff', fontSize: '0.86rem' }}>{row.name}</strong>
+          <strong style={{ color: 'var(--text-primary)', fontSize: '0.86rem' }}>{row.name}</strong>
           <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{row.description}</div>
         </div>
       )

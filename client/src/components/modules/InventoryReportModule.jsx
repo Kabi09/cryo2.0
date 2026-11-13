@@ -75,7 +75,7 @@ export default function InventoryReportModule({ reportsData, showToast }) {
       accessor: 'materialName',
       render: (row) => (
         <div>
-          <strong style={{ color: '#fff' }}>{row.materialName}</strong>
+          <strong style={{ color: 'var(--text-primary)' }}>{row.materialName}</strong>
           <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{row.category}</div>
         </div>
       )
