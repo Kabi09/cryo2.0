@@ -47,110 +47,56 @@ export default function Header({
     .toUpperCase();
 
   return (
-    <header className="top-header" style={{
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      gap: 16,
-      background: '#FFFFFF',
-      borderBottom: '1px solid #E5EAF1',
-      padding: '0 24px',
-      height: 70,
-      position: 'sticky',
-      top: 0,
-      zIndex: 30,
-      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.02)'
-    }}>
-      {/* Left: Mobile Toggle + Brand Logo & Title from Reference 1 */}
-      <div className="header-left" style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+    <header className="top-header">
+      {/* Left: Mobile Menu Toggle + Brand Logo & Title */}
+      <div className="header-left">
         <button
           className="mobile-menu-btn"
           onClick={onToggleMobileMenu}
           title="Open navigation"
-          style={{
-            display: 'none',
-            background: '#F1F5F9',
-            border: '1px solid #E2E8F0',
-            color: '#172033',
-            cursor: 'pointer',
-            padding: 7,
-            borderRadius: 8
-          }}
+          type="button"
+          aria-label="Toggle navigation drawer"
         >
           <Menu size={20} />
         </button>
 
         {/* Brand identity matching reference screenshot 1 */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{
-            width: 38,
-            height: 38,
-            borderRadius: 10,
-            background: 'linear-gradient(135deg, #2451C5, #3B82F6)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#FFFFFF',
-            boxShadow: '0 2px 8px rgba(36, 81, 197, 0.25)'
-          }}>
+        <div className="header-brand-block">
+          <div className="header-brand-logo">
             <Layers size={20} />
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: '1.05rem', fontWeight: 800, color: '#172033', letterSpacing: '-0.02em' }}>
+          <div className="header-brand-info">
+            <div className="header-brand-row">
+              <span className="header-brand-title">
                 CryoWorks
               </span>
-              <span style={{
-                fontSize: '0.66rem',
-                fontWeight: 700,
-                background: '#2451C5',
-                color: '#FFFFFF',
-                padding: '1px 6px',
-                borderRadius: 5,
-                letterSpacing: '0.04em'
-              }}>
+              <span className="header-brand-badge">
                 ADMIN
               </span>
             </div>
-            <span style={{ fontSize: '0.7rem', color: '#64748B', fontWeight: 500 }}>
+            <span className="header-brand-subtitle">
               Enterprise ERP System
             </span>
           </div>
         </div>
 
         {/* Breadcrumb separator & current module */}
-        <div className="hide-sm" style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 10 }}>
+        <div className="header-breadcrumb">
           <ChevronRight size={14} style={{ color: '#94A3B8' }} />
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{
-              fontSize: '0.72rem',
-              fontWeight: 700,
-              color: '#2451C5',
-              background: '#EFF6FF',
-              border: '1px solid #DBEAFE',
-              padding: '2px 8px',
-              borderRadius: 6
-            }}>
+            <span className="header-breadcrumb-tag">
               {getDomainLabel()}
             </span>
-            <span style={{ fontSize: '0.88rem', fontWeight: 700, color: '#172033' }}>
+            <span className="header-breadcrumb-module">
               {currentModule.title}
             </span>
           </div>
         </div>
       </div>
 
-      {/* Center: Department Switcher Pills */}
-      <div className="hide-sm" style={{
-        display: 'flex',
-        alignItems: 'center',
-        background: '#F1F5F9',
-        padding: 4,
-        borderRadius: 10,
-        border: '1px solid #E2E8F0',
-        gap: 3
-      }}>
+      {/* Center: Department Switcher Pills (Desktop only) */}
+      <div className="header-dept-pills">
         {[
           { key: 'scm', label: 'SCM (10)', icon: Package },
           { key: 'sales', label: 'Sales (10)', icon: Briefcase },
@@ -164,21 +110,8 @@ export default function Header({
             <button
               key={dept.key}
               onClick={() => onSelectDomain(dept.key)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 5,
-                padding: '6px 12px',
-                fontSize: '0.74rem',
-                fontWeight: 700,
-                border: 'none',
-                borderRadius: 7,
-                cursor: 'pointer',
-                transition: 'all 0.16s ease',
-                background: isActive ? '#2451C5' : 'transparent',
-                color: isActive ? '#FFFFFF' : '#475569',
-                boxShadow: isActive ? '0 2px 8px rgba(36, 81, 197, 0.25)' : 'none'
-              }}
+              type="button"
+              className={`header-dept-btn ${isActive ? 'active' : ''}`}
             >
               <Icon size={13} />
               <span>{dept.label}</span>
@@ -187,46 +120,23 @@ export default function Header({
         })}
       </div>
 
-      {/* Right: Quick Actions, DB Status & User Profile Pill (Reference 1) */}
-      <div className="header-right" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      {/* Right: Quick Actions, DB Status & User Profile Pill */}
+      <div className="header-right">
         {/* Sync / Refresh Button */}
         <button
           onClick={onRefresh}
           disabled={isRefreshing}
           title="Sync live data"
-          style={{
-            width: 36,
-            height: 36,
-            borderRadius: '50%',
-            background: '#FFFFFF',
-            border: '1px solid #E2E8F0',
-            color: '#334155',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            transition: 'all 0.15s ease',
-            boxShadow: '0 1px 2px rgba(0, 0, 0, 0.04)'
-          }}
+          type="button"
+          className="header-icon-btn"
         >
           <RefreshCw size={15} className={isRefreshing ? 'spin-anim' : ''} />
         </button>
 
         {/* Database Status Pill */}
         <div
+          className={`header-db-pill ${dbHealth?.connected !== false ? 'connected' : 'disconnected'}`}
           title={`MongoDB: ${dbHealth?.host || '127.0.0.1'}:${dbHealth?.port || 27017} (${dbHealth?.name || 'cryo_scm'})`}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-            background: dbHealth?.connected !== false ? '#ECFDF5' : '#FEF2F2',
-            border: `1px solid ${dbHealth?.connected !== false ? '#A7F3D0' : '#FECACA'}`,
-            color: dbHealth?.connected !== false ? '#16A36A' : '#EF4444',
-            padding: '5px 11px',
-            borderRadius: 99,
-            fontSize: '0.73rem',
-            fontWeight: 700
-          }}
         >
           <Database size={12} />
           <span
@@ -235,71 +145,29 @@ export default function Header({
               backgroundColor: dbHealth?.connected !== false ? '#16A36A' : '#EF4444'
             }}
           />
-          <span>DB: {dbHealth?.status || 'Connected'}</span>
+          <span className="header-db-text">DB: {dbHealth?.status || 'Connected'}</span>
         </div>
 
         {/* Notifications Icon Button */}
         <button
           title="Notifications"
-          className="hide-sm"
-          style={{
-            width: 36,
-            height: 36,
-            borderRadius: '50%',
-            background: '#FFFFFF',
-            border: '1px solid #E2E8F0',
-            color: '#64748B',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            transition: 'all 0.15s ease',
-            position: 'relative'
-          }}
+          type="button"
+          className="header-icon-btn hide-on-mobile"
         >
           <Bell size={16} />
-          <span style={{
-            position: 'absolute',
-            top: 7,
-            right: 7,
-            width: 6,
-            height: 6,
-            borderRadius: '50%',
-            backgroundColor: '#2451C5'
-          }} />
+          <span className="header-bell-dot" />
         </button>
 
         {/* User Profile Pill matching Reference Screenshot 1 */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 9,
-          background: '#F8FAFC',
-          border: '1px solid #E2E8F0',
-          padding: '4px 12px 4px 6px',
-          borderRadius: 99,
-          cursor: 'pointer'
-        }}>
-          <div style={{
-            width: 30,
-            height: 30,
-            borderRadius: '50%',
-            background: '#2451C5',
-            color: '#FFFFFF',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontWeight: 800,
-            fontSize: '0.75rem',
-            letterSpacing: '0.02em'
-          }}>
+        <div className="header-user-pill">
+          <div className="header-user-avatar">
             {userInitials}
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.15 }}>
-            <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#172033' }}>
+          <div className="header-user-text">
+            <span className="header-user-name">
               {userName}
             </span>
-            <span style={{ fontSize: '0.66rem', color: '#64748B', fontWeight: 500 }}>
+            <span className="header-user-role">
               {userCode} • {userRole}
             </span>
           </div>

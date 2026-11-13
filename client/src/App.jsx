@@ -60,7 +60,7 @@ import EmployeeLoginModule from './components/employee/EmployeeLoginModule';
 import EmployeeReportsModule from './components/employee/EmployeeReportsModule';
 
 import { api } from './services/api';
-import { CheckCircle2, AlertCircle, Info } from 'lucide-react';
+import { CheckCircle2, AlertCircle, Info, Package, Briefcase, Factory, Truck, Users } from 'lucide-react';
 
 export default function App() {
   const [activeDomain, setActiveDomain] = useState('scm'); // 'scm' | 'sales' | 'production'
@@ -1206,6 +1206,34 @@ export default function App() {
           </div>
         ))}
       </div>
+
+      {/* Mobile Bottom Navigation Bar */}
+      <nav className="mobile-bottom-nav">
+        {[
+          { key: 'scm', label: 'SCM', icon: Package, defaultModule: 'scm-materials' },
+          { key: 'sales', label: 'Sales', icon: Briefcase, defaultModule: 'sales-dashboard' },
+          { key: 'production', label: 'Prod', icon: Factory, defaultModule: 'production-dashboard' },
+          { key: 'logistics', label: 'Logistics', icon: Truck, defaultModule: 'logistics-dashboard' },
+          { key: 'employee', label: 'HR & RBAC', icon: Users, defaultModule: 'employee-dashboard' }
+        ].map(item => {
+          const Icon = item.icon;
+          const isActive = activeDomain === item.key;
+          return (
+            <button
+              key={item.key}
+              type="button"
+              className={`mobile-bottom-nav-item ${isActive ? 'active' : ''}`}
+              onClick={() => {
+                handleDomainChange(item.key);
+                setActiveModule(item.defaultModule);
+              }}
+            >
+              <Icon size={18} />
+              <span>{item.label}</span>
+            </button>
+          );
+        })}
+      </nav>
     </div>
   );
 }

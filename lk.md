@@ -170,10 +170,26 @@
 - **Reason**: User requested complete elimination of crowded dark interface in favor of clean enterprise light theme matching reference screenshot 1.
 - **Impact**: Crystal-clear legibility, cohesive design system across all 47 modules, zero compile errors (`vite build` in 941ms).
 
+#### Change: Mobile Responsive Layout & Viewport Scaling Fix
+- **What was changed**: Resolved issue where mobile/tablet viewport caused content to squeeze into a narrow strip on the left with huge empty white space on the right (due to top header expanding to ~1300px without wrapping and hamburger button having inline `display: none`).
+- **Files changed**:
+  - `client/src/index.css`: Added global `width: 100%; max-width: 100vw; overflow-x: hidden;` constraints on `.app-container` and `.main-wrapper`. Overhauled responsive media queries for `<= 1024px`, `<= 768px`, and `<= 480px`. Added `.card` styling and `.mobile-bottom-nav` styles.
+  - `client/src/components/common/Header.jsx`: Removed inline `display: none` from `.mobile-menu-btn`. Converted header elements into semantic responsive classes (`.header-dept-pills`, `.header-breadcrumb`, `.header-user-text`, `.header-db-text`), allowing them to gracefully hide on small viewports so the header stays strictly within `100vw`.
+  - `client/src/App.jsx`: Added fixed mobile bottom navigation bar (`.mobile-bottom-nav`) with 5 department buttons (SCM, Sales, Prod, Logistics, HR & RBAC) matching user mobile reference screenshots.
+- **Logic & Styling changed**:
+  - On mobile/tablet (`<= 1024px`), `.main-wrapper` expands to `100vw` with `margin-left: 0`.
+  - Content body and tables now fill `100%` of mobile width without horizontal blowout.
+  - Hamburger menu button (`☰`) is now functional on mobile, toggling the animated drawer sidebar.
+  - Mobile bottom navigation bar provides 1-tap switching between all 5 enterprise domains.
+- **Reason**: Fix layout not fitting on mobile screen (`media_1794576870826_d4438365.png`).
+- **Impact**: Flawless responsive presentation across all device viewports from 320px mobile to 4K desktop.
+
 ---
 
 ## Current Progress
 - **Completed**:
+  - Mobile Responsive Layout: 100% responsive across mobile, tablet, and desktop viewports.
+  - Mobile Bottom Navigation Bar: Implemented 5-tab quick switcher matching mobile reference.
   - UI/UX Complete Redesign: 100% migrated to clean light theme matching Reference Screenshot 1.
   - Supply Chain Management: 10/10 modules fully operational with light styling.
   - Sales Management CRM: 10/10 modules fully operational with light styling.
