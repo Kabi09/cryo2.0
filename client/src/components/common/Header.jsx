@@ -1,6 +1,6 @@
 import React from 'react';
-import { Menu, RefreshCw, Package, Briefcase, Factory } from 'lucide-react';
-import { SCM_MODULES, SALES_MODULES, PRODUCTION_MODULES } from './Sidebar';
+import { Menu, RefreshCw, Package, Briefcase, Factory, Truck } from 'lucide-react';
+import { SCM_MODULES, SALES_MODULES, PRODUCTION_MODULES, LOGISTICS_MODULES } from './Sidebar';
 
 export default function Header({
   activeDomain,
@@ -10,13 +10,15 @@ export default function Header({
   onRefresh,
   isRefreshing
 }) {
-  const allModules = [...SCM_MODULES, ...SALES_MODULES, ...PRODUCTION_MODULES];
+  const allModules = [...SCM_MODULES, ...SALES_MODULES, ...PRODUCTION_MODULES, ...LOGISTICS_MODULES];
   const currentModule = allModules.find(m => m.id === activeModule) || allModules[0];
 
   const getDomainLabel = () => {
     if (activeDomain === 'scm') return 'Supply Chain';
     if (activeDomain === 'sales') return 'Sales CRM';
-    return 'Production';
+    if (activeDomain === 'production') return 'Production';
+    if (activeDomain === 'logistics') return 'Logistics & Delivery';
+    return 'Enterprise';
   };
 
   return (
@@ -104,6 +106,26 @@ export default function Header({
             }}
           >
             <Factory size={13} /> Production (12)
+          </button>
+          <button
+            onClick={() => onSelectDomain('logistics')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 5,
+              padding: '5px 10px',
+              fontSize: '0.74rem',
+              fontWeight: 700,
+              border: 'none',
+              borderRadius: 6,
+              cursor: 'pointer',
+              transition: 'all 0.18s ease',
+              background: activeDomain === 'logistics' ? 'linear-gradient(135deg, #D97706, #F59E0B)' : 'transparent',
+              color: activeDomain === 'logistics' ? '#fff' : 'var(--text-secondary)',
+              boxShadow: activeDomain === 'logistics' ? '0 2px 8px rgba(245, 158, 11, 0.4)' : 'none'
+            }}
+          >
+            <Truck size={13} /> Logistics (9)
           </button>
         </div>
 

@@ -3,6 +3,7 @@ import {
   Boxes,
   Briefcase,
   Factory,
+  Truck,
   ChevronDown,
   ChevronUp,
   Package,
@@ -49,6 +50,18 @@ export const PRODUCTION_MODULES = [
   { id: 'production-qa', num: '10', title: 'Quality Assurance (QA)' },
   { id: 'production-rework', num: '11', title: 'Rework / Rebuild' },
   { id: 'production-finished-goods', num: '12', title: 'Finished Goods' }
+];
+
+export const LOGISTICS_MODULES = [
+  { id: 'logistics-dashboard', num: '01', title: 'Dashboard' },
+  { id: 'logistics-planning', num: '02', title: 'Delivery Planning' },
+  { id: 'logistics-vehicles-couriers', num: '03', title: 'Vehicle & Courier' },
+  { id: 'logistics-dispatch', num: '04', title: 'Dispatch' },
+  { id: 'logistics-tracking', num: '05', title: 'Delivery Tracking' },
+  { id: 'logistics-confirmation', num: '06', title: 'Delivery Confirmation' },
+  { id: 'logistics-installation', num: '07', title: 'Installation' },
+  { id: 'logistics-installation-completion', num: '08', title: 'Installation Completion' },
+  { id: 'logistics-reports', num: '09', title: 'Logistics Reports' }
 ];
 
 /**
@@ -103,11 +116,12 @@ export default function Sidebar({
   isOpen,
   onClose
 }) {
-  // Accordion state: SCM, Sales, and Production can be expanded/collapsed independently
+  // Accordion state: SCM, Sales, Production, and Logistics can be expanded/collapsed independently
   const [openDropdowns, setOpenDropdowns] = useState({
     scm: true,
     sales: true,
-    production: true
+    production: true,
+    logistics: true
   });
 
   const toggleDropdown = (key, defaultModule) => {
@@ -146,7 +160,7 @@ export default function Sidebar({
           <div className="sidebar-logo">C</div>
           <div className="sidebar-brand">
             <h2>Cryo Enterprise</h2>
-            <p>SCM • Sales • Production</p>
+            <p>SCM • Sales • Production • Logistics</p>
           </div>
           <button 
             className="mobile-menu-btn" 
@@ -161,7 +175,7 @@ export default function Sidebar({
         <div className="sidebar-nav">
           <div className="nav-section-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span>Enterprise Modules</span>
-            <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)' }}>32 TABS</span>
+            <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)' }}>41 TABS</span>
           </div>
 
           {/* ======================================================== */}
@@ -302,6 +316,56 @@ export default function Sidebar({
                       key={mod.id}
                       className={`tree-child-item ${isActive ? 'active' : ''}`}
                       onClick={() => handleModuleClick(mod.id, 'production')}
+                    >
+                      <TreeBranchArrow isLast={isLast} isActive={isActive} />
+                      <div className="tree-child-label-box">
+                        <span className="tree-child-text">{mod.title}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* ======================================================== */}
+          {/* 4. LOGISTICS & DELIVERY DROPDOWN GROUP                   */}
+          {/* ======================================================== */}
+          <div className="tree-dropdown-group" style={{ marginTop: 10 }}>
+            <div
+              className={`tree-parent-header ${activeDomain === 'logistics' ? 'active-parent' : ''}`}
+              onClick={() => toggleDropdown('logistics', 'logistics-dashboard')}
+            >
+              <div className="tree-parent-left">
+                <div className="tree-parent-icon logistics-icon-box">
+                  <Truck size={18} />
+                </div>
+                <div className="tree-parent-text">
+                  <span className="tree-parent-title">Logistics & Delivery</span>
+                  <span className="tree-parent-subtitle">9 Modules</span>
+                </div>
+              </div>
+              <div className="tree-parent-right">
+                <span className="tree-badge">9</span>
+                {openDropdowns.logistics ? (
+                  <ChevronUp size={16} className="tree-chevron open" />
+                ) : (
+                  <ChevronDown size={16} className="tree-chevron" />
+                )}
+              </div>
+            </div>
+
+            {openDropdowns.logistics && (
+              <div className="tree-child-container">
+                {LOGISTICS_MODULES.map((mod, index) => {
+                  const isActive = activeModule === mod.id;
+                  const isLast = index === LOGISTICS_MODULES.length - 1;
+
+                  return (
+                    <div
+                      key={mod.id}
+                      className={`tree-child-item ${isActive ? 'active' : ''}`}
+                      onClick={() => handleModuleClick(mod.id, 'logistics')}
                     >
                       <TreeBranchArrow isLast={isLast} isActive={isActive} />
                       <div className="tree-child-label-box">

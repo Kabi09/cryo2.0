@@ -40,6 +40,17 @@ import ProductionQAModule from './components/production/ProductionQAModule';
 import ReworkModule from './components/production/ReworkModule';
 import FinishedGoodsModule from './components/production/FinishedGoodsModule';
 
+// Logistics & Delivery Management Modules (9 Modules)
+import LogisticsDashboardModule from './components/logistics/LogisticsDashboardModule';
+import DeliveryPlanningModule from './components/logistics/DeliveryPlanningModule';
+import VehicleCourierModule from './components/logistics/VehicleCourierModule';
+import DispatchModule from './components/logistics/DispatchModule';
+import DeliveryTrackingModule from './components/logistics/DeliveryTrackingModule';
+import DeliveryConfirmationModule from './components/logistics/DeliveryConfirmationModule';
+import InstallationModule from './components/logistics/InstallationModule';
+import InstallationCompletionModule from './components/logistics/InstallationCompletionModule';
+import LogisticsReportsModule from './components/logistics/LogisticsReportsModule';
+
 import { api } from './services/api';
 import { CheckCircle2, AlertCircle, Info } from 'lucide-react';
 
@@ -93,6 +104,17 @@ export default function App() {
   const [reworkOrders, setReworkOrders] = useState([]);
   const [finishedGoods, setFinishedGoods] = useState([]);
 
+  // 4. Logistics State
+  const [logisticsDashboardData, setLogisticsDashboardData] = useState(null);
+  const [deliveryPlans, setDeliveryPlans] = useState([]);
+  const [vehiclesCouriers, setVehiclesCouriers] = useState([]);
+  const [dispatches, setDispatches] = useState([]);
+  const [trackingRecords, setTrackingRecords] = useState([]);
+  const [confirmations, setConfirmations] = useState([]);
+  const [installations, setInstallations] = useState([]);
+  const [installationCompletions, setInstallationCompletions] = useState([]);
+  const [logisticsReportsData, setLogisticsReportsData] = useState(null);
+
   const showToast = (message, type = 'info') => {
     const id = Date.now() + Math.random();
     setToasts(prev => [...prev, { id, message, type }]);
@@ -143,7 +165,18 @@ export default function App() {
         compRes,
         pqaRes,
         rwRes,
-        fgRes
+        fgRes,
+
+        // Logistics Calls
+        logDashRes,
+        delPlanRes,
+        vehRes,
+        dispRes,
+        trkRes,
+        confRes,
+        instRes,
+        icompRes,
+        logRepRes
       ] = await Promise.all([
         // SCM
         api.getMaterials().catch(() => ({ data: [] })),
@@ -183,7 +216,18 @@ export default function App() {
         api.getCompletions().catch(() => ({ data: [] })),
         api.getProductionQATests().catch(() => ({ data: [] })),
         api.getReworkOrders().catch(() => ({ data: [] })),
-        api.getFinishedGoods().catch(() => ({ data: [] }))
+        api.getFinishedGoods().catch(() => ({ data: [] })),
+
+        // Logistics
+        api.getLogisticsDashboard().catch(() => null),
+        api.getDeliveryPlans().catch(() => ({ data: [] })),
+        api.getVehiclesCouriers().catch(() => ({ data: [] })),
+        api.getDispatches().catch(() => ({ data: [] })),
+        api.getDeliveryTracking().catch(() => ({ data: [] })),
+        api.getDeliveryConfirmations().catch(() => ({ data: [] })),
+        api.getInstallations().catch(() => ({ data: [] })),
+        api.getInstallationCompletions().catch(() => ({ data: [] })),
+        api.getLogisticsReports().catch(() => null)
       ]);
 
       // Populate SCM
@@ -225,6 +269,17 @@ export default function App() {
       setProductionQATests(pqaRes.data || []);
       setReworkOrders(rwRes.data || []);
       setFinishedGoods(fgRes.data || []);
+
+      // Populate Logistics
+      setLogisticsDashboardData(logDashRes || null);
+      setDeliveryPlans(delPlanRes.data || []);
+      setVehiclesCouriers(vehRes.data || []);
+      setDispatches(dispRes.data || []);
+      setTrackingRecords(trkRes.data || []);
+      setConfirmations(confRes.data || []);
+      setInstallations(instRes.data || []);
+      setInstallationCompletions(icompRes.data || []);
+      setLogisticsReportsData(logRepRes || null);
     } catch (err) {
       console.error('Error fetching data:', err);
       showToast(err.message || 'Error connecting to backend services', 'error');
@@ -245,6 +300,8 @@ export default function App() {
       setActiveModule('sales-dashboard');
     } else if (domain === 'production') {
       setActiveModule('production-dashboard');
+    } else if (domain === 'logistics') {
+      setActiveModule('logistics-dashboard');
     }
   };
 
@@ -443,6 +500,44 @@ export default function App() {
     await loadAllData();
   };
 
+  // Logistics Handlers
+  const handleSaveDeliveryPlan = async (data) => {
+    await api.createDeliveryPlan(data);
+    await loadAllData();
+  };
+  const handleSaveVehicleCourier = async (data) => {
+    await api.createVehicleCourier(data);
+    await loadAllData();
+  };
+  const handleUpdateVehicleCourier = async (id, data) => {
+    await api.updateVehicleCourier(id, data);
+    await loadAllData();
+  };
+  const handleSaveDispatch = async (data) => {
+    await api.createDispatch(data);
+    await loadAllData();
+  };
+  const handleSaveTrackingMilestone = async (data) => {
+    await api.createTrackingMilestone(data);
+    await loadAllData();
+  };
+  const handleSaveDeliveryConfirmation = async (data) => {
+    await api.createDeliveryConfirmation(data);
+    await loadAllData();
+  };
+  const handleSaveInstallation = async (data) => {
+    await api.createInstallation(data);
+    await loadAllData();
+  };
+  const handleUpdateInstallationStatus = async (id, status, remarks) => {
+    await api.updateInstallationStatus(id, status, remarks);
+    await loadAllData();
+  };
+  const handleSaveInstallationCompletion = async (data) => {
+    await api.createInstallationCompletion(data);
+    await loadAllData();
+  };
+
   return (
     <div className="app-container">
       {/* Unified Tree Accordion Sidebar */}
@@ -460,6 +555,8 @@ export default function App() {
             setActiveDomain('sales');
           } else if (mod.startsWith('production-')) {
             setActiveDomain('production');
+          } else if (mod.startsWith('logistics-')) {
+            setActiveDomain('logistics');
           }
           setPreSelectedGRNForQC(null);
         }}
@@ -808,6 +905,97 @@ export default function App() {
               qaTests={productionQATests}
               onSave={handleSaveFinishedGood}
               onUpdateStatus={handleUpdateFinishedGoodStatus}
+              showToast={showToast}
+            />
+          )}
+
+          {/* ========================================= */}
+          {/* 4. LOGISTICS & DELIVERY (9 MENUS)         */}
+          {/* ========================================= */}
+          {activeModule === 'logistics-dashboard' && (
+            <LogisticsDashboardModule
+              dashboardData={logisticsDashboardData}
+              deliveryPlans={deliveryPlans}
+              onNavigateModule={(mod) => setActiveModule(`logistics-${mod}`)}
+            />
+          )}
+
+          {activeModule === 'logistics-planning' && (
+            <DeliveryPlanningModule
+              deliveryPlans={deliveryPlans}
+              salesOrders={salesOrders}
+              finishedGoods={finishedGoods}
+              onSave={handleSaveDeliveryPlan}
+              showToast={showToast}
+            />
+          )}
+
+          {activeModule === 'logistics-vehicles-couriers' && (
+            <VehicleCourierModule
+              items={vehiclesCouriers}
+              onSave={handleSaveVehicleCourier}
+              onUpdate={handleUpdateVehicleCourier}
+              showToast={showToast}
+            />
+          )}
+
+          {activeModule === 'logistics-dispatch' && (
+            <DispatchModule
+              dispatches={dispatches}
+              deliveryPlans={deliveryPlans}
+              vehiclesCouriers={vehiclesCouriers}
+              finishedGoods={finishedGoods}
+              onSave={handleSaveDispatch}
+              showToast={showToast}
+            />
+          )}
+
+          {activeModule === 'logistics-tracking' && (
+            <DeliveryTrackingModule
+              trackingRecords={trackingRecords}
+              deliveryPlans={deliveryPlans}
+              onSave={handleSaveTrackingMilestone}
+              showToast={showToast}
+            />
+          )}
+
+          {activeModule === 'logistics-confirmation' && (
+            <DeliveryConfirmationModule
+              confirmations={confirmations}
+              deliveryPlans={deliveryPlans}
+              onSave={handleSaveDeliveryConfirmation}
+              showToast={showToast}
+            />
+          )}
+
+          {activeModule === 'logistics-installation' && (
+            <InstallationModule
+              installations={installations}
+              deliveryPlans={deliveryPlans}
+              onSave={handleSaveInstallation}
+              onUpdateStatus={handleUpdateInstallationStatus}
+              showToast={showToast}
+            />
+          )}
+
+          {activeModule === 'logistics-installation-completion' && (
+            <InstallationCompletionModule
+              completions={installationCompletions}
+              installations={installations}
+              onSave={handleSaveInstallationCompletion}
+              showToast={showToast}
+            />
+          )}
+
+          {activeModule === 'logistics-reports' && (
+            <LogisticsReportsModule
+              deliveryPlans={deliveryPlans}
+              dispatches={dispatches}
+              trackingRecords={trackingRecords}
+              confirmations={confirmations}
+              installations={installations}
+              installationCompletions={installationCompletions}
+              reportsData={logisticsReportsData}
               showToast={showToast}
             />
           )}

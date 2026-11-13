@@ -492,5 +492,113 @@ export const api = {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ stockStatus })
-    }).then(handleResponse)
+    }).then(handleResponse),
+
+  // ==========================================
+  // LOGISTICS & DELIVERY MANAGEMENT ENDPOINTS
+  // ==========================================
+  
+  // 01. Logistics Dashboard
+  getLogisticsDashboard: () =>
+    fetch(`${API_BASE}/logistics/dashboard`).then(handleResponse),
+
+  // 02. Delivery Planning
+  getDeliveryPlans: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return fetch(`${API_BASE}/logistics/delivery-plans?${query}`).then(handleResponse);
+  },
+  createDeliveryPlan: (data) =>
+    fetch(`${API_BASE}/logistics/delivery-plans`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    }).then(handleResponse),
+
+  // 03. Vehicles & Couriers
+  getVehiclesCouriers: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return fetch(`${API_BASE}/logistics/vehicles-couriers?${query}`).then(handleResponse);
+  },
+  createVehicleCourier: (data) =>
+    fetch(`${API_BASE}/logistics/vehicles-couriers`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    }).then(handleResponse),
+  updateVehicleCourier: (id, data) =>
+    fetch(`${API_BASE}/logistics/vehicles-couriers/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    }).then(handleResponse),
+
+  // 04. Dispatch
+  getDispatches: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return fetch(`${API_BASE}/logistics/dispatches?${query}`).then(handleResponse);
+  },
+  createDispatch: (data) =>
+    fetch(`${API_BASE}/logistics/dispatches`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    }).then(handleResponse),
+
+  // 05. Delivery Tracking
+  getDeliveryTracking: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return fetch(`${API_BASE}/logistics/tracking?${query}`).then(handleResponse);
+  },
+  createTrackingMilestone: (data) =>
+    fetch(`${API_BASE}/logistics/tracking`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    }).then(handleResponse),
+
+  // 06. Delivery Confirmation (POD)
+  getDeliveryConfirmations: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return fetch(`${API_BASE}/logistics/confirmations?${query}`).then(handleResponse);
+  },
+  createDeliveryConfirmation: (data) =>
+    fetch(`${API_BASE}/logistics/confirmations`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    }).then(handleResponse),
+
+  // 07. Installation
+  getInstallations: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return fetch(`${API_BASE}/logistics/installations?${query}`).then(handleResponse);
+  },
+  createInstallation: (data) =>
+    fetch(`${API_BASE}/logistics/installations`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    }).then(handleResponse),
+  updateInstallationStatus: (id, status, remarks) =>
+    fetch(`${API_BASE}/logistics/installations/${id}/status`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status, remarks })
+    }).then(handleResponse),
+
+  // 08. Installation Completion
+  getInstallationCompletions: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return fetch(`${API_BASE}/logistics/installation-completions?${query}`).then(handleResponse);
+  },
+  createInstallationCompletion: (data) =>
+    fetch(`${API_BASE}/logistics/installation-completions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    }).then(handleResponse),
+
+  // 09. Logistics Reports
+  getLogisticsReports: () =>
+    fetch(`${API_BASE}/logistics/reports`).then(handleResponse)
 };

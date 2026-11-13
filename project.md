@@ -1,12 +1,13 @@
-# Project Overview — Cryo Enterprise 2.0 (SCM • Sales • Production)
+# Project Overview — Cryo Enterprise 2.0 (SCM • Sales • Production • Logistics)
 
 ## 1. Overview
-A unified enterprise manufacturing ERP & CRM platform engineered on the MERN stack (MongoDB, Express, React, Node.js) with pure JavaScript (`.jsx` / `.js`, **no TypeScript**). Features an obsidian dark industrial interface with vibrant neon accents and a 3-tier tree-branch expandable accordion navigation (`└→`).
+A unified enterprise manufacturing ERP & CRM platform engineered on the MERN stack (MongoDB, Express, React, Node.js) with pure JavaScript (`.jsx` / `.js`, **no TypeScript**). Features an obsidian dark industrial interface with vibrant neon accents and a 4-tier tree-branch expandable accordion navigation (`└→`).
 
-The system integrates 32 comprehensive modules across 3 functional suites:
+The system integrates 41 comprehensive modules across 4 functional suites:
 1. **Supply Chain Management (10 Modules)**: From Raw Material Master to Supplier Linkage, PO, Inward Quarantine GRN, QC Tests, Stock Ledger, Production Issue, and Supplier Return.
 2. **Sales Management CRM (10 Modules)**: From Inbound Customer Enquiry to Lead Opportunity, Follow-up Tracking, Multi-Version Quotations (V1/V2/V3), Proforma Invoices, Customer PO Verification, Advance Payments, Sales Orders, and Analytical Reports.
 3. **Production Management (12 Modules)**: From Sales Order handover to Work Order Planning, BOM calculations, Scheduling, Company Store Requisitions, Stock-checked Material Issue, Shopfloor Execution, Daily/Weekly Progress Updates, Assembly Completion, Multilateral QA Testing, Closed-Loop Rework, and Serialized Finished Goods Warehouse admission.
+4. **Logistics & Delivery Management (9 Modules)**: From Delivery Planning and Company Fleet/Courier allocation to Warehouse Dispatch Gate passes, Serial Number reservation, Real-time Milestone Tracking, Proof of Delivery (POD) partial fulfillment, On-site Installation scheduling, Mandatory 7-Point Commissioning Checklist, and SLA analytics.
 
 ---
 
@@ -19,7 +20,7 @@ The system integrates 32 comprehensive modules across 3 functional suites:
 
 ---
 
-## 3. Module Index (32 Total Modules)
+## 3. Module Index (41 Total Modules)
 
 ### Part A: Supply Chain Management (10 Modules)
 1. `Raw Material Master` - Raw material SKU registration, units, and stock thresholds.
@@ -58,3 +59,14 @@ The system integrates 32 comprehensive modules across 3 functional suites:
 10. `Quality Assurance (QA)` - Thermal (<55°C), sensor, motor, and electrical testing. Pass -> FG, Fail -> Rework.
 11. `Rework / Rebuild` - Repair bay for defective units with mandatory Re-QA validation before admission to stock.
 12. `Finished Goods` - Serialized QA-approved warehouse inventory ready for customer dispatch.
+
+### Part D: Logistics & Delivery Management (9 Modules)
+1. `Dashboard` - Outbound fulfillment KPIs (Pending, In Transit, Delivered, Installation Pending).
+2. `Delivery Planning` - Schedule deliveries against confirmed Sales Orders and available Finished Goods.
+3. `Vehicle & Courier` - Fleet management (vehicles + drivers) and third-party courier partner management.
+4. `Dispatch` - Warehouse exit gate slip, physical serial number allocation, decrements FG warehouse inventory.
+5. `Delivery Tracking` - Live GPS/checkpoint milestone recording with transit delay reason tracking.
+6. `Delivery Confirmation` - Proof of Delivery (POD) capturing customer receipt signature and partial deliveries.
+7. `Installation` - On-site deployment scheduling, tool provisioning, and engineer assignment.
+8. `Installation Completion` - Mandatory 7-point technical verification checklist and customer sign-off certificate.
+9. `Logistics Reports` - End-to-end delivery metrics, SLA on-time rate, transit delay analysis, and CSV export.

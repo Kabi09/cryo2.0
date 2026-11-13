@@ -232,6 +232,12 @@ body {
   border: 1px solid rgba(16, 185, 129, 0.25);
 }
 
+.logistics-icon-box {
+  background: rgba(245, 158, 11, 0.12);
+  color: #FBBF24;
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
 .tree-parent-text {
   display: flex;
   flex-direction: column;

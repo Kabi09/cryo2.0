@@ -5,6 +5,7 @@ const connectDB = require('./config/db');
 const scmRoutes = require('./routes/scmRoutes');
 const salesRoutes = require('./routes/salesRoutes');
 const productionRoutes = require('./routes/productionRoutes');
+const logisticsRoutes = require('./routes/logisticsRoutes');
 
 const app = express();
 
@@ -29,6 +30,7 @@ app.get('/api/health', (req, res) => {
 app.use('/api', scmRoutes);
 app.use('/api/sales', salesRoutes);
 app.use('/api/production', productionRoutes);
+app.use('/api/logistics', logisticsRoutes);
 
 // Error Handling Middleware
 app.use((err, req, res, next) => {

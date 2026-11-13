@@ -91,3 +91,39 @@
 8. **Finished Goods Serialized Admission**:
    - Every entry into the Finished Goods Warehouse (`FG`) must reference a passing QA test approval code (`QA Number`).
    - Units are registered with serialized tags and warranty start dates before dispatch.
+
+---
+
+## 4. Logistics & Delivery Management Rules
+
+1. **Warehouse Dispatch Inventory Protection**:
+   - An exit dispatch gate slip (`DISP`) cannot be authorized without linking an active `DeliveryPlan` and a verified physical `FinishedGood` serial number.
+   - Upon confirming dispatch, the referenced finished good machine status in the database transitions from `'Available'` to `'Dispatched'`.
+   - Double-dispatch or phantom equipment allocation is strictly prevented by DB-level validations.
+
+2. **Dual Transport Method Enforcement**:
+   - Every delivery plan must categorize whether movement is by **Company Vehicle** or **Third-Party Courier / Transport**.
+   - If *Company Vehicle*: Validates driver name, mobile number, and vehicle registration number.
+   - If *Courier / Transport*: Validates carrier partner name, tracking / LR / Docket ID, and dispatch hub.
+
+3. **Proof of Delivery (POD) & Partial Delivery Protection**:
+   - A shipment cannot be closed without capturing the receiving customer representative's name and verification acknowledgment.
+   - Partial Deliveries: If a customer accepts fewer machines than planned (e.g. 2 out of 3 delivered due to space constraint or transit damage), the system increments `Delivered Quantity` to 2 and leaves `Pending Quantity = 1` active in the delivery plan.
+   - The delivery plan remains in status `'Partially Delivered'` until remaining units are fulfilled.
+
+4. **Automated Site Installation Handover**:
+   - When a delivery plan specifies `installationRequired: true`, the successful creation of a `DeliveryConfirmation` (POD) triggers the backend controller to automatically instantiate an `Installation` record in `'Scheduled'` status, assigning the lead field engineer without manual administrative intervention.
+
+5. **Mandatory 7-Point Installation Quality Gate**:
+   - Before an on-site installation can be closed, the technician must execute and submit the formal 7-point commissioning checklist:
+     1. `Machine Bed & Structural Base Fixed Properly`
+     2. `3-Phase Electrical Wiring & Grounding Safe`
+     3. `Regulated Power Supply & Surge Protection Test`
+     4. `Cryo Sensor & Thermocouple Calibrations Verified`
+     5. `Operating Chamber Temperature Pulldown Test`
+     6. `Embedded Firmware & HMI Profile Setup Complete`
+     7. `Overall Functional Operation & Emergency Stop Test`
+   - **Quality Rule**: If even one (1) single checkpoint is marked `'Fail'`, the backend and frontend immediately force the report status to `'Failed - Retest Required'`. The installation **cannot be signed off or completed** until the engineering defect is fixed and a 100% (7/7) passing retest is registered.
+
+6. **Customer Acceptance & Warranty Commencement**:
+   - Formal warranty coverage begins only upon mutual digital acknowledgment by both the Customer Site Engineer and the Certified Field Technician on the `InstallationCompletion` certificate.

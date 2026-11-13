@@ -179,3 +179,105 @@ flowchart TD
 1. Total order fulfillment achieved: **10 / 10 Machines** verified by QA and stored in Finished Goods Bay 4A.
 2. Machines carry serialized tags (`MA-001` through `MA-010`) with warranty start dates.
 3. Logistics changes stock status to `Reserved for Dispatch` and completes customer delivery.
+
+---
+
+## 4. Logistics & Delivery Management Workflows
+
+```mermaid
+flowchart TD
+    SO["Confirmed Sales Order (SO)"] --> DP["02. Delivery Planning"]
+    FG["QA-Approved Finished Goods"] --> DP
+    DP --> METHOD{"Select Delivery Method"}
+    METHOD -->|"Company Vehicle"| FLEET["03. Fleet & Driver Allocation"]
+    METHOD -->|"Courier / Transport"| CARRIER["03. Carrier Partner & Tracking ID"]
+    FLEET --> DISP["04. Warehouse Dispatch Slip"]
+    CARRIER --> DISP
+    DISP -->|"FG Stock: Dispatched"| TRK["05. Real-Time Delivery Tracking"]
+    TRK -->|"Milestones Logged"| POD["06. Proof of Delivery (POD)"]
+    POD --> PARTIAL{"Full or Partial Delivery?"}
+    PARTIAL -->|"Partial Qty"| BAL["Remaining Qty Pending in Plan"]
+    PARTIAL -->|"Received"| INST_CHECK{"Installation Required?"}
+    INST_CHECK -->|"Yes"| INST["07. Schedule Site Installation"]
+    INST_CHECK -->|"No"| CLOSE["Delivery Completed & Archived"]
+    INST --> ICOMP["08. Installation 7-Point Sign-Off"]
+    ICOMP --> QA_CHECK{"All 7 Points Pass?"}
+    QA_CHECK -->|"Yes (7/7 Pass)"| FINAL["Customer Commissioned & Handed Over"]
+    QA_CHECK -->|"No (>=1 Fail)"| RETEST["Failed - Retest Required / Rework"]
+    RETEST --> INST
+    FINAL --> REP["09. Logistics Performance Reports"]
+    CLOSE --> REP
+```
+
+### Logistics Workflow 1: Delivery Planning
+1. Logistics manager monitors confirmed Sales Orders and QA-approved Finished Goods in warehouse.
+2. Creates **Delivery Plan** (`DEL-001`):
+   - Selects Sales Order reference (`SO-001`).
+   - Customer details, shipping address, contact person, product, and quantities are auto-filled.
+   - Calculates pending quantity balance for partial shipments.
+   - Selects delivery method: **Company Vehicle** or **Courier / Transport**.
+   - Indicates whether on-site installation and technician commissioning is required.
+
+### Logistics Workflow 2: Transport Method & Asset Allocation
+1. **Company Vehicle Flow**:
+   - Assigns registered fleet vehicle (`TN-09-CB-4011`, Tata 407 LCV).
+   - Assigns company driver (`K. Suresh`, DL: `TN0920180004123`).
+   - Verifies vehicle fitness certificate, insurance validity, and GPS device ID.
+2. **Courier / Third-Party Transport Flow**:
+   - Assigns contracted logistics partner (e.g. VRL Logistics, Safechem Express, Blue Dart Surface).
+   - Inputs tracking / LR / Docket number, dispatch hub, and carrier contact.
+
+### Logistics Workflow 3: Warehouse Dispatch & Serial Number Allocation
+1. Warehouse supervisor issues official **Dispatch Gate Slip** (`DISP-001`):
+   - Matches physical finished goods serial number (`MB-001-SERIES-01`) to the delivery plan.
+   - Verifies packaging, shock-indicator sticker, crate strapping, and manual book enclosure.
+   - Generates e-Way bill number and tax invoice reference.
+2. **Finished Goods Inventory Gate**:
+   - The selected machine in `FinishedGoods` immediately updates `stockStatus: 'Dispatched'`.
+   - Prevents double dispatch or phantom inventory allocation.
+
+### Logistics Workflow 4: Real-Time Delivery Tracking
+1. Logistics desk logs checkpoint milestones in **Delivery Tracking** (`TRK-001`):
+   - Current checkpoint location (e.g. `Ambattur Industrial Hub`, `Sriperumbudur Tollway`, `Customer Factory Gate`).
+   - Milestone status: `Dispatched` → `In Transit` → `Out for Delivery` → `Delivered`.
+2. **Delay & Exception Logging**:
+   - If route is hindered, flags `Delayed: true` with root-cause categorization (`Weather / Rain`, `Highway Traffic Jam`, `Vehicle Breakdown`, `Customer Site Gate Closed`).
+   - Automatically computes revised estimated delivery date.
+
+### Logistics Workflow 5: Proof of Delivery (POD) & Partial Acceptance
+1. Delivery team arrives at customer facility and unloads equipment.
+2. Generates **Delivery Confirmation / POD** (`POD-001`):
+   - Records physical received quantity vs damaged quantity (if any).
+   - Captures receiving representative name, mobile number, and condition of packaging (`Intact - Factory Sealed` vs `Tampered / Crushed`).
+   - Customer digital signature acknowledgment recorded.
+3. **Partial Delivery Engine**:
+   - If only 2 of 3 units are accepted, `Delivered Qty` updates to 2, and `Pending Qty: 1` remains open in the Delivery Plan for subsequent fulfillment.
+4. **Automated Installation Trigger**:
+   - If `installationRequired: true`, confirming POD automatically initializes an **Installation Job** in `Scheduled` status.
+
+### Logistics Workflow 6: On-Site Technical Installation
+1. Lead Field Service Engineer (`Er. Rajesh Kumar`) is dispatched to customer cleanroom with calibrated tooling kit (Fluke thermal imager, torque wrench set, digital manometer, software configuration dongle).
+2. Engineer inspects equipment unpacked at customer facility in **Installation** (`INS-001`).
+3. Verifies power stability, grounding, chiller loop connections, and prepares commissioning run.
+
+### Logistics Workflow 7: Mandatory 7-Point Installation Checklist & Sign-Off
+1. Service engineer conducts the 7 mandatory safety and functional tests in **Installation Completion** (`ICOMP-001`):
+   - `Checkpoint 1`: Machine Bed & Structural Base Fixed Properly (`Pass` / `Fail`)
+   - `Checkpoint 2`: 3-Phase Electrical Wiring & Grounding Safe (`Pass` / `Fail`)
+   - `Checkpoint 3`: Regulated Power Supply & Surge Protection Test (`Pass` / `Fail`)
+   - `Checkpoint 4`: Cryo Sensor & Thermocouple Calibrations Verified (`Pass` / `Fail`)
+   - `Checkpoint 5`: Operating Chamber Temperature Pulldown Test (`Pass` / `Fail`)
+   - `Checkpoint 6`: Embedded Firmware & HMI Profile Setup Complete (`Pass` / `Fail`)
+   - `Checkpoint 7`: Overall Functional Operation & Emergency Stop Test (`Pass` / `Fail`)
+2. Itemizes live functional telemetry (e.g. 414.2V input voltage, -82.4°C pulldown temp, 2ms PLC ping).
+3. **Strict Quality Gate**:
+   - If all 7 checkpoints are `Pass` → Status marked `Completed`, customer signs handover note, warranty officially commences.
+   - If even **one** checkpoint fails → System forces status to `Failed - Retest Required`. The job cannot be closed until a service technician rectifies the defect and passes all 7 points.
+
+### Logistics Workflow 8: Logistics Intelligence & SLA Auditing
+1. Management reviews **Logistics Reports**:
+   - On-time delivery SLA percentage.
+   - Fleet utilization and courier transit cost comparisons.
+   - Transit delay root cause breakdown.
+   - First-time installation pass rate vs retest rate.
+   - Instant export to CSV and printable handover sheets.

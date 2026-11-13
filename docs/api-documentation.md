@@ -107,3 +107,28 @@ All endpoints run on Express.js (`http://localhost:5000`) and Vite development p
 | 12 | `/api/production/finished-goods` | `POST` | Admit QA-approved machines to warehouse | `{ workOrder, salesOrder, product, serialNumber, qaApprovalReference, approvedQuantity, warehouseLocation, storageDate, productCondition }` |
 | 12 | `/api/production/finished-goods/:id/status` | `PUT` | Update stock dispatch reservation | `{ stockStatus: 'Available' \| 'Reserved for Dispatch' \| 'Dispatched' }` |
 
+---
+
+## 4. Logistics & Delivery Endpoints (`/api/logistics/*`)
+
+| # | Endpoint | Method | Description | Sample Request / Query |
+|---|---|---|---|---|
+| 01 | `/api/logistics/dashboard` | `GET` | Logistics KPI summary & stage counts | Returns `{ summary: { pendingDeliveries, inTransit, delivered, installationPending, failedDelivery }, recentDeliveries }` |
+| 02 | `/api/logistics/delivery-plans` | `GET` | List planned product deliveries | `?status=Planned` |
+| 02 | `/api/logistics/delivery-plans` | `POST` | Create delivery plan linked to Sales Order | `{ salesOrder, customer, deliveryAddress, product, plannedDeliveryQuantity, deliveryDate, deliveryMethod, installationRequired }` |
+| 03 | `/api/logistics/vehicles-couriers` | `GET` | List company fleet vehicles and carrier partners | `?category=Vehicle` or `?category=Courier` |
+| 03 | `/api/logistics/vehicles-couriers` | `POST` | Register company vehicle or courier agency | `{ category: 'Vehicle' \| 'Courier', vehicleNumber, driverName, mobileNumber, courierCompanyName, trackingPortalUrl, status }` |
+| 03 | `/api/logistics/vehicles-couriers/:id` | `PUT` | Update vehicle maintenance or courier status | `{ status: 'Available' \| 'On Trip' \| 'Maintenance' \| 'Active' }` |
+| 04 | `/api/logistics/dispatches` | `GET` | List warehouse dispatch exit passes | `?status=Dispatched` |
+| 04 | `/api/logistics/dispatches` | `POST` | Gate dispatch, serial allocation, decrements FG stock | `{ deliveryPlan, finishedGood, serialNumber, dispatchedQuantity, ewayBillNumber, invoiceNumber, packagingCondition, driverVerified }` |
+| 05 | `/api/logistics/tracking` | `GET` | List shipment transit milestone logs | `?deliveryPlan=...` or `?delayed=true` |
+| 05 | `/api/logistics/tracking` | `POST` | Record live GPS/checkpoint milestone & delays | `{ deliveryPlan, currentLocation, status: 'In Transit' \| 'Out for Delivery' \| 'Delivered', delayed, delayReason, expectedDeliveryDate }` |
+| 06 | `/api/logistics/confirmations` | `GET` | List Proof of Delivery (POD) sign-offs | `?status=Accepted` |
+| 06 | `/api/logistics/confirmations` | `POST` | Record customer receipt, POD signature & partial deliveries | `{ deliveryPlan, receivedQuantity, damagedQuantity, customerReceiverName, customerPhone, packagingIntact, customerSignatureText, status }` |
+| 07 | `/api/logistics/installations` | `GET` | List scheduled on-site engineering jobs | `?status=Scheduled` |
+| 07 | `/api/logistics/installations` | `POST` | Schedule technical deployment & assign engineers | `{ deliveryPlan, customer, installationAddress, product, serialNumber, assignedTechnician, plannedInstallationDate, requiredTools }` |
+| 07 | `/api/logistics/installations/:id/status` | `PUT` | Update installation progress / mark complete | `{ status: 'In Progress' \| 'Completed' \| 'Failed', remarks }` |
+| 08 | `/api/logistics/installation-completions` | `GET` | List formal commissioning reports | `?overallResult=Pass` |
+| 08 | `/api/logistics/installation-completions` | `POST` | Submit 7-point mandatory checklist & telemetry | `{ installation, checklist: { productFixedProperly, electricalConnection, powerSupplyTest, sensorConnection, temperatureTest, softwareConfiguration, overallWorkingCondition }, testingDetails: [...], customerConfirmation: { customerName, customerFeedback, customerSignature } }` |
+| 09 | `/api/logistics/reports` | `GET` | Delivery SLA, carrier speed, and quality ratios | Returns onTimeRate, delayCauses, carrierComparison, firstTimeInstallPassRate |
+
