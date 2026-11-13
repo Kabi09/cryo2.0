@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import DataTable from '../common/DataTable';
 import Modal from '../common/Modal';
 import StatusBadge from '../common/StatusBadge';
-import { Wrench, Calendar, MapPin, User, CheckCircle2, AlertTriangle, Clock, ShieldCheck, Phone, FileText } from 'lucide-react';
+import { Wrench, Calendar, MapPin, User, CheckCircle2, AlertTriangle, Clock, Phone, FileText } from 'lucide-react';
 
 export default function InstallationModule({
   installations = [],
@@ -13,7 +13,6 @@ export default function InstallationModule({
 }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
-  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
 
   const [formData, setFormData] = useState({
     deliveryPlan: '',
@@ -82,96 +81,71 @@ export default function InstallationModule({
     }
   };
 
-  // Status counters
-  const totalCount = installations.length;
-  const scheduledCount = installations.filter(i => i.status === 'Scheduled').length;
-  const inProgressCount = installations.filter(i => i.status === 'In Progress').length;
-  const completedCount = installations.filter(i => i.status === 'Completed').length;
-  const failedCount = installations.filter(i => i.status === 'Failed' || i.status === 'Rescheduled').length;
-
   const columns = [
     {
-      header: 'INSTALLATION NO',
+      header: 'Installation No',
       accessor: 'installationNumber',
-      render: (row) => (
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 font-mono text-xs font-bold">
-            <Wrench className="w-4 h-4" />
-          </div>
-          <div>
-            <span className="font-mono text-xs font-bold text-cyan-400 block">{row.installationNumber}</span>
-            <span className="text-[10px] text-slate-400">Ref: {row.deliveryNumber}</span>
-          </div>
-        </div>
-      )
+      render: (row) => <span className="font-mono text-cyan" style={{ fontWeight: 700 }}>{row.installationNumber}</span>
     },
     {
-      header: 'CUSTOMER',
+      header: 'Delivery Ref',
+      accessor: 'deliveryNumber',
+      render: (row) => <span className="font-mono" style={{ color: '#818CF8' }}>{row.deliveryNumber}</span>
+    },
+    {
+      header: 'Customer',
       accessor: 'customerName',
       render: (row) => (
         <div>
-          <div className="text-xs font-semibold text-slate-200">{row.customerName}</div>
-          <div className="text-[10px] text-slate-400 flex items-center gap-1">
-            <User className="w-3 h-3 text-slate-500" /> {row.contactPerson || 'N/A'} • {row.mobileNumber || ''}
+          <strong style={{ color: '#fff' }}>{row.customerName}</strong>
+          <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+            {row.contactPerson || 'N/A'} • {row.mobileNumber || ''}
           </div>
         </div>
       )
     },
     {
-      header: 'PRODUCT & SERIAL',
+      header: 'Product & Serial',
       accessor: 'productName',
       render: (row) => (
         <div>
-          <div className="text-xs font-medium text-slate-300">{row.productName}</div>
-          <div className="text-[10px] font-mono text-cyan-400/80">SN: {row.serialNumber || 'N/A'} (Qty: {row.installationQuantity})</div>
-        </div>
-      )
-    },
-    {
-      header: 'TECHNICIAN',
-      accessor: 'assignedTechnician',
-      render: (row) => (
-        <div className="flex items-center gap-1.5">
-          <div className="w-6 h-6 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-[10px] text-cyan-400 font-bold">
-            {row.assignedTechnician ? row.assignedTechnician[0] : 'T'}
+          <span>{row.productName}</span>
+          <div style={{ fontSize: '0.72rem', color: 'var(--cyan)', fontFamily: 'var(--font-mono)' }}>
+            SN: {row.serialNumber || 'N/A'} ({row.installationQuantity || 1} Units)
           </div>
-          <span className="text-xs text-slate-300 truncate max-w-[150px]">{row.assignedTechnician}</span>
         </div>
       )
     },
     {
-      header: 'PLANNED DATE',
+      header: 'Technician',
+      accessor: 'assignedTechnician',
+      render: (row) => <span>{row.assignedTechnician}</span>
+    },
+    {
+      header: 'Planned Date',
       accessor: 'plannedInstallationDate',
-      render: (row) => (
-        <div className="flex items-center gap-1 text-xs text-slate-300">
-          <Calendar className="w-3.5 h-3.5 text-cyan-400" />
-          <span>{row.plannedInstallationDate ? new Date(row.plannedInstallationDate).toLocaleDateString() : 'N/A'}</span>
-        </div>
-      )
+      render: (row) => (row.plannedInstallationDate ? new Date(row.plannedInstallationDate).toLocaleDateString() : 'N/A')
     },
     {
-      header: 'STATUS',
+      header: 'Status',
       accessor: 'status',
       render: (row) => <StatusBadge status={row.status} />
     },
     {
-      header: 'ACTIONS',
+      header: 'Actions',
       accessor: '_id',
       render: (row) => (
-        <div className="flex items-center gap-2">
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
           <button
-            onClick={() => {
-              setSelectedItem(row);
-              setIsViewModalOpen(true);
-            }}
-            className="px-2.5 py-1 text-xs rounded-md bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 transition"
+            onClick={() => setSelectedItem(row)}
+            className="btn btn-secondary btn-sm"
           >
             View Details
           </button>
           {row.status === 'Scheduled' && (
             <button
               onClick={() => onUpdateStatus?.(row._id, 'In Progress')}
-              className="px-2 py-1 text-xs rounded-md bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 transition"
+              className="btn btn-primary btn-sm"
               title="Start On-Site Work"
             >
               Start
@@ -183,341 +157,268 @@ export default function InstallationModule({
   ];
 
   return (
-    <div className="space-y-6">
-      {/* Top Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800/80 pb-5">
-        <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-3">
-            <span className="p-2 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
-              <Wrench className="w-6 h-6" />
-            </span>
-            Installation & Commissioning
-          </h1>
-          <p className="text-sm text-slate-400 mt-1">
-            Schedule on-site technical deployment and assign service engineers for delivered machinery
-          </p>
-        </div>
-
-        {/* Single Add Button */}
-        <button
-          onClick={handleOpenModal}
-          className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-medium text-sm shadow-lg shadow-cyan-500/20 flex items-center gap-2 transition"
-        >
-          <Wrench className="w-4 h-4" />
-          + Schedule Installation
-        </button>
-      </div>
-
-      {/* Summary KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <div className="bg-[#0E131F] border border-slate-800/80 rounded-xl p-3.5 flex items-center justify-between">
-          <div>
-            <div className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold">Total Scheduled</div>
-            <div className="text-xl font-bold text-white mt-1">{totalCount}</div>
-          </div>
-          <div className="w-9 h-9 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
-            <Clock className="w-5 h-5" />
-          </div>
-        </div>
-
-        <div className="bg-[#0E131F] border border-slate-800/80 rounded-xl p-3.5 flex items-center justify-between">
-          <div>
-            <div className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold">Scheduled</div>
-            <div className="text-xl font-bold text-cyan-400 mt-1">{scheduledCount}</div>
-          </div>
-          <div className="w-9 h-9 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400">
-            <Calendar className="w-5 h-5" />
-          </div>
-        </div>
-
-        <div className="bg-[#0E131F] border border-slate-800/80 rounded-xl p-3.5 flex items-center justify-between">
-          <div>
-            <div className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold">In Progress</div>
-            <div className="text-xl font-bold text-amber-400 mt-1">{inProgressCount}</div>
-          </div>
-          <div className="w-9 h-9 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
-            <Wrench className="w-5 h-5" />
-          </div>
-        </div>
-
-        <div className="bg-[#0E131F] border border-slate-800/80 rounded-xl p-3.5 flex items-center justify-between">
-          <div>
-            <div className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold">Completed</div>
-            <div className="text-xl font-bold text-emerald-400 mt-1">{completedCount}</div>
-          </div>
-          <div className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
-            <CheckCircle2 className="w-5 h-5" />
-          </div>
-        </div>
-
-        <div className="bg-[#0E131F] border border-slate-800/80 rounded-xl p-3.5 flex items-center justify-between">
-          <div>
-            <div className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold">Failed / Resched</div>
-            <div className="text-xl font-bold text-rose-400 mt-1">{failedCount}</div>
-          </div>
-          <div className="w-9 h-9 rounded-lg bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400">
-            <AlertTriangle className="w-5 h-5" />
-          </div>
-        </div>
-      </div>
-
-      {/* Main DataTable */}
-      <div className="bg-[#0E131F] border border-slate-800/80 rounded-2xl p-5 shadow-xl">
-        <DataTable
-          columns={columns}
-          data={installations}
-          searchPlaceholder="Search by installation no, customer, technician, serial..."
-        />
-      </div>
+    <div className="module-container">
+      <DataTable
+        title="Installation & Commissioning"
+        subtitle="Schedule on-site technical deployment, tool allocation, and engineer dispatch for delivered machinery"
+        columns={columns}
+        data={installations}
+        onAdd={handleOpenModal}
+        addLabel="Schedule Installation"
+      />
 
       {/* Schedule Installation Modal */}
-      <Modal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        title="Schedule Machine Installation & Handover"
-        size="lg"
-      >
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">
-                Select Delivery Reference <span className="text-cyan-400">*</span>
-              </label>
-              <select
-                value={formData.deliveryPlan}
-                onChange={(e) => handleSelectDelivery(e.target.value)}
-                className="w-full bg-[#161D2E] border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-cyan-500 transition"
-                required
+      {isModalOpen && (
+        <Modal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          title="Schedule Machine Installation & Handover"
+          subtitle="Assign certified service engineers and coordinate site deployment readiness"
+          size="lg"
+        >
+          <form onSubmit={handleSubmit}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+              {/* Delivery Reference */}
+              <div style={{ background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-subtle)', borderRadius: 10, padding: 18 }}>
+                <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--cyan)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Wrench size={16} /> 1. Linked Delivery & Equipment Particulars
+                </div>
+
+                <div className="form-grid">
+                  <div className="form-group col-span-2">
+                    <label className="form-label">Delivery Order Reference <span className="req">*</span></label>
+                    <select
+                      className="form-select"
+                      value={formData.deliveryPlan}
+                      onChange={(e) => handleSelectDelivery(e.target.value)}
+                      required
+                    >
+                      <option value="">Select Delivered Shipment</option>
+                      {deliveryPlans.map(p => (
+                        <option key={p._id} value={p._id}>
+                          {p.deliveryNumber} — {p.customerName} ({p.productName})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Customer Company Name</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      value={formData.customerName}
+                      readOnly
+                      style={{ opacity: 0.8 }}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Sales Order Reference</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      value={formData.soNumber}
+                      readOnly
+                      style={{ opacity: 0.8, fontFamily: 'var(--font-mono)' }}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Contact Person</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      value={formData.contactPerson}
+                      onChange={(e) => setFormData({ ...formData, contactPerson: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Mobile Phone Number</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      value={formData.mobileNumber}
+                      onChange={(e) => setFormData({ ...formData, mobileNumber: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="form-group col-span-2">
+                    <label className="form-label">Customer Site Installation Address <span className="req">*</span></label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      value={formData.installationAddress}
+                      onChange={(e) => setFormData({ ...formData, installationAddress: e.target.value })}
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Product Name</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      value={formData.productName}
+                      readOnly
+                      style={{ opacity: 0.8 }}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Serial Number <span className="req">*</span></label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      value={formData.serialNumber}
+                      onChange={(e) => setFormData({ ...formData, serialNumber: e.target.value })}
+                      style={{ fontFamily: 'var(--font-mono)', color: 'var(--cyan)' }}
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Technician & Schedule */}
+              <div style={{ background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-subtle)', borderRadius: 10, padding: 18 }}>
+                <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--cyan)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Calendar size={16} /> 2. Technical Engineer & Schedule Planning
+                </div>
+
+                <div className="form-grid">
+                  <div className="form-group">
+                    <label className="form-label">Assigned Lead Technician <span className="req">*</span></label>
+                    <select
+                      className="form-select"
+                      value={formData.assignedTechnician}
+                      onChange={(e) => setFormData({ ...formData, assignedTechnician: e.target.value })}
+                      required
+                    >
+                      <option value="Er. Rajesh Kumar (Senior Field Engineer)">Er. Rajesh Kumar (Senior Field Engineer)</option>
+                      <option value="Er. Vinoth S (Automation Specialist)">Er. Vinoth S (Automation Specialist)</option>
+                      <option value="Er. Dinesh K (Electrical Engineer)">Er. Dinesh K (Electrical Engineer)</option>
+                      <option value="Er. Anandhan M (Pneumatics Lead)">Er. Anandhan M (Pneumatics Lead)</option>
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Planned Installation Date <span className="req">*</span></label>
+                    <input
+                      type="date"
+                      className="form-input"
+                      value={formData.plannedInstallationDate}
+                      onChange={(e) => setFormData({ ...formData, plannedInstallationDate: e.target.value })}
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group col-span-2">
+                    <label className="form-label">Required Tools & Specialized Equipment</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      value={formData.requiredTools}
+                      onChange={(e) => setFormData({ ...formData, requiredTools: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="form-group col-span-2">
+                    <label className="form-label">Pre-Installation Site Instructions</label>
+                    <textarea
+                      rows="2"
+                      className="form-textarea"
+                      value={formData.installationInstructions}
+                      onChange={(e) => setFormData({ ...formData, installationInstructions: e.target.value })}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="modal-footer" style={{ marginTop: 24 }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setIsModalOpen(false)}
               >
-                <option value="">-- Select Delivery Plan --</option>
-                {deliveryPlans.map(p => (
-                  <option key={p._id} value={p._id}>
-                    {p.deliveryNumber} - {p.customerName} ({p.productName})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">SO Number (Auto-fill)</label>
-              <input
-                type="text"
-                value={formData.soNumber}
-                readOnly
-                className="w-full bg-[#161D2E]/60 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-400 cursor-not-allowed font-mono"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">Customer Name</label>
-              <input
-                type="text"
-                value={formData.customerName}
-                readOnly
-                className="w-full bg-[#161D2E]/60 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-300 cursor-not-allowed"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">Contact Person</label>
-              <input
-                type="text"
-                value={formData.contactPerson}
-                onChange={(e) => setFormData({ ...formData, contactPerson: e.target.value })}
-                className="w-full bg-[#161D2E] border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-cyan-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">Mobile Number</label>
-              <input
-                type="text"
-                value={formData.mobileNumber}
-                onChange={(e) => setFormData({ ...formData, mobileNumber: e.target.value })}
-                className="w-full bg-[#161D2E] border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-cyan-500"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1">Customer Site Delivery Address</label>
-            <input
-              type="text"
-              value={formData.installationAddress}
-              onChange={(e) => setFormData({ ...formData, installationAddress: e.target.value })}
-              className="w-full bg-[#161D2E] border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-cyan-500"
-              required
-            />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">Product Model</label>
-              <input
-                type="text"
-                value={formData.productName}
-                readOnly
-                className="w-full bg-[#161D2E]/60 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-300 cursor-not-allowed"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">Assigned Serial Number</label>
-              <input
-                type="text"
-                value={formData.serialNumber}
-                onChange={(e) => setFormData({ ...formData, serialNumber: e.target.value })}
-                className="w-full bg-[#161D2E] border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-sm text-cyan-400 font-mono focus:outline-none focus:border-cyan-500"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">Quantity</label>
-              <input
-                type="number"
-                min="1"
-                value={formData.installationQuantity}
-                onChange={(e) => setFormData({ ...formData, installationQuantity: Number(e.target.value) })}
-                className="w-full bg-[#161D2E] border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-cyan-500"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">
-                Assigned Lead Technician <span className="text-cyan-400">*</span>
-              </label>
-              <select
-                value={formData.assignedTechnician}
-                onChange={(e) => setFormData({ ...formData, assignedTechnician: e.target.value })}
-                className="w-full bg-[#161D2E] border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-cyan-500"
-                required
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="btn btn-primary"
               >
-                <option value="Er. Rajesh Kumar (Senior Field Engineer)">Er. Rajesh Kumar (Senior Field Engineer)</option>
-                <option value="Er. Vinoth S (Automation Specialist)">Er. Vinoth S (Automation Specialist)</option>
-                <option value="Er. Dinesh K (Electrical Engineer)">Er. Dinesh K (Electrical Engineer)</option>
-                <option value="Er. Anandhan M (Pneumatics Lead)">Er. Anandhan M (Pneumatics Lead)</option>
-              </select>
+                Confirm Installation Schedule
+              </button>
             </div>
-
-            <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">Planned Installation Date</label>
-              <input
-                type="date"
-                value={formData.plannedInstallationDate}
-                onChange={(e) => setFormData({ ...formData, plannedInstallationDate: e.target.value })}
-                className="w-full bg-[#161D2E] border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-cyan-500"
-                required
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1">Required Tools & Specialized Equipment</label>
-            <input
-              type="text"
-              value={formData.requiredTools}
-              onChange={(e) => setFormData({ ...formData, requiredTools: e.target.value })}
-              className="w-full bg-[#161D2E] border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-cyan-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1">Pre-Installation Site Instructions</label>
-            <textarea
-              rows="2"
-              value={formData.installationInstructions}
-              onChange={(e) => setFormData({ ...formData, installationInstructions: e.target.value })}
-              className="w-full bg-[#161D2E] border border-slate-700/80 rounded-xl px-3.5 py-2 text-sm text-slate-200 focus:outline-none focus:border-cyan-500 resize-none"
-            />
-          </div>
-
-          <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
-            <button
-              type="button"
-              onClick={() => setIsModalOpen(false)}
-              className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-medium transition"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-5 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-sm font-medium shadow-lg shadow-cyan-500/20 transition"
-            >
-              Confirm Schedule
-            </button>
-          </div>
-        </form>
-      </Modal>
+          </form>
+        </Modal>
+      )}
 
       {/* View Detail Modal */}
       {selectedItem && (
         <Modal
-          isOpen={isViewModalOpen}
-          onClose={() => setIsViewModalOpen(false)}
-          title={`Installation Details - ${selectedItem.installationNumber}`}
+          isOpen={!!selectedItem}
+          onClose={() => setSelectedItem(null)}
+          title={`Installation Job Details: ${selectedItem.installationNumber}`}
+          subtitle={`Delivery Ref: ${selectedItem.deliveryNumber} • ${selectedItem.customerName}`}
           size="lg"
         >
-          <div className="space-y-5">
-            <div className="flex items-center justify-between p-4 rounded-xl bg-slate-900/60 border border-slate-800">
-              <div>
-                <span className="text-xs text-slate-400 uppercase font-semibold">Status</span>
-                <div className="mt-1"><StatusBadge status={selectedItem.status} /></div>
+          <div>
+            <div className="detail-grid">
+              <div className="detail-item">
+                <div className="detail-label">Installation Number</div>
+                <div className="detail-value font-mono text-cyan">{selectedItem.installationNumber}</div>
               </div>
-              <div>
-                <span className="text-xs text-slate-400 uppercase font-semibold">Delivery Ref</span>
-                <div className="text-sm font-mono text-cyan-400 font-bold mt-1">{selectedItem.deliveryNumber}</div>
+              <div className="detail-item">
+                <div className="detail-label">Status</div>
+                <div className="detail-value"><StatusBadge status={selectedItem.status} /></div>
               </div>
-              <div>
-                <span className="text-xs text-slate-400 uppercase font-semibold">SO Reference</span>
-                <div className="text-sm font-mono text-slate-200 mt-1">{selectedItem.soNumber || 'N/A'}</div>
+              <div className="detail-item">
+                <div className="detail-label">Customer Name</div>
+                <div className="detail-value">{selectedItem.customerName}</div>
               </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 text-xs">
-              <div className="p-3 rounded-lg bg-slate-900/40 border border-slate-800/80">
-                <span className="text-slate-500 uppercase block font-semibold mb-1">Customer & Location</span>
-                <div className="text-slate-200 font-medium text-sm">{selectedItem.customerName}</div>
-                <div className="text-slate-400 mt-1 flex items-start gap-1">
-                  <MapPin className="w-3.5 h-3.5 text-cyan-400 shrink-0 mt-0.5" />
-                  <span>{selectedItem.installationAddress}</span>
-                </div>
-                <div className="text-slate-400 mt-1 flex items-center gap-1">
-                  <Phone className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-                  <span>{selectedItem.contactPerson} ({selectedItem.mobileNumber})</span>
-                </div>
+              <div className="detail-item">
+                <div className="detail-label">Contact Person</div>
+                <div className="detail-value">{selectedItem.contactPerson} ({selectedItem.mobileNumber})</div>
               </div>
-
-              <div className="p-3 rounded-lg bg-slate-900/40 border border-slate-800/80">
-                <span className="text-slate-500 uppercase block font-semibold mb-1">Equipment & Tech</span>
-                <div className="text-slate-200 font-medium text-sm">{selectedItem.productName}</div>
-                <div className="text-cyan-400 font-mono mt-1">SN: {selectedItem.serialNumber} (Qty: {selectedItem.installationQuantity})</div>
-                <div className="text-slate-400 mt-1 flex items-center gap-1">
-                  <User className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-                  <span>{selectedItem.assignedTechnician}</span>
+              <div className="detail-item">
+                <div className="detail-label">Product Name</div>
+                <div className="detail-value">{selectedItem.productName}</div>
+              </div>
+              <div className="detail-item">
+                <div className="detail-label">Serial Number</div>
+                <div className="detail-value font-mono text-cyan">{selectedItem.serialNumber}</div>
+              </div>
+              <div className="detail-item">
+                <div className="detail-label">Assigned Technician</div>
+                <div className="detail-value">{selectedItem.assignedTechnician}</div>
+              </div>
+              <div className="detail-item">
+                <div className="detail-label">Planned Date</div>
+                <div className="detail-value">
+                  {selectedItem.plannedInstallationDate ? new Date(selectedItem.plannedInstallationDate).toLocaleDateString() : 'N/A'}
                 </div>
               </div>
+              <div className="detail-item" style={{ gridColumn: 'span 2' }}>
+                <div className="detail-label">Site Address</div>
+                <div className="detail-value">{selectedItem.installationAddress}</div>
+              </div>
+              <div className="detail-item" style={{ gridColumn: 'span 2' }}>
+                <div className="detail-label">Required Tools</div>
+                <div className="detail-value">{selectedItem.requiredTools || 'Standard Tool Set'}</div>
+              </div>
+              <div className="detail-item" style={{ gridColumn: 'span 2' }}>
+                <div className="detail-label">Site Instructions</div>
+                <div className="detail-value">{selectedItem.installationInstructions || 'None'}</div>
+              </div>
             </div>
 
-            <div className="p-3 rounded-lg bg-slate-900/40 border border-slate-800/80 text-xs">
-              <span className="text-slate-500 uppercase block font-semibold mb-1">Required Tools</span>
-              <div className="text-slate-300 font-mono text-[11px]">{selectedItem.requiredTools || 'Standard tool kit'}</div>
-            </div>
-
-            <div className="p-3 rounded-lg bg-slate-900/40 border border-slate-800/80 text-xs">
-              <span className="text-slate-500 uppercase block font-semibold mb-1">Instructions</span>
-              <div className="text-slate-300">{selectedItem.installationInstructions || 'None'}</div>
-            </div>
-
-            <div className="flex justify-end pt-3 border-t border-slate-800">
+            <div className="modal-footer" style={{ marginTop: 20 }}>
               <button
                 type="button"
-                onClick={() => setIsViewModalOpen(false)}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-medium transition"
+                className="btn btn-secondary"
+                onClick={() => setSelectedItem(null)}
               >
                 Close
               </button>
@@ -528,4 +429,3 @@ export default function InstallationModule({
     </div>
   );
 }
-

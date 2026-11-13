@@ -10,7 +10,9 @@ import {
   Wrench,
   CheckCircle2,
   FileSpreadsheet,
-  Navigation
+  Navigation,
+  Layers,
+  Calendar
 } from 'lucide-react';
 import DataTable from '../common/DataTable';
 import StatusBadge from '../common/StatusBadge';
@@ -38,10 +40,9 @@ export default function LogisticsReportsModule({
 
   const totalInstallations = installations.length;
   const passedInstallations = installationCompletions.filter(c => c.overallResult === 'Pass').length;
-  const retestInstallations = installationCompletions.filter(c => c.overallResult === 'Fail').length;
 
   const onTimeRate = totalDeliveries > 0 ? Math.round(((totalDeliveries - delayedCount) / totalDeliveries) * 100) : 100;
-  const installationPassRate = installationCompletions.length > 0 ? Math.round((passedInstallations / installationCompletions.length) * 100) : 100;
+  const installationPassRate = installationCompletions.length > 0 ? Math.round((passedInstallations / (installationCompletions.length || 1)) * 100) : 100;
 
   // Filtered Deliveries
   const filteredDeliveries = deliveryPlans.filter(d => {
@@ -115,40 +116,45 @@ export default function LogisticsReportsModule({
   // Delivery Table Columns
   const deliveryColumns = [
     {
-      header: 'DELIVERY NO',
+      header: 'Delivery No',
       accessor: 'deliveryNumber',
-      render: (r) => <span className="font-mono text-cyan-400 font-bold text-xs">{r.deliveryNumber}</span>
+      render: (r) => <span className="font-mono text-cyan" style={{ fontWeight: 700 }}>{r.deliveryNumber}</span>
     },
     {
-      header: 'CUSTOMER',
+      header: 'SO Ref',
+      accessor: 'soNumber',
+      render: (r) => <span className="font-mono" style={{ color: '#818CF8' }}>{r.soNumber || 'SO-001'}</span>
+    },
+    {
+      header: 'Customer',
       accessor: 'customerName',
-      render: (r) => <span className="text-slate-200 text-xs font-semibold">{r.customerName}</span>
+      render: (r) => <strong style={{ color: '#fff' }}>{r.customerName}</strong>
     },
     {
-      header: 'PRODUCT & QTY',
+      header: 'Product & Qty',
       accessor: 'productName',
       render: (r) => (
-        <span className="text-slate-300 text-xs">
-          {r.productName} <span className="text-cyan-400 font-mono">(Qty: {r.plannedDeliveryQuantity})</span>
+        <span>
+          {r.productName} <span className="code-badge" style={{ marginLeft: 6 }}>{r.plannedDeliveryQuantity} Units</span>
         </span>
       )
     },
     {
-      header: 'METHOD',
+      header: 'Transport Method',
       accessor: 'deliveryMethod',
       render: (r) => (
-        <span className="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
+        <span className="badge badge-info">
           {r.deliveryMethod}
         </span>
       )
     },
     {
-      header: 'DATE',
+      header: 'Delivery Date',
       accessor: 'deliveryDate',
-      render: (r) => <span className="text-xs text-slate-400">{r.deliveryDate ? new Date(r.deliveryDate).toLocaleDateString() : 'N/A'}</span>
+      render: (r) => (r.deliveryDate ? new Date(r.deliveryDate).toLocaleDateString() : '-')
     },
     {
-      header: 'STATUS',
+      header: 'Status',
       accessor: 'status',
       render: (r) => <StatusBadge status={r.status} />
     }
@@ -157,33 +163,31 @@ export default function LogisticsReportsModule({
   // Tracking Table Columns
   const trackingColumns = [
     {
-      header: 'TRACKING NO',
+      header: 'Tracking No',
       accessor: 'trackingNumber',
-      render: (r) => <span className="font-mono text-cyan-400 font-bold text-xs">{r.trackingNumber}</span>
+      render: (r) => <span className="font-mono text-cyan" style={{ fontWeight: 700 }}>{r.trackingNumber}</span>
     },
     {
-      header: 'DELIVERY REF',
+      header: 'Delivery Ref',
       accessor: 'deliveryNumber',
-      render: (r) => <span className="text-xs text-slate-300 font-mono">{r.deliveryNumber}</span>
+      render: (r) => <span className="font-mono" style={{ color: '#818CF8' }}>{r.deliveryNumber}</span>
     },
     {
-      header: 'CURRENT LOCATION',
+      header: 'Current Location',
       accessor: 'currentLocation',
-      render: (r) => <span className="text-xs text-slate-200">{r.currentLocation}</span>
+      render: (r) => <strong style={{ color: '#fff' }}>{r.currentLocation}</strong>
     },
     {
-      header: 'DELAY STATUS',
+      header: 'Delay Status',
       accessor: 'delayed',
       render: (r) => (
-        <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
-          r.delayed ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-        }`}>
+        <span className={`badge ${r.delayed ? 'badge-danger' : 'badge-success'}`}>
           {r.delayed ? `Delayed: ${r.delayReason || 'Transit issue'}` : 'On Schedule'}
         </span>
       )
     },
     {
-      header: 'STATUS',
+      header: 'Milestone Status',
       accessor: 'status',
       render: (r) => <StatusBadge status={r.status} />
     }
@@ -192,229 +196,185 @@ export default function LogisticsReportsModule({
   // Installation Columns
   const installationColumns = [
     {
-      header: 'COMPLETION NO',
+      header: 'Completion No',
       accessor: 'completionNumber',
-      render: (r) => <span className="font-mono text-emerald-400 font-bold text-xs">{r.completionNumber}</span>
+      render: (r) => <span className="font-mono text-cyan" style={{ fontWeight: 700 }}>{r.completionNumber}</span>
     },
     {
-      header: 'CUSTOMER',
+      header: 'Customer',
       accessor: 'customerName',
-      render: (r) => <span className="text-xs text-slate-200 font-semibold">{r.customerName}</span>
+      render: (r) => <strong style={{ color: '#fff' }}>{r.customerName}</strong>
     },
     {
-      header: 'EQUIPMENT',
+      header: 'Equipment',
       accessor: 'productName',
-      render: (r) => <span className="text-xs text-slate-300">{r.productName}</span>
+      render: (r) => r.productName
     },
     {
-      header: 'ENGINEER',
+      header: 'Service Engineer',
       accessor: 'technician',
-      render: (r) => <span className="text-xs text-slate-400">{r.technician}</span>
+      render: (r) => r.technician
     },
     {
-      header: 'RESULT',
+      header: 'Quality Checklist',
+      accessor: 'checklist',
+      render: (r) => {
+        const passed = Object.values(r.checklist || {}).filter(v => v === 'Pass').length;
+        return (
+          <span className={`badge ${passed === 7 ? 'badge-success' : 'badge-danger'}`}>
+            {passed} / 7 Pass
+          </span>
+        );
+      }
+    },
+    {
+      header: 'Overall Result',
       accessor: 'overallResult',
       render: (r) => (
-        <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
-          r.overallResult === 'Pass' ? 'text-emerald-400 bg-emerald-500/10 border border-emerald-500/20' : 'text-rose-400 bg-rose-500/10 border border-rose-500/20'
-        }`}>
-          {r.overallResult}
+        <span className={`badge ${r.overallResult === 'Pass' ? 'badge-success' : 'badge-danger'}`}>
+          {r.overallResult === 'Pass' ? 'PASSED' : 'RETEST REQUIRED'}
         </span>
       )
     },
     {
-      header: 'STATUS',
+      header: 'Status',
       accessor: 'status',
       render: (r) => <StatusBadge status={r.status} />
     }
   ];
 
   return (
-    <div className="space-y-6">
-      {/* Top Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800/80 pb-5">
-        <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-3">
-            <span className="p-2 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
-              <BarChart3 className="w-6 h-6" />
-            </span>
-            Logistics & Delivery Intelligence Reports
-          </h1>
-          <p className="text-sm text-slate-400 mt-1">
-            End-to-end delivery metrics, transit delay analysis, carrier SLAs, and commissioning quality ratios
-          </p>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="flex items-center gap-3">
-          <button
-            onClick={handleExportCSV}
-            className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-sm font-medium flex items-center gap-2 transition"
-          >
-            <Download className="w-4 h-4 text-cyan-400" />
-            Export CSV
-          </button>
-          <button
-            onClick={handlePrint}
-            className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-sm font-medium flex items-center gap-2 transition"
-          >
-            <Printer className="w-4 h-4 text-slate-400" />
-            Print
-          </button>
-        </div>
-      </div>
-
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+    <div className="module-container">
+      {/* 5 Executive KPI Cards */}
+      <div className="kpi-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
         <KpiCard
-          label="Total Deliveries"
+          title="Total Deliveries"
           value={totalDeliveries}
+          subtext="All scheduled customer shipments"
           icon={Truck}
-          color="cyan"
-          subtitle="All scheduled orders"
+          color="#06B6D4"
         />
         <KpiCard
-          label="Active In Transit"
+          title="Active In Transit"
           value={inTransitCount}
+          subtext="Shipments on road or with carrier"
           icon={Navigation}
-          color="blue"
-          subtitle="On road / carrier"
+          color="#3B82F6"
         />
         <KpiCard
-          label="Delivered (POD)"
+          title="Delivered (POD)"
           value={deliveredCount}
+          subtext="Signed proof of delivery received"
           icon={PackageCheck}
-          color="emerald"
-          subtitle="Signed and received"
+          color="#10B981"
         />
         <KpiCard
-          label="On-Time Rate"
+          title="On-Time Rate"
           value={`${onTimeRate}%`}
+          subtext={`${delayedCount} delayed shipments logged`}
           icon={Clock}
-          color={onTimeRate >= 90 ? 'emerald' : 'amber'}
-          subtitle={`${delayedCount} delayed shipments`}
+          color={onTimeRate >= 90 ? '#10B981' : '#F59E0B'}
         />
         <KpiCard
-          label="Install Pass Rate"
+          title="Installation Pass Rate"
           value={`${installationPassRate}%`}
+          subtext={`${passedInstallations} of ${installationCompletions.length || 0} passed on first test`}
           icon={Wrench}
-          color={installationPassRate >= 90 ? 'emerald' : 'amber'}
-          subtitle={`${passedInstallations} of ${installationCompletions.length} verified`}
+          color={installationPassRate >= 90 ? '#10B981' : '#F59E0B'}
         />
       </div>
 
-      {/* Report Sub-Tabs Navigation */}
-      <div className="flex flex-wrap items-center gap-2 border-b border-slate-800 pb-3">
-        <button
-          onClick={() => setActiveReportTab('deliveries')}
-          className={`px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition ${
-            activeReportTab === 'deliveries'
-              ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 shadow-lg shadow-cyan-500/10'
-              : 'text-slate-400 hover:text-white bg-slate-900/40 hover:bg-slate-800/60 border border-transparent'
-          }`}
-        >
-          <Truck className="w-4 h-4" />
-          Delivery Status Master
-        </button>
+      {/* Sub-Reports Tab Switcher & Export Actions */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
+        <div className="tab-switcher">
+          <button
+            className={`tab-btn ${activeReportTab === 'deliveries' ? 'active' : ''}`}
+            onClick={() => setActiveReportTab('deliveries')}
+          >
+            <Truck size={14} style={{ marginRight: 6, verticalAlign: 'middle' }} />
+            Delivery Status Master
+          </button>
+          <button
+            className={`tab-btn ${activeReportTab === 'transit' ? 'active' : ''}`}
+            onClick={() => setActiveReportTab('transit')}
+          >
+            <Navigation size={14} style={{ marginRight: 6, verticalAlign: 'middle' }} />
+            Transit & Delay Log
+          </button>
+          <button
+            className={`tab-btn ${activeReportTab === 'installations' ? 'active' : ''}`}
+            onClick={() => setActiveReportTab('installations')}
+          >
+            <Wrench size={14} style={{ marginRight: 6, verticalAlign: 'middle' }} />
+            Installation & QA Pass Rate
+          </button>
+        </div>
 
-        <button
-          onClick={() => setActiveReportTab('transit')}
-          className={`px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition ${
-            activeReportTab === 'transit'
-              ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 shadow-lg shadow-cyan-500/10'
-              : 'text-slate-400 hover:text-white bg-slate-900/40 hover:bg-slate-800/60 border border-transparent'
-          }`}
-        >
-          <Navigation className="w-4 h-4" />
-          Transit & Delay Log
-        </button>
-
-        <button
-          onClick={() => setActiveReportTab('installations')}
-          className={`px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition ${
-            activeReportTab === 'installations'
-              ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 shadow-lg shadow-cyan-500/10'
-              : 'text-slate-400 hover:text-white bg-slate-900/40 hover:bg-slate-800/60 border border-transparent'
-          }`}
-        >
-          <Wrench className="w-4 h-4" />
-          Installation & QA Pass Rate
-        </button>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <button className="btn btn-secondary btn-sm" onClick={handleExportCSV}>
+            <Download size={14} /> Export CSV
+          </button>
+          <button className="btn btn-secondary btn-sm" onClick={handlePrint}>
+            <Printer size={14} /> Print
+          </button>
+        </div>
       </div>
 
-      {/* Dynamic Report View */}
+      {/* Active Tab View */}
       {activeReportTab === 'deliveries' && (
-        <div className="bg-[#0E131F] border border-slate-800/80 rounded-2xl p-5 shadow-xl space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-              <FileSpreadsheet className="w-4 h-4 text-cyan-400" />
-              Delivery Movement Breakdown
-            </h2>
-            <div className="flex items-center gap-2">
-              <select
-                value={selectedMethod}
-                onChange={(e) => setSelectedMethod(e.target.value)}
-                className="bg-[#161D2E] border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none"
-              >
-                <option value="All">All Methods</option>
-                <option value="Company Vehicle">Company Vehicle</option>
-                <option value="Courier / Transport">Courier / Transport</option>
-              </select>
+        <div>
+          {/* Method and Status Filters Bar */}
+          <div style={{ display: 'flex', gap: 10, marginBottom: 14, alignItems: 'center', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600 }}>Filter By:</span>
+            <select
+              className="select-filter"
+              value={selectedMethod}
+              onChange={(e) => setSelectedMethod(e.target.value)}
+            >
+              <option value="All">All Transport Methods</option>
+              <option value="Company Vehicle">Company Vehicle</option>
+              <option value="Courier / Transport">Courier / Transport</option>
+            </select>
 
-              <select
-                value={selectedStatus}
-                onChange={(e) => setSelectedStatus(e.target.value)}
-                className="bg-[#161D2E] border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none"
-              >
-                <option value="All">All Statuses</option>
-                <option value="Planned">Planned</option>
-                <option value="Dispatched">Dispatched</option>
-                <option value="In Transit">In Transit</option>
-                <option value="Delivered">Delivered</option>
-              </select>
-            </div>
+            <select
+              className="select-filter"
+              value={selectedStatus}
+              onChange={(e) => setSelectedStatus(e.target.value)}
+            >
+              <option value="All">All Statuses</option>
+              <option value="Planned">Planned</option>
+              <option value="Dispatched">Dispatched</option>
+              <option value="In Transit">In Transit</option>
+              <option value="Delivered">Delivered</option>
+            </select>
           </div>
 
           <DataTable
+            title="Customer Delivery Status Master"
+            subtitle="Consolidated shipment manifest with transport method breakdown and delivery dates"
             columns={deliveryColumns}
             data={filteredDeliveries}
-            searchPlaceholder="Filter delivery reports..."
           />
         </div>
       )}
 
       {activeReportTab === 'transit' && (
-        <div className="bg-[#0E131F] border border-slate-800/80 rounded-2xl p-5 shadow-xl space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-amber-400" />
-              Real-Time Tracking & Delay Exceptions
-            </h2>
-          </div>
-          <DataTable
-            columns={trackingColumns}
-            data={trackingRecords}
-            searchPlaceholder="Search tracking numbers, locations..."
-          />
-        </div>
+        <DataTable
+          title="Shipment Transit & Milestone Log"
+          subtitle="Real-time waypoint records, toll checkpoints, and delay classification audit"
+          columns={trackingColumns}
+          data={trackingRecords}
+        />
       )}
 
       {activeReportTab === 'installations' && (
-        <div className="bg-[#0E131F] border border-slate-800/80 rounded-2xl p-5 shadow-xl space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-              On-Site Commissioning & Acceptance Reports
-            </h2>
-          </div>
-          <DataTable
-            columns={installationColumns}
-            data={installationCompletions}
-            searchPlaceholder="Search installations, tech..."
-          />
-        </div>
+        <DataTable
+          title="On-Site Commissioning & Acceptance Reports"
+          subtitle="7-point checklist verification results, technical telemetry, and customer sign-off ledger"
+          columns={installationColumns}
+          data={installationCompletions}
+        />
       )}
     </div>
   );
 }
-

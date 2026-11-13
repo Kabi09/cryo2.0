@@ -7,7 +7,6 @@ import {
   CheckCircle2, 
   XCircle, 
   AlertTriangle, 
-  FileCheck, 
   User, 
   Calendar, 
   Wrench, 
@@ -25,7 +24,6 @@ export default function InstallationCompletionModule({
 }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
-  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
 
   const [formData, setFormData] = useState({
     installation: '',
@@ -61,7 +59,6 @@ export default function InstallationCompletionModule({
   });
 
   const handleOpenModal = () => {
-    // Select first installation if available
     if (installations.length > 0 && !formData.installation) {
       handleSelectInstallation(installations[0]._id);
     }
@@ -148,7 +145,6 @@ export default function InstallationCompletionModule({
     { key: 'overallWorkingCondition', label: '7. Overall Functional Operation & Emergency Stop Test' }
   ];
 
-  // Helper to count passed checkpoints
   const getPassCount = (checklist) => {
     if (!checklist) return 0;
     return Object.values(checklist).filter(v => v === 'Pass').length;
@@ -156,90 +152,70 @@ export default function InstallationCompletionModule({
 
   const columns = [
     {
-      header: 'COMPLETION NO',
+      header: 'Completion No',
       accessor: 'completionNumber',
-      render: (row) => (
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
-            <ClipboardCheck className="w-4 h-4" />
-          </div>
-          <div>
-            <span className="font-mono text-xs font-bold text-emerald-400 block">{row.completionNumber}</span>
-            <span className="text-[10px] text-slate-400">Inst: {row.installationNumber}</span>
-          </div>
-        </div>
-      )
+      render: (row) => <span className="font-mono text-cyan" style={{ fontWeight: 700 }}>{row.completionNumber}</span>
     },
     {
-      header: 'CUSTOMER & PRODUCT',
+      header: 'Installation Ref',
+      accessor: 'installationNumber',
+      render: (row) => <span className="font-mono" style={{ color: '#818CF8' }}>{row.installationNumber}</span>
+    },
+    {
+      header: 'Customer',
       accessor: 'customerName',
+      render: (row) => <strong style={{ color: '#fff' }}>{row.customerName}</strong>
+    },
+    {
+      header: 'Equipment & Serial',
+      accessor: 'productName',
       render: (row) => (
         <div>
-          <div className="text-xs font-semibold text-slate-200">{row.customerName}</div>
-          <div className="text-[10px] text-cyan-400/80 font-mono">
-            {row.productName} • SN: {row.serialNumber}
+          <span>{row.productName}</span>
+          <div style={{ fontSize: '0.72rem', color: 'var(--cyan)', fontFamily: 'var(--font-mono)' }}>
+            SN: {row.serialNumber || 'N/A'}
           </div>
         </div>
       )
     },
     {
-      header: 'TECHNICIAN',
+      header: 'Lead Technician',
       accessor: 'technician',
-      render: (row) => (
-        <div className="flex items-center gap-1.5">
-          <User className="w-3.5 h-3.5 text-slate-400" />
-          <span className="text-xs text-slate-300 truncate max-w-[140px]">{row.technician}</span>
-        </div>
-      )
+      render: (row) => row.technician
     },
     {
-      header: 'CHECKLIST',
+      header: '7-Point Checklist',
       accessor: 'checklist',
       render: (row) => {
         const passed = getPassCount(row.checklist);
-        const isPerfect = passed === 7;
         return (
-          <div className="flex items-center gap-2">
-            <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold font-mono ${
-              isPerfect 
-                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
-                : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
-            }`}>
-              {passed}/7 Pass
-            </span>
-          </div>
+          <span className={`badge ${passed === 7 ? 'badge-success' : 'badge-danger'}`}>
+            {passed} / 7 Pass
+          </span>
         );
       }
     },
     {
-      header: 'OVERALL RESULT',
+      header: 'Overall Result',
       accessor: 'overallResult',
       render: (row) => (
-        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-          row.overallResult === 'Pass'
-            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-            : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
-        }`}>
-          {row.overallResult === 'Pass' ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
-          {row.overallResult}
+        <span className={`badge ${row.overallResult === 'Pass' ? 'badge-success' : 'badge-danger'}`}>
+          {row.overallResult === 'Pass' ? 'PASSED' : 'RETEST REQUIRED'}
         </span>
       )
     },
     {
-      header: 'STATUS',
+      header: 'Status',
       accessor: 'status',
       render: (row) => <StatusBadge status={row.status} />
     },
     {
-      header: 'ACTIONS',
+      header: 'Actions',
       accessor: '_id',
       render: (row) => (
         <button
-          onClick={() => {
-            setSelectedItem(row);
-            setIsViewModalOpen(true);
-          }}
-          className="px-2.5 py-1 text-xs rounded-md bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 transition"
+          onClick={() => setSelectedItem(row)}
+          className="btn btn-secondary btn-sm"
         >
           View Report
         </button>
@@ -248,310 +224,359 @@ export default function InstallationCompletionModule({
   ];
 
   return (
-    <div className="space-y-6">
-      {/* Top Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800/80 pb-5">
-        <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-3">
-            <span className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-              <ClipboardCheck className="w-6 h-6" />
-            </span>
-            Installation Completion & Quality Sign-Off
-          </h1>
-          <p className="text-sm text-slate-400 mt-1">
-            Mandatory 7-point technical verification checklist, functional telemetry, and customer sign-off protocol
-          </p>
-        </div>
+    <div className="module-container">
+      <DataTable
+        title="Installation Completion & Quality Sign-Off"
+        subtitle="Mandatory 7-point technical verification checklist, operational telemetry, and customer handover protocol"
+        columns={columns}
+        data={completions}
+        onAdd={handleOpenModal}
+        addLabel="Record Completion Report"
+      />
 
-        {/* Single Add Button */}
-        <button
-          onClick={handleOpenModal}
-          className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-medium text-sm shadow-lg shadow-emerald-500/20 flex items-center gap-2 transition"
-        >
-          <ClipboardCheck className="w-4 h-4" />
-          + Record Completion Report
-        </button>
-      </div>
-
-      {/* Main DataTable */}
-      <div className="bg-[#0E131F] border border-slate-800/80 rounded-2xl p-5 shadow-xl">
-        <DataTable
-          columns={columns}
-          data={completions}
-          searchPlaceholder="Search completion reports, customer, serial, technician..."
-        />
-      </div>
-
-      {/* Add / Record Completion Modal */}
-      <Modal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        title="Record Installation Completion Report"
-        size="lg"
-      >
-        <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Linked Installation */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">
-                Link Installation Job <span className="text-emerald-400">*</span>
-              </label>
-              <select
-                value={formData.installation}
-                onChange={(e) => handleSelectInstallation(e.target.value)}
-                className="w-full bg-[#161D2E] border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-emerald-500"
-                required
-              >
-                <option value="">-- Select Installation --</option>
-                {installations.map(inst => (
-                  <option key={inst._id} value={inst._id}>
-                    {inst.installationNumber} - {inst.customerName} ({inst.productName})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">Lead Field Technician</label>
-              <input
-                type="text"
-                value={formData.technician}
-                onChange={(e) => setFormData({ ...formData, technician: e.target.value })}
-                className="w-full bg-[#161D2E] border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-emerald-500"
-                required
-              />
-            </div>
-          </div>
-
-          {/* Product & Customer Info Read-only Summary */}
-          <div className="p-3 rounded-xl bg-slate-900/50 border border-slate-800 flex flex-wrap items-center justify-between text-xs gap-3">
-            <div>
-              <span className="text-slate-500 block">Customer</span>
-              <span className="text-slate-200 font-semibold">{formData.customerName || 'None selected'}</span>
-            </div>
-            <div>
-              <span className="text-slate-500 block">Equipment</span>
-              <span className="text-slate-200 font-semibold">{formData.productName || 'None selected'}</span>
-            </div>
-            <div>
-              <span className="text-slate-500 block">Serial Number</span>
-              <span className="text-emerald-400 font-mono font-bold">{formData.serialNumber || 'N/A'}</span>
-            </div>
-            <div>
-              <span className="text-slate-500 block">Test Date</span>
-              <span className="text-slate-300">{formData.installationDate}</span>
-            </div>
-          </div>
-
-          {/* 7-Point Mandatory Checklist */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                7-Point Mandatory Quality Checklist
-              </h3>
-              <span className="text-[11px] text-slate-400">All 7 points must pass for successful commissioning</span>
-            </div>
-
-            <div className="bg-[#161D2E] border border-slate-800 rounded-xl p-3 divide-y divide-slate-800">
-              {checklistItems.map((item) => (
-                <div key={item.key} className="py-2.5 flex items-center justify-between">
-                  <span className="text-xs text-slate-300 font-medium">{item.label}</span>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleChecklistChange(item.key, 'Pass')}
-                      className={`px-3 py-1 rounded-lg text-xs font-semibold transition ${
-                        formData.checklist[item.key] === 'Pass'
-                          ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/20'
-                          : 'bg-slate-800 text-slate-400 hover:text-white'
-                      }`}
-                    >
-                      Pass
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleChecklistChange(item.key, 'Fail')}
-                      className={`px-3 py-1 rounded-lg text-xs font-semibold transition ${
-                        formData.checklist[item.key] === 'Fail'
-                          ? 'bg-rose-500 text-white shadow-md shadow-rose-500/20'
-                          : 'bg-slate-800 text-slate-400 hover:text-white'
-                      }`}
-                    >
-                      Fail
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Functional Parameter Testing */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider">
-                Functional Telemetry & Test Values
-              </h3>
-              <button
-                type="button"
-                onClick={handleAddTestRow}
-                className="text-xs text-emerald-400 hover:text-emerald-300 flex items-center gap-1"
-              >
-                <Plus className="w-3.5 h-3.5" /> Add Metric
-              </button>
-            </div>
-
-            <div className="space-y-2">
-              {formData.testingDetails.map((row, idx) => (
-                <div key={idx} className="grid grid-cols-12 gap-2 items-center bg-[#161D2E]/60 p-2 rounded-lg border border-slate-800">
-                  <div className="col-span-4">
-                    <input
-                      type="text"
-                      placeholder="Parameter (e.g. Temp)"
-                      value={row.parameter}
-                      onChange={(e) => handleTestRowChange(idx, 'parameter', e.target.value)}
-                      className="w-full bg-[#0E131F] border border-slate-700/60 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none"
-                    />
-                  </div>
-                  <div className="col-span-3">
-                    <input
-                      type="text"
-                      placeholder="Expected"
-                      value={row.expectedValue}
-                      onChange={(e) => handleTestRowChange(idx, 'expectedValue', e.target.value)}
-                      className="w-full bg-[#0E131F] border border-slate-700/60 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none"
-                    />
-                  </div>
-                  <div className="col-span-3">
-                    <input
-                      type="text"
-                      placeholder="Actual"
-                      value={row.actualValue}
-                      onChange={(e) => handleTestRowChange(idx, 'actualValue', e.target.value)}
-                      className="w-full bg-[#0E131F] border border-slate-700/60 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none"
-                    />
-                  </div>
-                  <div className="col-span-2 flex items-center justify-between">
-                    <select
-                      value={row.result}
-                      onChange={(e) => handleTestRowChange(idx, 'result', e.target.value)}
-                      className="bg-[#0E131F] border border-slate-700/60 rounded px-1.5 py-1.5 text-xs text-slate-200 focus:outline-none"
-                    >
-                      <option value="Pass">Pass</option>
-                      <option value="Fail">Fail</option>
-                    </select>
-                    {formData.testingDetails.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveTestRow(idx)}
-                        className="text-slate-500 hover:text-rose-400 p-1"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Customer Sign-off Section */}
-          <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 space-y-3">
-            <h4 className="text-xs font-bold text-slate-300 uppercase">Customer Sign-Off & Acceptance</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-[11px] text-slate-400 mb-1">Customer Signatory Name</label>
-                <input
-                  type="text"
-                  value={formData.customerConfirmation.customerName}
-                  onChange={(e) => setFormData({
-                    ...formData,
-                    customerConfirmation: { ...formData.customerConfirmation, customerName: e.target.value }
-                  })}
-                  className="w-full bg-[#161D2E] border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] text-slate-400 mb-1">Customer Feedback / Observations</label>
-                <input
-                  type="text"
-                  value={formData.customerConfirmation.customerFeedback}
-                  onChange={(e) => setFormData({
-                    ...formData,
-                    customerConfirmation: { ...formData.customerConfirmation, customerFeedback: e.target.value }
-                  })}
-                  className="w-full bg-[#161D2E] border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
-            <button
-              type="button"
-              onClick={() => setIsModalOpen(false)}
-              className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-medium transition"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-5 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white text-sm font-medium shadow-lg shadow-emerald-500/20 transition"
-            >
-              Submit Completion Report
-            </button>
-          </div>
-        </form>
-      </Modal>
-
-      {/* View Completion Report Modal */}
-      {selectedItem && (
+      {/* Add Completion Modal */}
+      {isModalOpen && (
         <Modal
-          isOpen={isViewModalOpen}
-          onClose={() => setIsViewModalOpen(false)}
-          title={`Installation Report - ${selectedItem.completionNumber}`}
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          title="Record Installation Completion Report"
+          subtitle="Mandatory 7-point technical verification protocol & mutual customer acceptance"
           size="lg"
         >
-          <div className="space-y-5">
-            <div className="flex items-center justify-between p-4 rounded-xl bg-slate-900/60 border border-slate-800">
-              <div>
-                <span className="text-xs text-slate-400 uppercase font-semibold">Overall Verdict</span>
-                <div className="mt-1">
-                  <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
-                    selectedItem.overallResult === 'Pass'
-                      ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                      : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
-                  }`}>
-                    {selectedItem.overallResult === 'Pass' ? <CheckCircle2 className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
+          <form onSubmit={handleSubmit}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+              {/* Linked Job Details */}
+              <div style={{ background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-subtle)', borderRadius: 10, padding: 18 }}>
+                <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--cyan)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Wrench size={16} /> 1. Installation Job Reference & Unit Particulars
+                </div>
+
+                <div className="form-grid">
+                  <div className="form-group col-span-2">
+                    <label className="form-label">Link Scheduled Installation <span className="req">*</span></label>
+                    <select
+                      className="form-select"
+                      value={formData.installation}
+                      onChange={(e) => handleSelectInstallation(e.target.value)}
+                      required
+                    >
+                      <option value="">Select Installation Record</option>
+                      {installations.map(inst => (
+                        <option key={inst._id} value={inst._id}>
+                          {inst.installationNumber} — {inst.customerName} ({inst.productName})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Customer Name</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      value={formData.customerName}
+                      readOnly
+                      style={{ opacity: 0.8 }}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Product Name</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      value={formData.productName}
+                      readOnly
+                      style={{ opacity: 0.8 }}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Serial Number</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      value={formData.serialNumber}
+                      readOnly
+                      style={{ opacity: 0.8, fontFamily: 'var(--font-mono)', color: 'var(--cyan)' }}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Lead Commissioning Engineer <span className="req">*</span></label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      value={formData.technician}
+                      onChange={(e) => setFormData({ ...formData, technician: e.target.value })}
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* 7-Point Mandatory Quality Checklist */}
+              <div style={{ background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-subtle)', borderRadius: 10, padding: 18 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                  <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--cyan)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <ShieldCheck size={16} /> 2. Mandatory 7-Point Quality Checklist
+                  </div>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>All 7 points must pass for commissioning</span>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {checklistItems.map((item) => (
+                    <div
+                      key={item.key}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '10px 14px',
+                        background: 'var(--bg-surface)',
+                        borderRadius: 8,
+                        border: '1px solid var(--border-subtle)'
+                      }}
+                    >
+                      <span style={{ fontSize: '0.82rem', color: 'var(--text-primary)', fontWeight: 500 }}>
+                        {item.label}
+                      </span>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button
+                          type="button"
+                          onClick={() => handleChecklistChange(item.key, 'Pass')}
+                          className={`btn btn-sm ${formData.checklist[item.key] === 'Pass' ? 'btn-primary' : 'btn-secondary'}`}
+                          style={{
+                            padding: '4px 12px',
+                            background: formData.checklist[item.key] === 'Pass' ? '#10B981' : undefined,
+                            borderColor: formData.checklist[item.key] === 'Pass' ? '#10B981' : undefined
+                          }}
+                        >
+                          Pass
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleChecklistChange(item.key, 'Fail')}
+                          className={`btn btn-sm ${formData.checklist[item.key] === 'Fail' ? 'btn-primary' : 'btn-secondary'}`}
+                          style={{
+                            padding: '4px 12px',
+                            background: formData.checklist[item.key] === 'Fail' ? '#EF4444' : undefined,
+                            borderColor: formData.checklist[item.key] === 'Fail' ? '#EF4444' : undefined
+                          }}
+                        >
+                          Fail
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Functional Telemetry Values */}
+              <div style={{ background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-subtle)', borderRadius: 10, padding: 18 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                  <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--cyan)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    3. Functional Telemetry & Live Readings
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleAddTestRow}
+                    className="btn btn-secondary btn-sm"
+                  >
+                    <Plus size={13} /> Add Metric
+                  </button>
+                </div>
+
+                <div className="subtable-box">
+                  <table className="subtable">
+                    <thead>
+                      <tr>
+                        <th>Parameter Metric</th>
+                        <th>Expected Value</th>
+                        <th>Actual Live Value</th>
+                        <th>Result</th>
+                        <th style={{ width: 40 }}></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {formData.testingDetails.map((row, idx) => (
+                        <tr key={idx}>
+                          <td>
+                            <input
+                              type="text"
+                              className="form-input"
+                              placeholder="Parameter name"
+                              value={row.parameter}
+                              onChange={(e) => handleTestRowChange(idx, 'parameter', e.target.value)}
+                            />
+                          </td>
+                          <td>
+                            <input
+                              type="text"
+                              className="form-input"
+                              placeholder="Expected spec"
+                              value={row.expectedValue}
+                              onChange={(e) => handleTestRowChange(idx, 'expectedValue', e.target.value)}
+                            />
+                          </td>
+                          <td>
+                            <input
+                              type="text"
+                              className="form-input"
+                              placeholder="Actual reading"
+                              value={row.actualValue}
+                              onChange={(e) => handleTestRowChange(idx, 'actualValue', e.target.value)}
+                            />
+                          </td>
+                          <td>
+                            <select
+                              className="form-select"
+                              value={row.result}
+                              onChange={(e) => handleTestRowChange(idx, 'result', e.target.value)}
+                            >
+                              <option value="Pass">Pass</option>
+                              <option value="Fail">Fail</option>
+                            </select>
+                          </td>
+                          <td>
+                            {formData.testingDetails.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveTestRow(idx)}
+                                className="icon-btn"
+                                style={{ color: 'var(--danger)' }}
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Customer Sign-off Section */}
+              <div style={{ background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-subtle)', borderRadius: 10, padding: 18 }}>
+                <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--cyan)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 14 }}>
+                  4. Customer Acceptance & Mutual Sign-Off
+                </div>
+
+                <div className="form-grid">
+                  <div className="form-group">
+                    <label className="form-label">Customer Signatory Name <span className="req">*</span></label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      value={formData.customerConfirmation.customerName}
+                      onChange={(e) => setFormData({
+                        ...formData,
+                        customerConfirmation: { ...formData.customerConfirmation, customerName: e.target.value }
+                      })}
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Customer Feedback / Acceptance Remarks</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      value={formData.customerConfirmation.customerFeedback}
+                      onChange={(e) => setFormData({
+                        ...formData,
+                        customerConfirmation: { ...formData.customerConfirmation, customerFeedback: e.target.value }
+                      })}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="modal-footer" style={{ marginTop: 24 }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setIsModalOpen(false)}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="btn btn-primary"
+              >
+                Submit Completion Report
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* View Detail Report Modal */}
+      {selectedItem && (
+        <Modal
+          isOpen={!!selectedItem}
+          onClose={() => setSelectedItem(null)}
+          title={`Commissioning Certificate: ${selectedItem.completionNumber}`}
+          subtitle={`Installation Ref: ${selectedItem.installationNumber} • ${selectedItem.customerName}`}
+          size="lg"
+        >
+          <div>
+            <div className="detail-grid">
+              <div className="detail-item">
+                <div className="detail-label">Report Number</div>
+                <div className="detail-value font-mono text-cyan">{selectedItem.completionNumber}</div>
+              </div>
+              <div className="detail-item">
+                <div className="detail-label">Overall Verdict</div>
+                <div className="detail-value">
+                  <span className={`badge ${selectedItem.overallResult === 'Pass' ? 'badge-success' : 'badge-danger'}`}>
                     {selectedItem.overallResult === 'Pass' ? 'PASSED & COMMISSIONED' : 'FAILED - RETEST REQUIRED'}
                   </span>
                 </div>
               </div>
-              <div>
-                <span className="text-xs text-slate-400 uppercase font-semibold">Job Reference</span>
-                <div className="text-sm font-mono text-cyan-400 font-bold mt-1">{selectedItem.installationNumber}</div>
+              <div className="detail-item">
+                <div className="detail-label">Customer Name</div>
+                <div className="detail-value">{selectedItem.customerName}</div>
               </div>
-              <div>
-                <span className="text-xs text-slate-400 uppercase font-semibold">Sign-off Status</span>
-                <div className="mt-1"><StatusBadge status={selectedItem.status} /></div>
+              <div className="detail-item">
+                <div className="detail-label">Equipment Model</div>
+                <div className="detail-value">{selectedItem.productName} (SN: {selectedItem.serialNumber})</div>
+              </div>
+              <div className="detail-item">
+                <div className="detail-label">Commissioning Tech</div>
+                <div className="detail-value">{selectedItem.technician}</div>
+              </div>
+              <div className="detail-item">
+                <div className="detail-label">Sign-Off Status</div>
+                <div className="detail-value"><StatusBadge status={selectedItem.status} /></div>
               </div>
             </div>
 
-            {/* Checklist Results */}
-            <div className="p-4 rounded-xl bg-slate-900/40 border border-slate-800">
-              <h4 className="text-xs font-bold text-slate-300 uppercase mb-3 flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                Verified Checkpoints Result
-              </h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+            {/* Checklist Results Grid */}
+            <div style={{ marginTop: 18, background: 'var(--bg-surface-elevated)', borderRadius: 10, padding: 16, border: '1px solid var(--border-subtle)' }}>
+              <div style={{ fontWeight: 700, fontSize: '0.85rem', marginBottom: 12, color: 'var(--cyan)' }}>
+                7-Point Inspection Audit:
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 8 }}>
                 {checklistItems.map(item => {
                   const passed = selectedItem.checklist?.[item.key] === 'Pass';
                   return (
-                    <div key={item.key} className="flex items-center justify-between p-2 rounded bg-[#161D2E]/40 border border-slate-800/60">
-                      <span className="text-slate-300">{item.label}</span>
-                      <span className={`font-bold ${passed ? 'text-emerald-400' : 'text-rose-400'}`}>
+                    <div
+                      key={item.key}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '8px 12px',
+                        background: 'var(--bg-surface)',
+                        borderRadius: 6,
+                        border: '1px solid var(--border-subtle)'
+                      }}
+                    >
+                      <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>{item.label}</span>
+                      <span className={`badge ${passed ? 'badge-success' : 'badge-danger'}`}>
                         {passed ? 'PASS' : 'FAIL'}
                       </span>
                     </div>
@@ -560,55 +585,71 @@ export default function InstallationCompletionModule({
               </div>
             </div>
 
-            {/* Test Telemetry */}
+            {/* Telemetry Readings */}
             {selectedItem.testingDetails && selectedItem.testingDetails.length > 0 && (
-              <div className="p-4 rounded-xl bg-slate-900/40 border border-slate-800">
-                <h4 className="text-xs font-bold text-slate-300 uppercase mb-3">Live Test Parameters</h4>
-                <div className="space-y-1.5 text-xs">
-                  {selectedItem.testingDetails.map((td, i) => (
-                    <div key={i} className="flex items-center justify-between p-2 rounded bg-[#161D2E]/40">
-                      <span className="text-slate-300 font-medium">{td.parameter}</span>
-                      <div className="flex items-center gap-4">
-                        <span className="text-slate-400">Exp: {td.expectedValue}</span>
-                        <span className="text-cyan-400 font-mono">Act: {td.actualValue}</span>
-                        <span className={td.result === 'Pass' ? 'text-emerald-400 font-bold' : 'text-rose-400 font-bold'}>
-                          {td.result}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
+              <div style={{ marginTop: 18 }}>
+                <div style={{ fontWeight: 700, fontSize: '0.85rem', marginBottom: 8 }}>Recorded Telemetry:</div>
+                <div className="subtable-box">
+                  <table className="subtable">
+                    <thead>
+                      <tr>
+                        <th>Metric</th>
+                        <th>Target Specification</th>
+                        <th>Actual Verified</th>
+                        <th>Result</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selectedItem.testingDetails.map((td, i) => (
+                        <tr key={i}>
+                          <td><strong>{td.parameter}</strong></td>
+                          <td>{td.expectedValue}</td>
+                          <td style={{ fontFamily: 'var(--font-mono)', color: 'var(--cyan)' }}>{td.actualValue}</td>
+                          <td>
+                            <span className={`badge ${td.result === 'Pass' ? 'badge-success' : 'badge-danger'}`}>
+                              {td.result}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             )}
 
-            {/* Customer Signatures */}
-            <div className="grid grid-cols-2 gap-4 text-xs">
-              <div className="p-3 rounded-lg bg-slate-900/40 border border-slate-800">
-                <span className="text-slate-500 uppercase block font-semibold mb-1">Customer Sign-Off</span>
-                <div className="text-slate-200 font-semibold">{selectedItem.customerConfirmation?.customerName || selectedItem.customerName}</div>
-                <div className="text-slate-400 italic text-[11px] mt-1">"{selectedItem.customerConfirmation?.customerFeedback}"</div>
-                <div className="text-emerald-400 font-mono text-[11px] mt-2 border-t border-slate-800 pt-1">
+            {/* Signatures */}
+            <div style={{ marginTop: 18, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              <div style={{ background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-subtle)', borderRadius: 8, padding: 14 }}>
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Customer Sign-Off</div>
+                <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#fff', marginTop: 4 }}>
+                  {selectedItem.customerConfirmation?.customerName || selectedItem.customerName}
+                </div>
+                <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', fontStyle: 'italic', marginTop: 4 }}>
+                  "{selectedItem.customerConfirmation?.customerFeedback}"
+                </div>
+                <div style={{ marginTop: 8, fontSize: '0.74rem', color: '#10B981', fontFamily: 'var(--font-mono)' }}>
                   ✓ {selectedItem.customerConfirmation?.customerSignature}
                 </div>
               </div>
 
-              <div className="p-3 rounded-lg bg-slate-900/40 border border-slate-800">
-                <span className="text-slate-500 uppercase block font-semibold mb-1">Service Engineer Sign-Off</span>
-                <div className="text-slate-200 font-semibold">{selectedItem.technician}</div>
-                <div className="text-slate-400 text-[11px] mt-1">Commissioning Engineer / Quality Inspector</div>
-                <div className="text-cyan-400 font-mono text-[11px] mt-2 border-t border-slate-800 pt-1">
+              <div style={{ background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-subtle)', borderRadius: 8, padding: 14 }}>
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Service Engineer Sign-Off</div>
+                <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#fff', marginTop: 4 }}>{selectedItem.technician}</div>
+                <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', marginTop: 4 }}>Lead Field Service Engineer</div>
+                <div style={{ marginTop: 8, fontSize: '0.74rem', color: 'var(--cyan)', fontFamily: 'var(--font-mono)' }}>
                   ✓ {selectedItem.customerConfirmation?.technicianSignature}
                 </div>
               </div>
             </div>
 
-            <div className="flex justify-end pt-3 border-t border-slate-800">
+            <div className="modal-footer" style={{ marginTop: 20 }}>
               <button
                 type="button"
-                onClick={() => setIsViewModalOpen(false)}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-medium transition"
+                className="btn btn-secondary"
+                onClick={() => setSelectedItem(null)}
               >
-                Close Report
+                Close Certificate
               </button>
             </div>
           </div>
@@ -617,4 +658,3 @@ export default function InstallationCompletionModule({
     </div>
   );
 }
-
