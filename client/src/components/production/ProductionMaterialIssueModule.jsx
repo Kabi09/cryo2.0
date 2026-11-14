@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import DataTable from '../common/DataTable';
 import Modal from '../common/Modal';
 import StatusBadge from '../common/StatusBadge';
-import { Warehouse, CheckCircle2, AlertTriangle, Printer, Layers } from 'lucide-react';
+import { Warehouse, CheckCircle2, AlertTriangle, Printer, Layers, Eye } from 'lucide-react';
 
 export default function ProductionMaterialIssueModule({
   materialIssues = [],
@@ -12,6 +12,8 @@ export default function ProductionMaterialIssueModule({
   showToast
 }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedIssue, setSelectedIssue] = useState(null);
+
   const [formData, setFormData] = useState({
     materialRequest: '',
     requestNumber: '',
@@ -118,12 +120,20 @@ export default function ProductionMaterialIssueModule({
     {
       header: 'Issue No',
       accessor: 'issueNumber',
-      render: (row) => <span className="font-mono text-cyan" style={{ fontWeight: 700 }}>{row.issueNumber}</span>
+      render: (row) => (
+        <span
+          className="code-badge"
+          style={{ cursor: 'pointer', color: 'var(--primary)', fontWeight: 700 }}
+          onClick={() => setSelectedIssue(row)}
+        >
+          {row.issueNumber}
+        </span>
+      )
     },
     {
       header: 'Request No',
       accessor: 'requestNumber',
-      render: (row) => <span className="font-mono" style={{ color: '#818CF8' }}>{row.requestNumber || 'MR-001'}</span>
+      render: (row) => <span className="font-mono" style={{ color: 'var(--text-secondary)' }}>{row.requestNumber || 'MR-001'}</span>
     },
     {
       header: 'WO No',
@@ -143,7 +153,7 @@ export default function ProductionMaterialIssueModule({
     {
       header: 'Issue Date',
       accessor: 'issueDate',
-      render: (row) => (row.issueDate ? new Date(row.issueDate).toLocaleDateString() : '-')
+      render: (row) => (row.issueDate ? new Date(row.issueDate).toLocaleDateString('en-GB') : '-')
     },
     {
       header: 'Issued By',
@@ -154,6 +164,21 @@ export default function ProductionMaterialIssueModule({
       header: 'Status',
       accessor: 'status',
       render: (row) => <StatusBadge status={row.status || 'Issued'} />
+    },
+    {
+      header: 'Actions',
+      render: (row) => (
+        <div className="action-btns" onClick={(e) => e.stopPropagation()}>
+          <button
+            type="button"
+            className="icon-btn"
+            title="View Issue Slip Details"
+            onClick={() => setSelectedIssue(row)}
+          >
+            <Eye size={15} />
+          </button>
+        </div>
+      )
     }
   ];
 
@@ -163,12 +188,12 @@ export default function ProductionMaterialIssueModule({
       <div className="card" style={{ marginBottom: 16, padding: '12px 18px', display: 'flex', alignItems: 'center', gap: 12, background: 'rgba(16, 185, 129, 0.05)' }}>
         <CheckCircle2 size={18} style={{ color: 'var(--success)' }} />
         <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-          <strong>Inventory Protection Rule:</strong> Materials cannot exceed approved store stock. Once issued, Company Store inventory decreases immediately and records an audit trail in the Stock Ledger.
+          <strong>Inventory Protection Rule:</strong> Materials cannot exceed approved warehouse stock. Once issued, Company Store inventory decreases immediately and records an audit trail in the Stock Ledger.
         </span>
       </div>
 
       <DataTable
-        title="Material Issue from Company Store"
+        title="Material Issue Slips"
         subtitle="Authorize physical issuance of raw materials from warehouse to production work orders"
         columns={columns}
         data={materialIssues}
@@ -188,15 +213,13 @@ export default function ProductionMaterialIssueModule({
             <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
               {/* Request & Destination Card */}
               <div style={{ background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-subtle)', borderRadius: 10, padding: 18 }}>
-                <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--cyan)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <Warehouse size={16} /> 1. Request Details & Warehouse Location
+                <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Warehouse size={16} /> 1. Requisition & Work Order Particulars
                 </div>
-                
+
                 <div className="form-grid">
                   <div className="form-group col-span-2">
-                    <label className="form-label">
-                      Select Material Request (MR) <span className="req">*</span>
-                    </label>
+                    <label className="form-label">Material Request Reference <span className="req">*</span></label>
                     <select
                       className="form-select"
                       value={formData.materialRequest}
@@ -206,20 +229,20 @@ export default function ProductionMaterialIssueModule({
                       <option value="">Select Pending Material Request</option>
                       {materialRequests.map(mr => (
                         <option key={mr._id} value={mr._id}>
-                          {mr.requestNumber} — {mr.productName} ({mr.items?.length || 0} Materials) — [{mr.status}]
+                          {mr.requestNumber} — {mr.workOrderNumber} ({mr.productName}) • [{mr.status}]
                         </option>
                       ))}
                     </select>
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Linked Work Order</label>
+                    <label className="form-label">Work Order Reference</label>
                     <input
                       type="text"
                       className="form-input"
                       value={formData.workOrderNumber}
                       readOnly
-                      placeholder="Auto-linked from MR"
+                      style={{ background: 'var(--bg-surface)' }}
                     />
                   </div>
 
@@ -235,18 +258,7 @@ export default function ProductionMaterialIssueModule({
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Issue Date <span className="req">*</span></label>
-                    <input
-                      type="date"
-                      className="form-input"
-                      value={formData.issueDate}
-                      onChange={(e) => setFormData({ ...formData, issueDate: e.target.value })}
-                      required
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label className="form-label">Issued By (Store Keeper) <span className="req">*</span></label>
+                    <label className="form-label">Issued By <span className="req">*</span></label>
                     <input
                       type="text"
                       className="form-input"
@@ -256,8 +268,8 @@ export default function ProductionMaterialIssueModule({
                     />
                   </div>
 
-                  <div className="form-group col-span-2">
-                    <label className="form-label">Received By (Shop Floor Tech) <span className="req">*</span></label>
+                  <div className="form-group">
+                    <label className="form-label">Received By (Tech) <span className="req">*</span></label>
                     <input
                       type="text"
                       className="form-input"
@@ -269,82 +281,66 @@ export default function ProductionMaterialIssueModule({
                 </div>
               </div>
 
-              {/* Issued Material Rows */}
+              {/* Items Table */}
               <div style={{ background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-subtle)', borderRadius: 10, padding: 18 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                  <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--cyan)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <Layers size={16} /> 2. Materials to Issue (Physical Stock Verification)
-                  </div>
-                  {formData.items.length > 0 && (
-                    <span className="badge badge-info">{formData.items.length} Items Loaded</span>
-                  )}
+                <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 14 }}>
+                  2. Materials to Issue & Lot / Batch Allocation
                 </div>
 
                 {formData.items.length === 0 ? (
-                  <div style={{ padding: 24, textAlign: 'center', background: 'rgba(0, 0, 0, 0.25)', borderRadius: 8, color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                    Please select a Material Request above to load itemized raw materials.
+                  <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                    Select a Material Request above to load line items.
                   </div>
                 ) : (
-                  <div style={{ overflowX: 'auto' }}>
-                    <table className="custom-table" style={{ fontSize: '0.82rem' }}>
+                  <div className="subtable-box">
+                    <table className="subtable">
                       <thead>
                         <tr>
-                          <th style={{ width: '28%' }}>Raw Material</th>
-                          <th style={{ textAlign: 'center' }}>Requested</th>
-                          <th style={{ textAlign: 'center' }}>Live Store Stock</th>
-                          <th style={{ width: '120px', textAlign: 'center' }}>Issue Qty</th>
-                          <th style={{ width: '160px' }}>Batch / Heat No</th>
+                          <th>Raw Material</th>
+                          <th style={{ textAlign: 'center' }}>Available</th>
+                          <th style={{ textAlign: 'center' }}>Issue Qty</th>
+                          <th>Batch / Heat No</th>
                           <th style={{ textAlign: 'center' }}>Unit</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {formData.items.map((row, idx) => {
-                          const hasStock = row.availableStock >= row.issuedQty;
-                          return (
-                            <tr key={idx}>
-                              <td>
-                                <strong style={{ color: 'var(--text-primary)' }}>{row.materialName}</strong>
-                                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
-                                  {row.materialCode}
-                                </div>
-                              </td>
-                              <td style={{ textAlign: 'center', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
-                                {row.requestedQty}
-                              </td>
-                              <td style={{ textAlign: 'center' }}>
-                                <span className={`badge ${hasStock ? 'badge-success' : 'badge-danger'}`}>
-                                  {row.availableStock} {row.unit}
-                                </span>
-                              </td>
-                              <td>
-                                <input
-                                  type="number"
-                                  className="form-input"
-                                  min="0.01"
-                                  max={row.availableStock}
-                                  step="any"
-                                  value={row.issuedQty}
-                                  onChange={(e) => handleItemQtyChange(idx, e.target.value)}
-                                  style={{ textAlign: 'center', fontWeight: 700 }}
-                                  required
-                                />
-                              </td>
-                              <td>
-                                <input
-                                  type="text"
-                                  className="form-input"
-                                  value={row.batchNumber}
-                                  onChange={(e) => handleBatchChange(idx, e.target.value)}
-                                  placeholder="Batch / Heat No"
-                                  required
-                                />
-                              </td>
-                              <td style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>
-                                {row.unit}
-                              </td>
-                            </tr>
-                          );
-                        })}
+                        {formData.items.map((row, idx) => (
+                          <tr key={idx}>
+                            <td>
+                              <strong style={{ color: 'var(--text-primary)' }}>{row.materialName}</strong>
+                              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{row.materialCode}</div>
+                            </td>
+                            <td style={{ textAlign: 'center' }}>
+                              <span className="badge badge-info">{row.availableStock} {row.unit}</span>
+                            </td>
+                            <td>
+                              <input
+                                type="number"
+                                className="form-input"
+                                min="0.01"
+                                max={row.availableStock}
+                                step="any"
+                                value={row.issuedQty}
+                                onChange={(e) => handleItemQtyChange(idx, e.target.value)}
+                                style={{ textAlign: 'center', fontWeight: 700 }}
+                                required
+                              />
+                            </td>
+                            <td>
+                              <input
+                                type="text"
+                                className="form-input"
+                                value={row.batchNumber}
+                                onChange={(e) => handleBatchChange(idx, e.target.value)}
+                                placeholder="Batch / Heat No"
+                                required
+                              />
+                            </td>
+                            <td style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>
+                              {row.unit}
+                            </td>
+                          </tr>
+                        ))}
                       </tbody>
                     </table>
                   </div>
@@ -366,7 +362,7 @@ export default function ProductionMaterialIssueModule({
               </div>
             </div>
 
-            <div className="modal-footer" style={{ marginTop: 24, padding: '16px 0 0 0', background: 'transparent' }}>
+            <div className="modal-footer" style={{ marginTop: 24, padding: '16px 0 0 0', display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
               <button type="button" className="btn btn-secondary" onClick={() => setIsModalOpen(false)}>
                 Cancel
               </button>
@@ -377,7 +373,95 @@ export default function ProductionMaterialIssueModule({
           </form>
         </Modal>
       )}
+
+      {/* View Issue Slip Details Modal */}
+      {selectedIssue && (
+        <Modal
+          title={`Material Issue Slip: ${selectedIssue.issueNumber}`}
+          subtitle={`Dispatched from ${selectedIssue.storeLocation} to ${selectedIssue.workOrderNumber}`}
+          isOpen={!!selectedIssue}
+          onClose={() => setSelectedIssue(null)}
+          size="lg"
+        >
+          <div>
+            <div className="detail-grid">
+              <div className="detail-item">
+                <div className="detail-label">Issue Slip No</div>
+                <div className="detail-value" style={{ fontWeight: 700, color: 'var(--primary)' }}>{selectedIssue.issueNumber}</div>
+              </div>
+              <div className="detail-item">
+                <div className="detail-label">Status</div>
+                <div className="detail-value"><StatusBadge status={selectedIssue.status || 'Issued'} /></div>
+              </div>
+              <div className="detail-item">
+                <div className="detail-label">Work Order Ref</div>
+                <div className="detail-value">{selectedIssue.workOrderNumber}</div>
+              </div>
+              <div className="detail-item">
+                <div className="detail-label">Request Ref</div>
+                <div className="detail-value">{selectedIssue.requestNumber || '—'}</div>
+              </div>
+              <div className="detail-item">
+                <div className="detail-label">Issue Date</div>
+                <div className="detail-value">{selectedIssue.issueDate ? new Date(selectedIssue.issueDate).toLocaleDateString('en-GB') : '-'}</div>
+              </div>
+              <div className="detail-item">
+                <div className="detail-label">Store Location</div>
+                <div className="detail-value">{selectedIssue.storeLocation}</div>
+              </div>
+              <div className="detail-item">
+                <div className="detail-label">Issued By</div>
+                <div className="detail-value">{selectedIssue.issuedBy}</div>
+              </div>
+              <div className="detail-item">
+                <div className="detail-label">Received By</div>
+                <div className="detail-value">{selectedIssue.receivedBy}</div>
+              </div>
+            </div>
+
+            {/* Issued Items */}
+            <div style={{ marginTop: 18 }}>
+              <div style={{ fontWeight: 700, fontSize: '0.85rem', marginBottom: 8, color: 'var(--text-primary)' }}>
+                Issued Materials & Batch Allocation:
+              </div>
+              <div className="subtable-box">
+                <table className="subtable">
+                  <thead>
+                    <tr>
+                      <th>Raw Material</th>
+                      <th>Material Code</th>
+                      <th>Issued Qty</th>
+                      <th>Allocated Batch / Heat No</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(selectedIssue.items || []).map((it, idx) => (
+                      <tr key={idx}>
+                        <td><strong>{it.materialName}</strong></td>
+                        <td style={{ fontFamily: 'var(--font-mono)' }}>{it.materialCode}</td>
+                        <td style={{ fontWeight: 700, color: 'var(--success)', fontFamily: 'var(--font-mono)' }}>
+                          {it.issuedQty} {it.unit}
+                        </td>
+                        <td style={{ fontFamily: 'var(--font-mono)' }}>{it.batchNumber || 'STANDARD-BATCH'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div style={{ marginTop: 24, textAlign: 'right' }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setSelectedIssue(null)}
+              >
+                Close Slip
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
-

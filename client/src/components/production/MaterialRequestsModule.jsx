@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import DataTable from '../common/DataTable';
 import Modal from '../common/Modal';
 import StatusBadge from '../common/StatusBadge';
-import { Package, Plus, Trash2, ArrowRight, Warehouse, Info } from 'lucide-react';
+import { Package, Plus, Trash2, ArrowRight, Warehouse, Info, Eye, AlertTriangle, CheckCircle2, ShoppingCart } from 'lucide-react';
 
 export default function MaterialRequestsModule({
   materialRequests = [],
@@ -10,10 +10,15 @@ export default function MaterialRequestsModule({
   materials = [],
   boms = [],
   inventory = [],
+  preSelectedWO = null,
   onSave,
+  onNavigateToIssue,
+  onNavigateToPurchasing,
   showToast
 }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedMR, setSelectedMR] = useState(null);
+
   const [formData, setFormData] = useState({
     workOrder: '',
     workOrderNumber: '',
@@ -26,6 +31,14 @@ export default function MaterialRequestsModule({
     remarks: '',
     items: []
   });
+
+  // Handle preSelectedWO from Work Orders page
+  useEffect(() => {
+    if (preSelectedWO) {
+      handleSelectWO(preSelectedWO._id);
+      setIsModalOpen(true);
+    }
+  }, [preSelectedWO]);
 
   const handleOpenModal = () => {
     if (workOrders.length > 0 && !formData.workOrder) {
@@ -106,7 +119,15 @@ export default function MaterialRequestsModule({
     {
       header: 'Request No',
       accessor: 'requestNumber',
-      render: (row) => <span className="font-mono text-cyan" style={{ fontWeight: 700 }}>{row.requestNumber}</span>
+      render: (row) => (
+        <span
+          className="code-badge"
+          style={{ cursor: 'pointer', color: 'var(--primary)', fontWeight: 700 }}
+          onClick={() => setSelectedMR(row)}
+        >
+          {row.requestNumber}
+        </span>
+      )
     },
     {
       header: 'WO No',
@@ -116,27 +137,63 @@ export default function MaterialRequestsModule({
     {
       header: 'Product',
       accessor: 'productName',
-      render: (row) => row.productName
+      render: (row) => row.productName || 'Cryo Unit'
     },
     {
-      header: 'Requested Items',
+      header: 'Materials',
       accessor: 'items',
-      render: (row) => `${row.items ? row.items.length : 0} Materials`
+      render: (row) => `${row.items ? row.items.length : 0} Items`
+    },
+    {
+      header: 'Stock Health',
+      render: (row) => {
+        const hasShortage = (row.items || []).some(it => (it.availableStock || 0) < (it.requestedQty || it.requiredQty || 0));
+        return hasShortage ? (
+          <span className="badge badge-warning" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+            <AlertTriangle size={11} /> Shortage Detected
+          </span>
+        ) : (
+          <span className="badge badge-success" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+            <CheckCircle2 size={11} /> In Stock
+          </span>
+        );
+      }
     },
     {
       header: 'Required By',
       accessor: 'requiredDate',
-      render: (row) => (row.requiredDate ? new Date(row.requiredDate).toLocaleDateString() : '-')
-    },
-    {
-      header: 'Requested By',
-      accessor: 'requestedBy',
-      render: (row) => row.requestedBy
+      render: (row) => (row.requiredDate ? new Date(row.requiredDate).toLocaleDateString('en-GB') : '-')
     },
     {
       header: 'Status',
       accessor: 'status',
       render: (row) => <StatusBadge status={row.status || 'Pending'} />
+    },
+    {
+      header: 'Actions',
+      render: (row) => (
+        <div className="action-btns" onClick={(e) => e.stopPropagation()}>
+          <button
+            type="button"
+            className="icon-btn"
+            title="View Material Request Details"
+            onClick={() => setSelectedMR(row)}
+          >
+            <Eye size={15} />
+          </button>
+          {onNavigateToIssue && (
+            <button
+              type="button"
+              className="btn btn-secondary"
+              style={{ padding: '2px 8px', fontSize: '0.72rem', height: 26, gap: 4 }}
+              title="Issue Materials from Store"
+              onClick={() => onNavigateToIssue(row)}
+            >
+              Issue ➔
+            </button>
+          )}
+        </div>
+      )
     }
   ];
 
@@ -144,50 +201,51 @@ export default function MaterialRequestsModule({
     <div className="module-container">
       {/* SCM Company Store Connection Banner */}
       <div className="card" style={{ marginBottom: 16, padding: '12px 18px', display: 'flex', alignItems: 'center', gap: 12, background: 'rgba(6, 182, 212, 0.05)' }}>
-        <Warehouse size={18} style={{ color: 'var(--cyan)' }} />
+        <Warehouse size={18} style={{ color: 'var(--primary)' }} />
         <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-          <strong>Unified Company Store:</strong> Material requests connect directly to the Supply Chain inventory database. No separate duplicate stock database. Store verifies stock and issues with batch control.
+          <strong>Unified SCM Company Store:</strong> Material requests connect directly to verified Supply Chain warehouse inventory. When approved, materials are issued via batch-tracked store issue slips.
         </span>
       </div>
 
       <DataTable
         title="Material Requests to Company Store"
-        subtitle="Shop floor material requisition based on Bill of Materials and Work Order batch quantities"
+        subtitle="Shop floor material requisitions derived from BOM requirements and Work Order batch quantities"
         columns={columns}
         data={materialRequests}
         onAdd={handleOpenModal}
         addLabel="Create Material Request"
       />
 
+      {/* Create Modal */}
       {isModalOpen && (
         <Modal
-          title="Create Material Request (MR)"
-          subtitle="Generate store requisition ticket based on production quantities and locked BOM"
+          title="Create Material Request to Store"
+          subtitle="Generate store requisition for required raw materials from verified Bill of Materials"
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
           size="lg"
         >
           <form onSubmit={handleSubmit}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-              {/* Work Order Specification */}
+              {/* Header Box */}
               <div style={{ background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-subtle)', borderRadius: 10, padding: 18 }}>
-                <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--cyan)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <ShoppingCart size={16} /> 1. Work Order Association
+                <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Package size={16} /> 1. Work Order Reference
                 </div>
-                
+
                 <div className="form-grid">
                   <div className="form-group col-span-2">
-                    <label className="form-label">Active Work Order <span className="req">*</span></label>
+                    <label className="form-label">Linked Work Order <span className="req">*</span></label>
                     <select
                       className="form-select"
                       value={formData.workOrder}
                       onChange={(e) => handleSelectWO(e.target.value)}
                       required
                     >
-                      <option value="">Select Work Order</option>
+                      <option value="">Select Target Work Order</option>
                       {workOrders.map(wo => (
                         <option key={wo._id} value={wo._id}>
-                          {wo.workOrderNumber} — {wo.productName} ({wo.productionQuantity} Units) — [{wo.status}]
+                          {wo.workOrderNumber} — {wo.productName} ({wo.productionQuantity} Units) • [{wo.status}]
                         </option>
                       ))}
                     </select>
@@ -200,23 +258,12 @@ export default function MaterialRequestsModule({
                       className="form-input"
                       value={formData.productName}
                       readOnly
-                      placeholder="Auto-derived from WO"
+                      style={{ background: 'var(--bg-surface)' }}
                     />
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Request Date <span className="req">*</span></label>
-                    <input
-                      type="date"
-                      className="form-input"
-                      value={formData.requestedDate}
-                      onChange={(e) => setFormData({ ...formData, requestedDate: e.target.value })}
-                      required
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label className="form-label">Required On-Site Date <span className="req">*</span></label>
+                    <label className="form-label">Required By Date <span className="req">*</span></label>
                     <input
                       type="date"
                       className="form-input"
@@ -225,61 +272,37 @@ export default function MaterialRequestsModule({
                       required
                     />
                   </div>
-
-                  <div className="form-group">
-                    <label className="form-label">Requested By (Supervisor) <span className="req">*</span></label>
-                    <input
-                      type="text"
-                      className="form-input"
-                      value={formData.requestedBy}
-                      onChange={(e) => setFormData({ ...formData, requestedBy: e.target.value })}
-                      required
-                    />
-                  </div>
-
-                  <div className="form-group col-span-2">
-                    <label className="form-label">Shop Floor Department <span className="req">*</span></label>
-                    <input
-                      type="text"
-                      className="form-input"
-                      value={formData.department}
-                      onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                      required
-                    />
-                  </div>
                 </div>
               </div>
 
-              {/* Calculated Material Breakdown Table */}
+              {/* Items Card */}
               <div style={{ background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-subtle)', borderRadius: 10, padding: 18 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                  <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <Layers size={16} /> 2. BOM-Calculated Raw Materials for Issuance
-                  </div>
-                  {formData.items.length > 0 && (
-                    <span className="badge badge-info">{formData.items.length} Materials Required</span>
-                  )}
+                <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span>2. BOM Material Requirements & Warehouse Stock Check</span>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--text-muted)' }}>
+                    {formData.items.length} Materials Required
+                  </span>
                 </div>
 
                 {formData.items.length === 0 ? (
-                  <div style={{ padding: 24, textAlign: 'center', background: 'rgba(0, 0, 0, 0.25)', borderRadius: 8, color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                    Please select a Work Order above to automatically load required materials from BOM.
+                  <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                    Select a Work Order with an active BOM above to auto-populate required raw materials.
                   </div>
                 ) : (
-                  <div style={{ overflowX: 'auto' }}>
-                    <table className="custom-table" style={{ fontSize: '0.82rem' }}>
+                  <div className="subtable-box">
+                    <table className="subtable">
                       <thead>
                         <tr>
-                          <th style={{ width: '35%' }}>Material</th>
-                          <th style={{ textAlign: 'center' }}>Required Qty</th>
-                          <th style={{ textAlign: 'center' }}>Available in Store</th>
-                          <th style={{ width: '130px', textAlign: 'center' }}>Requested Qty</th>
+                          <th>Raw Material</th>
+                          <th style={{ textAlign: 'center' }}>BOM Qty</th>
+                          <th style={{ textAlign: 'center' }}>Warehouse Stock</th>
+                          <th style={{ textAlign: 'center' }}>Request Qty</th>
                           <th style={{ textAlign: 'center' }}>Unit</th>
                         </tr>
                       </thead>
                       <tbody>
                         {formData.items.map((row, index) => {
-                          const stockOk = row.availableStock >= row.requiredQty;
+                          const stockOk = (row.availableStock || 0) >= row.requiredQty;
                           return (
                             <tr key={index}>
                               <td>
@@ -293,7 +316,7 @@ export default function MaterialRequestsModule({
                               </td>
                               <td style={{ textAlign: 'center' }}>
                                 <span className={`badge ${stockOk ? 'badge-success' : 'badge-danger'}`}>
-                                  {row.availableStock} {row.unit}
+                                  {row.availableStock || 0} {row.unit}
                                 </span>
                               </td>
                               <td>
@@ -329,13 +352,13 @@ export default function MaterialRequestsModule({
                     className="form-textarea"
                     value={formData.remarks}
                     onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
-                    placeholder="Urgent batch dispatch, verify heat treatment certificates..."
+                    placeholder="Urgent batch dispatch, verify material certificates..."
                   />
                 </div>
               </div>
             </div>
 
-            <div className="modal-footer" style={{ marginTop: 24, padding: '16px 0 0 0', background: 'transparent' }}>
+            <div className="modal-footer" style={{ marginTop: 24, padding: '16px 0 0 0', display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
               <button type="button" className="btn btn-secondary" onClick={() => setIsModalOpen(false)}>
                 Cancel
               </button>
@@ -346,7 +369,100 @@ export default function MaterialRequestsModule({
           </form>
         </Modal>
       )}
+
+      {/* View Material Request Details Modal */}
+      {selectedMR && (
+        <Modal
+          title={`Material Request: ${selectedMR.requestNumber}`}
+          subtitle={`Requisition for Work Order ${selectedMR.workOrderNumber}`}
+          isOpen={!!selectedMR}
+          onClose={() => setSelectedMR(null)}
+          size="lg"
+        >
+          <div>
+            <div className="detail-grid">
+              <div className="detail-item">
+                <div className="detail-label">Request No</div>
+                <div className="detail-value" style={{ fontWeight: 700, color: 'var(--primary)' }}>{selectedMR.requestNumber}</div>
+              </div>
+              <div className="detail-item">
+                <div className="detail-label">Status</div>
+                <div className="detail-value"><StatusBadge status={selectedMR.status || 'Pending'} /></div>
+              </div>
+              <div className="detail-item">
+                <div className="detail-label">Work Order Ref</div>
+                <div className="detail-value">{selectedMR.workOrderNumber}</div>
+              </div>
+              <div className="detail-item">
+                <div className="detail-label">Target Product</div>
+                <div className="detail-value">{selectedMR.productName || 'Cryo Unit'}</div>
+              </div>
+              <div className="detail-item">
+                <div className="detail-label">Requested Date</div>
+                <div className="detail-value">{selectedMR.requestedDate ? new Date(selectedMR.requestedDate).toLocaleDateString('en-GB') : '-'}</div>
+              </div>
+              <div className="detail-item">
+                <div className="detail-label">Required By</div>
+                <div className="detail-value">{selectedMR.requiredDate ? new Date(selectedMR.requiredDate).toLocaleDateString('en-GB') : '-'}</div>
+              </div>
+            </div>
+
+            {/* Items Table */}
+            <div style={{ marginTop: 18 }}>
+              <div style={{ fontWeight: 700, fontSize: '0.85rem', marginBottom: 8, color: 'var(--text-primary)' }}>
+                Itemized Raw Material Schedule:
+              </div>
+              <div className="subtable-box">
+                <table className="subtable">
+                  <thead>
+                    <tr>
+                      <th>Raw Material</th>
+                      <th>Material Code</th>
+                      <th>Required Qty</th>
+                      <th>Issued Qty</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(selectedMR.items || []).map((it, idx) => (
+                      <tr key={idx}>
+                        <td><strong>{it.materialName}</strong></td>
+                        <td style={{ fontFamily: 'var(--font-mono)' }}>{it.materialCode}</td>
+                        <td style={{ fontWeight: 600 }}>{it.requestedQty || it.requiredQty} {it.unit}</td>
+                        <td>{it.alreadyIssuedQty || 0} {it.unit}</td>
+                        <td><StatusBadge status={it.status || 'Pending'} /></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div style={{ marginTop: 24, display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setSelectedMR(null)}
+              >
+                Close
+              </button>
+              {onNavigateToIssue && (
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={() => {
+                    const mr = selectedMR;
+                    setSelectedMR(null);
+                    onNavigateToIssue(mr);
+                  }}
+                >
+                  Proceed to Issue Materials ➔
+                </button>
+              )}
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
-

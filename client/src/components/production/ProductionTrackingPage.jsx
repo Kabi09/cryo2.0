@@ -25,25 +25,28 @@ export default function ProductionTrackingPage({
       <div style={{ marginBottom: 18, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
         <div className="tab-switcher">
           <button
+            type="button"
             className={`tab-btn ${activeTab === 'execution' ? 'active' : ''}`}
             onClick={() => setActiveTab('execution')}
           >
             <PlayCircle size={14} style={{ marginRight: 6 }} />
-            Shop Floor Execution ({executions.length})
+            In Progress ({executions.length})
           </button>
           <button
+            type="button"
             className={`tab-btn ${activeTab === 'updates' ? 'active' : ''}`}
             onClick={() => setActiveTab('updates')}
           >
             <ListOrdered size={14} style={{ marginRight: 6 }} />
-            Daily / Weekly Updates ({productionUpdates.length})
+            Daily Updates ({productionUpdates.length})
           </button>
           <button
+            type="button"
             className={`tab-btn ${activeTab === 'completion' ? 'active' : ''}`}
             onClick={() => setActiveTab('completion')}
           >
             <CheckCircle2 size={14} style={{ marginRight: 6 }} />
-            Production Completion ({completions.length})
+            Completed ({completions.length})
           </button>
         </div>
       </div>

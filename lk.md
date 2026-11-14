@@ -297,10 +297,80 @@
 ## Technical Decisions
 - **Decision**: Redesign Sales Management into 7 Simplified Pages with Embedded Follow-ups & 4-Stage Stepper.
   - **Reason**: The sales workflow had fragmented tabs (Follow-ups and Qualified Leads as separate pages). Embedding follow-ups into Enquiry Details and managing qualification inside Enquiry status simplifies user experience for non-technical manufacturing staff while retaining 100% data integrity.
-  - **Date**: 2026-11-14
+#### Change: Production Management Simplification & 7-Page Workflow Re-architecture
+- **What was changed**: Re-architected the 12 underlying production modules into an intuitive, sequential 7-page manufacturing pipeline matching the requested workflow:
+  $$\textbf{Sales Order} \longrightarrow \textbf{Work Orders (BOM/Schedule)} \longrightarrow \textbf{Materials (Requests/Issues)} \longrightarrow \textbf{Manufacturing (Progress/Updates)} \longrightarrow \textbf{Quality Check (QA/Rework)} \longrightarrow \textbf{Finished Goods} \longrightarrow \textbf{Logistics}$$
+  1. **7 Main Sidebar Navigation Pages**:
+     - `01 Dashboard`: Executive summary cards (Total Orders, Pending, In Progress, Completed, QA Pending, Ready for Dispatch), pending task actions (Materials required, Awaiting scheduling, Awaiting QA), and live Work Order table.
+     - `02 Work Orders`: 3 sub-tabs (`All Orders | BOM | Schedule`) consolidating Work Order planning, BOM recipe inspection, and production scheduling. Added duplicate SO warning, missing BOM warning with direct link, and full Work Order details dialog.
+     - `03 Materials`: 2 sub-tabs (`Material Requests | Issued Materials`) linking directly to SCM inventory stock. Required quantities are calculated from BOM $\times$ production quantity. Enforces strict stock conservation (issued cannot exceed available warehouse stock).
+     - `04 Manufacturing`: 3 sub-tabs (`In Progress | Daily Updates | Completed`). Real-time line controls (Pause, Resume, Hold), daily shift updates with auto-calculated pending quantities (`planned - completed`), and completion sign-off routing to QA.
+     - `05 Quality Check`: 3 sub-tabs (`Pending QA | Passed | Failed & Rework`). Quarantine gate displaying completed batches awaiting QA, approved test parameter checklist, Pass $\rightarrow$ Finished Goods routing, and Fail $\rightarrow$ Rework technician assignment loop.
+     - `06 Finished Goods`: 4 sub-tabs (`All | Available | Reserved | Dispatched`). Full audit lineage from SO $\rightarrow$ WO $\rightarrow$ QA Approval $\rightarrow$ FG Serial, stock reservations, and 1-click handover to Logistics dispatch.
+     - `07 Reports`: Production summary analytics, work order status mix, QA first-pass yield rate, delay tracker, and CSV report export.
+  2. **Zero Duplicate Typing & Clean Data Carryover**:
+     - Sales Order handover pre-fills customer, product, specifications, and target dates into Work Orders.
+     - Work Order pre-fills required raw materials and quantities into Material Requests based on the linked BOM.
+     - Material Issue enforces SCM stock deductions.
+     - Completion passes verified units to QA.
+     - Passed QA tests auto-populate Finished Goods receipts.
+     - Finished Goods reservations hand over to Logistics delivery planning.
+  3. **Files changed**:
+     - `client/src/components/common/Sidebar.jsx`
+     - `client/src/components/production/ProductionDashboardModule.jsx`
+     - `client/src/components/production/ProductionOrdersPage.jsx`
+     - `client/src/components/production/ProductionPlanningModule.jsx`
+     - `client/src/components/production/ProdMaterialRequestsPage.jsx`
+     - `client/src/components/production/MaterialRequestsModule.jsx`
+     - `client/src/components/production/ProductionMaterialIssueModule.jsx`
+     - `client/src/components/production/ProductionTrackingPage.jsx`
+     - `client/src/components/production/QualityReworkPage.jsx`
+     - `client/src/components/production/ProductionQAModule.jsx`
+     - `client/src/components/production/FinishedGoodsModule.jsx`
+     - `client/src/components/production/ProductionReportsModule.jsx`
+     - `client/src/App.jsx`
+- **Reason**: User requested simplification of the Production Management module for non-technical manufacturing staff with clean 7-page navigation and minimal clicks.
+- **Impact**: Streamlined shopfloor workflow, zero build errors (`npm run build` in 786ms), 100% backward compatibility for all legacy routes and APIs.
+
+- **Date**: 2026-11-14
 - **Decision**: Mobile Responsiveness & Layout Overhaul matching Reference Screenshot 1 (VairaWorks ADMIN).
   - **Reason**: Eliminated header horizontal overflow by hiding department pills under 1200px and breadcrumbs on mobile, docked the bottom navigation bar with fixed z-index, enhanced KPI cards with responsive 2-column squircle icons, and added mobile touch-friendly table scrolling.
-  - **Date**: 2026-11-14
+#### Change: Production Management Simplification & 7-Page Workflow Re-architecture
+- **What was changed**: Re-architected the 12 underlying production modules into an intuitive, sequential 7-page manufacturing pipeline matching the requested workflow:
+  $$\textbf{Sales Order} \longrightarrow \textbf{Work Orders (BOM/Schedule)} \longrightarrow \textbf{Materials (Requests/Issues)} \longrightarrow \textbf{Manufacturing (Progress/Updates)} \longrightarrow \textbf{Quality Check (QA/Rework)} \longrightarrow \textbf{Finished Goods} \longrightarrow \textbf{Logistics}$$
+  1. **7 Main Sidebar Navigation Pages**:
+     - `01 Dashboard`: Executive summary cards (Total Orders, Pending, In Progress, Completed, QA Pending, Ready for Dispatch), pending task actions (Materials required, Awaiting scheduling, Awaiting QA), and live Work Order table.
+     - `02 Work Orders`: 3 sub-tabs (`All Orders | BOM | Schedule`) consolidating Work Order planning, BOM recipe inspection, and production scheduling. Added duplicate SO warning, missing BOM warning with direct link, and full Work Order details dialog.
+     - `03 Materials`: 2 sub-tabs (`Material Requests | Issued Materials`) linking directly to SCM inventory stock. Required quantities are calculated from BOM $\times$ production quantity. Enforces strict stock conservation (issued cannot exceed available warehouse stock).
+     - `04 Manufacturing`: 3 sub-tabs (`In Progress | Daily Updates | Completed`). Real-time line controls (Pause, Resume, Hold), daily shift updates with auto-calculated pending quantities (`planned - completed`), and completion sign-off routing to QA.
+     - `05 Quality Check`: 3 sub-tabs (`Pending QA | Passed | Failed & Rework`). Quarantine gate displaying completed batches awaiting QA, approved test parameter checklist, Pass $\rightarrow$ Finished Goods routing, and Fail $\rightarrow$ Rework technician assignment loop.
+     - `06 Finished Goods`: 4 sub-tabs (`All | Available | Reserved | Dispatched`). Full audit lineage from SO $\rightarrow$ WO $\rightarrow$ QA Approval $\rightarrow$ FG Serial, stock reservations, and 1-click handover to Logistics dispatch.
+     - `07 Reports`: Production summary analytics, work order status mix, QA first-pass yield rate, delay tracker, and CSV report export.
+  2. **Zero Duplicate Typing & Clean Data Carryover**:
+     - Sales Order handover pre-fills customer, product, specifications, and target dates into Work Orders.
+     - Work Order pre-fills required raw materials and quantities into Material Requests based on the linked BOM.
+     - Material Issue enforces SCM stock deductions.
+     - Completion passes verified units to QA.
+     - Passed QA tests auto-populate Finished Goods receipts.
+     - Finished Goods reservations hand over to Logistics delivery planning.
+  3. **Files changed**:
+     - `client/src/components/common/Sidebar.jsx`
+     - `client/src/components/production/ProductionDashboardModule.jsx`
+     - `client/src/components/production/ProductionOrdersPage.jsx`
+     - `client/src/components/production/ProductionPlanningModule.jsx`
+     - `client/src/components/production/ProdMaterialRequestsPage.jsx`
+     - `client/src/components/production/MaterialRequestsModule.jsx`
+     - `client/src/components/production/ProductionMaterialIssueModule.jsx`
+     - `client/src/components/production/ProductionTrackingPage.jsx`
+     - `client/src/components/production/QualityReworkPage.jsx`
+     - `client/src/components/production/ProductionQAModule.jsx`
+     - `client/src/components/production/FinishedGoodsModule.jsx`
+     - `client/src/components/production/ProductionReportsModule.jsx`
+     - `client/src/App.jsx`
+- **Reason**: User requested simplification of the Production Management module for non-technical manufacturing staff with clean 7-page navigation and minimal clicks.
+- **Impact**: Streamlined shopfloor workflow, zero build errors (`npm run build` in 786ms), 100% backward compatibility for all legacy routes and APIs.
+
+- **Date**: 2026-11-14
 - **Decision**: Consolidate 47 separate tabs into 28 structured main pages with internal sub-tabs.
   - **Reason**: Having 47 flat sidebar tabs caused excessive cognitive load, cluttered navigation, and poor mobile UX. Grouping tightly-coupled steps (e.g. PO + GRN + Returns, Quotes + PI, Work Orders + Schedules) into unified tabbed pages improves ergonomics while maintaining 100% of existing workflows and data models.
   - **Date**: 2026-11-13

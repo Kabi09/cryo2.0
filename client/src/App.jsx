@@ -33,6 +33,7 @@ import ProdMaterialRequestsPage from './components/production/ProdMaterialReques
 import ProductionTrackingPage from './components/production/ProductionTrackingPage';
 import QualityReworkPage from './components/production/QualityReworkPage';
 import FinishedGoodsModule from './components/production/FinishedGoodsModule';
+import ProductionReportsModule from './components/production/ProductionReportsModule';
 
 // 4. Logistics & Delivery Management (5 Pages)
 import LogisticsDashboardModule from './components/logistics/LogisticsDashboardModule';
@@ -63,6 +64,8 @@ export default function App() {
   const [preSelectedQuoteForPI, setPreSelectedQuoteForPI] = useState(null);
   const [preSelectedPIForView, setPreSelectedPIForView] = useState(null);
   const [preSelectedPIForSO, setPreSelectedPIForSO] = useState(null);
+  const [preSelectedWOForMR, setPreSelectedWOForMR] = useState(null);
+  const [preSelectedQAForFG, setPreSelectedQAForFG] = useState(null);
 
   // 1. SCM State
   const [materials, setMaterials] = useState([]);
@@ -505,7 +508,7 @@ export default function App() {
     await loadAllData();
     showToast('Sales Order approved and handed over to Production Planning!', 'success');
     setActiveDomain('production');
-    setActiveModule('production-planning');
+    setActiveModule('production-orders');
   };
 
   // Production Handlers
@@ -989,14 +992,18 @@ export default function App() {
             <ProductionDashboardModule
               dashboardData={productionDashboardData}
               onNavigateModule={(mod) => {
-                if (mod === 'planning' || mod === 'schedule' || mod === 'work-orders') {
+                if (mod === 'orders' || mod === 'planning' || mod === 'work-orders') {
                   setActiveModule('production-orders');
-                } else if (mod === 'material-requests' || mod === 'material-issue') {
-                  setActiveModule('production-material-requests');
-                } else if (mod === 'execution' || mod === 'updates' || mod === 'completion') {
-                  setActiveModule('production-tracking');
-                } else if (mod === 'qa' || mod === 'rework') {
-                  setActiveModule('production-quality-rework');
+                } else if (mod === 'materials' || mod === 'material-requests' || mod === 'material-issue') {
+                  setActiveModule('production-materials');
+                } else if (mod === 'manufacturing' || mod === 'execution' || mod === 'updates' || mod === 'completion' || mod === 'tracking') {
+                  setActiveModule('production-manufacturing');
+                } else if (mod === 'quality' || mod === 'qa' || mod === 'rework') {
+                  setActiveModule('production-quality');
+                } else if (mod === 'finished-goods') {
+                  setActiveModule('production-finished-goods');
+                } else if (mod === 'reports') {
+                  setActiveModule('production-reports');
                 } else {
                   setActiveModule(`production-${mod}`);
                 }
@@ -1004,47 +1011,49 @@ export default function App() {
             />
           )}
 
-          {(activeModule === 'production-orders' || activeModule === 'production-planning' || activeModule === 'production-schedule') && (
+          {(activeModule === 'production-orders' || activeModule === 'production-planning' || activeModule === 'production-bom' || activeModule === 'production-schedule') && (
             <ProductionOrdersPage
               workOrders={workOrders}
               salesOrders={salesOrders}
               products={products}
               boms={boms}
+              materials={materials}
               schedules={schedules}
+              inventory={inventory}
               onSaveWorkOrder={handleSaveWorkOrder}
               onUpdateWorkOrderStatus={handleUpdateWorkOrderStatus}
+              onSaveBOM={handleSaveBOM}
               onSaveSchedule={handleSaveSchedule}
+              onNavigateToMaterials={(wo) => {
+                setPreSelectedWOForMR(wo);
+                setActiveModule('production-materials');
+              }}
               showToast={showToast}
-              defaultTab={activeModule === 'production-schedule' ? 'schedule' : 'orders'}
+              defaultTab={activeModule === 'production-bom' ? 'bom' : activeModule === 'production-schedule' ? 'schedule' : 'orders'}
             />
           )}
 
-          {activeModule === 'production-bom' && (
-            <BOMModule
-              boms={boms}
-              products={products}
-              materials={materials}
-              onSave={handleSaveBOM}
-              showToast={showToast}
-            />
-          )}
-
-          {(activeModule === 'production-material-requests' || activeModule === 'production-material-issue') && (
+          {(activeModule === 'production-materials' || activeModule === 'production-material-requests' || activeModule === 'production-material-issue') && (
             <ProdMaterialRequestsPage
               materialRequests={materialRequests}
-              productionMaterialIssues={productionMaterialIssues}
+              materialIssues={productionMaterialIssues}
               workOrders={workOrders}
               materials={materials}
               boms={boms}
               inventory={inventory}
+              preSelectedWO={preSelectedWOForMR}
               onSaveMaterialRequest={handleSaveMaterialRequest}
               onSaveProductionMaterialIssue={handleSaveProductionMaterialIssue}
+              onNavigateToPurchasing={() => {
+                setActiveDomain('scm');
+                setActiveModule('scm-purchasing');
+              }}
               showToast={showToast}
               defaultTab={activeModule === 'production-material-issue' ? 'issues' : 'requests'}
             />
           )}
 
-          {(activeModule === 'production-tracking' || activeModule === 'production-execution' || activeModule === 'production-updates' || activeModule === 'production-completion') && (
+          {(activeModule === 'production-manufacturing' || activeModule === 'production-tracking' || activeModule === 'production-execution' || activeModule === 'production-updates' || activeModule === 'production-completion') && (
             <ProductionTrackingPage
               executions={executions}
               productionUpdates={productionUpdates}
@@ -1054,13 +1063,13 @@ export default function App() {
               onUpdateExecutionStatus={handleUpdateExecutionStatus}
               onSaveProductionUpdate={handleSaveProductionUpdate}
               onSaveCompletion={handleSaveCompletion}
-              onNavigateToQA={() => setActiveModule('production-quality-rework')}
+              onNavigateToQA={() => setActiveModule('production-quality')}
               showToast={showToast}
               defaultTab={activeModule === 'production-updates' ? 'updates' : activeModule === 'production-completion' ? 'completion' : 'execution'}
             />
           )}
 
-          {(activeModule === 'production-quality-rework' || activeModule === 'production-qa' || activeModule === 'production-rework') && (
+          {(activeModule === 'production-quality' || activeModule === 'production-quality-rework' || activeModule === 'production-qa' || activeModule === 'production-rework') && (
             <QualityReworkPage
               qaTests={productionQATests}
               reworkOrders={reworkOrders}
@@ -1069,8 +1078,12 @@ export default function App() {
               onSaveQA={handleSaveProductionQA}
               onSaveReworkOrder={handleSaveReworkOrder}
               onUpdateReworkStatus={handleUpdateReworkStatus}
+              onNavigateToFG={(qa) => {
+                setPreSelectedQAForFG(qa);
+                setActiveModule('production-finished-goods');
+              }}
               showToast={showToast}
-              defaultTab={activeModule === 'production-rework' ? 'rework' : 'qa'}
+              defaultTab={activeModule === 'production-rework' ? 'rework' : activeModule === 'production-qa' ? 'passed' : 'pending'}
             />
           )}
 
@@ -1079,9 +1092,29 @@ export default function App() {
               finishedGoods={finishedGoods}
               workOrders={workOrders}
               qaTests={productionQATests}
+              preSelectedQA={preSelectedQAForFG}
+              onClearPreSelectedQA={() => setPreSelectedQAForFG(null)}
               onSave={handleSaveFinishedGood}
               onUpdateStatus={handleUpdateFinishedGoodStatus}
+              onHandoverToLogistics={(fg) => {
+                showToast(`Finished Goods ${fg.fgNumber} ready for Logistics delivery schedule`, 'success');
+                setActiveDomain('logistics');
+                setActiveModule('logistics-planning');
+              }}
               showToast={showToast}
+            />
+          )}
+
+          {activeModule === 'production-reports' && (
+            <ProductionReportsModule
+              workOrders={workOrders}
+              productionUpdates={productionUpdates}
+              completions={completions}
+              qaTests={productionQATests}
+              reworkOrders={reworkOrders}
+              finishedGoods={finishedGoods}
+              materialRequests={materialRequests}
+              products={products}
             />
           )}
 

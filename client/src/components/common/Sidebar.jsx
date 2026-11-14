@@ -34,12 +34,12 @@ export const SALES_MODULES = [
 
 export const PRODUCTION_MODULES = [
   { id: 'production-dashboard', num: '01', title: 'Dashboard' },
-  { id: 'production-orders', num: '02', title: 'Production Orders' },
-  { id: 'production-bom', num: '03', title: 'BOM' },
-  { id: 'production-material-requests', num: '04', title: 'Material Requests' },
-  { id: 'production-tracking', num: '05', title: 'Production Tracking' },
-  { id: 'production-quality-rework', num: '06', title: 'Quality & Rework' },
-  { id: 'production-finished-goods', num: '07', title: 'Finished Goods' }
+  { id: 'production-orders', num: '02', title: 'Work Orders' },
+  { id: 'production-materials', num: '03', title: 'Materials' },
+  { id: 'production-manufacturing', num: '04', title: 'Manufacturing' },
+  { id: 'production-quality', num: '05', title: 'Quality Check' },
+  { id: 'production-finished-goods', num: '06', title: 'Finished Goods' },
+  { id: 'production-reports', num: '07', title: 'Reports' }
 ];
 
 export const LOGISTICS_MODULES = [

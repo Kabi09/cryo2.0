@@ -1,18 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import DataTable from '../common/DataTable';
 import Modal from '../common/Modal';
 import StatusBadge from '../common/StatusBadge';
-import { ShieldCheck, Plus, Trash2, CheckCircle2, AlertTriangle, RotateCcw } from 'lucide-react';
+import { ShieldCheck, Plus, Trash2, CheckCircle2, AlertTriangle, RotateCcw, Eye, ArrowRight, PackageCheck } from 'lucide-react';
 
 export default function ProductionQAModule({
   qaTests = [],
+  allQaTests = [],
   workOrders = [],
   completions = [],
+  preSelectedCompletion = null,
+  onClearPreSelectedCompletion,
   onSave,
   onNavigateToRework,
+  onNavigateToFG,
   showToast
 }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedQA, setSelectedQA] = useState(null);
+
   const [formData, setFormData] = useState({
     workOrder: '',
     workOrderNumber: '',
@@ -22,8 +28,8 @@ export default function ProductionQAModule({
     productName: '',
     batchSerialNumber: 'BATCH-MA-001',
     testedQuantity: 10,
-    passedQuantity: 8,
-    failedQuantity: 2,
+    passedQuantity: 10,
+    failedQuantity: 0,
     inspectorName: 'Devanathan (Senior QA Engineer)',
     testDate: new Date().toISOString().split('T')[0],
     testParameters: [
@@ -39,6 +45,14 @@ export default function ProductionQAModule({
     failureReason: '',
     remarks: 'Product passes all mechanical, electrical, and sensor quality benchmarks.'
   });
+
+  useEffect(() => {
+    if (preSelectedCompletion) {
+      handleSelectCompletion(preSelectedCompletion._id);
+      setIsModalOpen(true);
+      onClearPreSelectedCompletion?.();
+    }
+  }, [preSelectedCompletion]);
 
   const handleOpenModal = () => {
     if (completions.length > 0 && !formData.completion) {
@@ -85,7 +99,18 @@ export default function ProductionQAModule({
   const handleParamChange = (idx, field, val) => {
     const updated = [...formData.testParameters];
     updated[idx] = { ...updated[idx], [field]: val };
-    setFormData(prev => ({ ...prev, testParameters: updated }));
+
+    // Auto-update overall result if any test parameter fails
+    const hasFail = updated.some(p => p.result === 'Fail');
+    const overall = hasFail ? 'Fail' : 'Pass';
+    const dec = hasFail ? 'Rework' : 'Finished Goods';
+
+    setFormData(prev => ({
+      ...prev,
+      testParameters: updated,
+      overallResult: overall,
+      decision: dec
+    }));
   };
 
   const handleSubmit = async (e) => {
@@ -99,7 +124,7 @@ export default function ProductionQAModule({
       await onSave(formData);
       setIsModalOpen(false);
       if (formData.decision === 'Rework') {
-        showToast('QA Inspection recorded! Defective units routed automatically to Rework/Rebuild bay.', 'warning');
+        showToast('QA Inspection recorded! Defective units routed to Rework & Repair bay.', 'warning');
       } else {
         showToast('QA Passed! Product approved for Finished Goods warehouse storage.', 'success');
       }
@@ -112,7 +137,15 @@ export default function ProductionQAModule({
     {
       header: 'QA No',
       accessor: 'qaNumber',
-      render: (row) => <span className="font-mono text-cyan" style={{ fontWeight: 700 }}>{row.qaNumber}</span>
+      render: (row) => (
+        <span
+          className="code-badge"
+          style={{ cursor: 'pointer', color: 'var(--primary)', fontWeight: 700 }}
+          onClick={() => setSelectedQA(row)}
+        >
+          {row.qaNumber}
+        </span>
+      )
     },
     {
       header: 'WO No',
@@ -122,7 +155,7 @@ export default function ProductionQAModule({
     {
       header: 'Product',
       accessor: 'productName',
-      render: (row) => row.productName
+      render: (row) => row.productName || 'Cryo Unit'
     },
     {
       header: 'Tested / Passed',
@@ -142,7 +175,7 @@ export default function ProductionQAModule({
     {
       header: 'Test Date',
       accessor: 'testDate',
-      render: (row) => (row.testDate ? new Date(row.testDate).toLocaleDateString() : '-')
+      render: (row) => (row.testDate ? new Date(row.testDate).toLocaleDateString('en-GB') : '-')
     },
     {
       header: 'Result',
@@ -153,6 +186,46 @@ export default function ProductionQAModule({
       header: 'Decision',
       accessor: 'decision',
       render: (row) => <StatusBadge status={row.decision || 'Finished Goods'} />
+    },
+    {
+      header: 'Actions',
+      render: (row) => {
+        const isPassed = row.overallResult === 'Pass' || row.decision === 'Finished Goods';
+        return (
+          <div className="action-btns" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              className="icon-btn"
+              title="View Test Parameters & Report"
+              onClick={() => setSelectedQA(row)}
+            >
+              <Eye size={15} />
+            </button>
+            {isPassed && onNavigateToFG && (
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ padding: '2px 8px', fontSize: '0.72rem', height: 26, gap: 4, color: 'var(--success)', borderColor: 'var(--success-border)' }}
+                title="Transfer Approved Units to Finished Goods"
+                onClick={() => onNavigateToFG(row)}
+              >
+                <PackageCheck size={12} /> Send to FG ➔
+              </button>
+            )}
+            {!isPassed && onNavigateToRework && (
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ padding: '2px 8px', fontSize: '0.72rem', height: 26, gap: 4, color: 'var(--warning)', borderColor: 'var(--warning-border)' }}
+                title="Send Defective Units for Rework"
+                onClick={() => onNavigateToRework(row)}
+              >
+                <RotateCcw size={12} /> Rework ➔
+              </button>
+            )}
+          </div>
+        );
+      }
     }
   ];
 
@@ -162,13 +235,13 @@ export default function ProductionQAModule({
       <div className="card" style={{ marginBottom: 16, padding: '14px 18px', background: 'rgba(99, 102, 241, 0.05)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <ShieldCheck size={20} style={{ color: 'var(--cyan)' }} />
+            <ShieldCheck size={20} style={{ color: 'var(--primary)' }} />
             <div>
               <strong style={{ fontSize: '0.86rem' }}>Quality Assurance Decision Tree:</strong>
               <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)' }}>
-                Pass → <span style={{ color: 'var(--success)', fontWeight: 700 }}>Finished Goods Stock</span> |
-                Fail → <span style={{ color: 'var(--warning)', fontWeight: 700 }}>Rework & Re-QA Cycle</span> |
-                Reject → <span style={{ color: 'var(--danger)', fontWeight: 700 }}>Scrap Review</span>
+                Pass → <span style={{ color: 'var(--success)', fontWeight: 700 }}>Finished Goods Warehouse</span> |
+                Fail → <span style={{ color: 'var(--warning)', fontWeight: 700 }}>Rework & Re-Test Loop</span> |
+                Reject → <span style={{ color: 'var(--danger)', fontWeight: 700 }}>Engineering Review</span>
               </div>
             </div>
           </div>
@@ -184,6 +257,7 @@ export default function ProductionQAModule({
         addLabel="New QA Test"
       />
 
+      {/* Modal: New QA Test */}
       {isModalOpen && (
         <Modal
           title="Product Quality Assurance (QA) Test"
@@ -194,93 +268,40 @@ export default function ProductionQAModule({
         >
           <form onSubmit={handleSubmit}>
             <div className="form-grid">
-              <div className="form-group">
-                <label>Select Production Completion</label>
+              <div className="form-group col-span-2">
+                <label className="form-label">Select Production Completion Batch <span className="req">*</span></label>
                 <select
+                  className="form-select"
                   value={formData.completion}
                   onChange={(e) => handleSelectCompletion(e.target.value)}
                   required
                 >
-                  <option value="">Select Completion Batch</option>
+                  <option value="">Select Completed Production Batch</option>
                   {completions.map(c => (
                     <option key={c._id} value={c._id}>
-                      {c.completionNumber} - {c.workOrderNumber} ({c.productName}) - {c.producedQuantity} Units
+                      {c.completionNumber} — {c.workOrderNumber} ({c.productName}) • [{c.producedQuantity} Units Produced]
                     </option>
                   ))}
                 </select>
               </div>
 
               <div className="form-group">
-                <label>Product Name</label>
+                <label className="form-label">Batch Serial Number <span className="req">*</span></label>
                 <input
                   type="text"
-                  value={formData.productName}
-                  readOnly
-                  style={{ opacity: 0.8 }}
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Batch / Serial Number</label>
-                <input
-                  type="text"
+                  className="form-input"
                   value={formData.batchSerialNumber}
                   onChange={(e) => setFormData({ ...formData, batchSerialNumber: e.target.value })}
+                  placeholder="e.g. BATCH-MA-001"
                   required
                 />
               </div>
 
               <div className="form-group">
-                <label>Tested Quantity</label>
-                <input
-                  type="number"
-                  min="1"
-                  value={formData.testedQuantity}
-                  onChange={(e) => setFormData({ ...formData, testedQuantity: Number(e.target.value) })}
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Passed Quantity</label>
-                <input
-                  type="number"
-                  min="0"
-                  value={formData.passedQuantity}
-                  onChange={(e) => {
-                    const pass = Number(e.target.value);
-                    const tested = Number(formData.testedQuantity);
-                    const fail = Math.max(0, tested - pass);
-                    setFormData({
-                      ...formData,
-                      passedQuantity: pass,
-                      failedQuantity: fail,
-                      overallResult: fail === 0 ? 'Pass' : pass === 0 ? 'Fail' : 'Partial Pass',
-                      decision: fail === 0 ? 'Finished Goods' : 'Rework'
-                    });
-                  }}
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Failed Quantity (Auto)</label>
-                <input
-                  type="number"
-                  value={formData.failedQuantity}
-                  readOnly
-                  style={{
-                    opacity: 0.8,
-                    color: formData.failedQuantity > 0 ? 'var(--danger)' : 'var(--success)',
-                    fontWeight: 700
-                  }}
-                />
-              </div>
-
-              <div className="form-group">
-                <label>QA Inspector Name</label>
+                <label className="form-label">Inspector Name <span className="req">*</span></label>
                 <input
                   type="text"
+                  className="form-input"
                   value={formData.inspectorName}
                   onChange={(e) => setFormData({ ...formData, inspectorName: e.target.value })}
                   required
@@ -288,159 +309,291 @@ export default function ProductionQAModule({
               </div>
 
               <div className="form-group">
-                <label>Test Date</label>
+                <label className="form-label">Total Tested Quantity <span className="req">*</span></label>
+                <input
+                  type="number"
+                  className="form-input"
+                  min="1"
+                  value={formData.testedQuantity}
+                  onChange={(e) => {
+                    const tested = Number(e.target.value);
+                    setFormData({
+                      ...formData,
+                      testedQuantity: tested,
+                      passedQuantity: Math.min(tested, formData.passedQuantity),
+                      failedQuantity: Math.max(0, tested - formData.passedQuantity)
+                    });
+                  }}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Passed Quantity <span className="req">*</span></label>
+                <input
+                  type="number"
+                  className="form-input"
+                  min="0"
+                  max={formData.testedQuantity}
+                  value={formData.passedQuantity}
+                  onChange={(e) => {
+                    const passed = Number(e.target.value);
+                    const failed = Math.max(0, formData.testedQuantity - passed);
+                    setFormData({
+                      ...formData,
+                      passedQuantity: passed,
+                      failedQuantity: failed,
+                      overallResult: failed > 0 ? 'Fail' : 'Pass',
+                      decision: failed > 0 ? 'Rework' : 'Finished Goods'
+                    });
+                  }}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Inspection Date <span className="req">*</span></label>
                 <input
                   type="date"
+                  className="form-input"
                   value={formData.testDate}
                   onChange={(e) => setFormData({ ...formData, testDate: e.target.value })}
                   required
                 />
               </div>
+
+              <div className="form-group">
+                <label className="form-label">Overall QA Result</label>
+                <select
+                  className="form-select"
+                  value={formData.overallResult}
+                  onChange={(e) => {
+                    const res = e.target.value;
+                    setFormData({
+                      ...formData,
+                      overallResult: res,
+                      decision: res === 'Pass' ? 'Finished Goods' : 'Rework'
+                    });
+                  }}
+                >
+                  <option value="Pass">Pass (Meets Benchmarks)</option>
+                  <option value="Fail">Fail (Requires Rework)</option>
+                  <option value="Conditional Pass">Conditional Pass</option>
+                </select>
+              </div>
+
+              <div className="form-group col-span-2">
+                <label className="form-label">QA Disposition Decision</label>
+                <select
+                  className="form-select"
+                  value={formData.decision}
+                  onChange={(e) => setFormData({ ...formData, decision: e.target.value })}
+                >
+                  <option value="Finished Goods">Route to Finished Goods Warehouse</option>
+                  <option value="Rework">Route to Rework / Repair Bay</option>
+                  <option value="Scrap">Scrap / Material Reclaim</option>
+                </select>
+              </div>
             </div>
 
-            {/* Test Parameter Multi-Rows */}
-            <div style={{ marginTop: 20 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                <span style={{ fontSize: '0.84rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                  Detailed Quality & Calibration Parameters
-                </span>
+            {/* Test Parameter Checklist */}
+            <div style={{ marginTop: 18, borderTop: '1px solid var(--border-subtle)', paddingTop: 14 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                <span style={{ fontWeight: 700, fontSize: '0.85rem' }}>Inspection Test Parameters & Engineering Benchmarks:</span>
                 <button
                   type="button"
                   className="btn btn-secondary btn-sm"
+                  style={{ padding: '2px 8px', fontSize: '0.72rem' }}
                   onClick={handleAddParam}
                 >
-                  <Plus size={14} /> Add Parameter
+                  + Add Check
                 </button>
               </div>
 
-              <table className="custom-table" style={{ fontSize: '0.78rem' }}>
-                <thead>
-                  <tr>
-                    <th style={{ width: '35%' }}>Test Parameter</th>
-                    <th style={{ width: '25%' }}>Expected Value</th>
-                    <th style={{ width: '25%' }}>Actual Measured</th>
-                    <th style={{ width: '15%' }}>Result</th>
-                    <th style={{ width: '10%' }}>Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {formData.testParameters.map((p, idx) => (
-                    <tr key={idx}>
-                      <td>
-                        <input
-                          type="text"
-                          value={p.parameter}
-                          onChange={(e) => handleParamChange(idx, 'parameter', e.target.value)}
-                          placeholder="e.g. Sensor, Heat Test"
-                          required
-                        />
-                      </td>
-                      <td>
-                        <input
-                          type="text"
-                          value={p.expected}
-                          onChange={(e) => handleParamChange(idx, 'expected', e.target.value)}
-                          required
-                        />
-                      </td>
-                      <td>
-                        <input
-                          type="text"
-                          value={p.actual}
-                          onChange={(e) => handleParamChange(idx, 'actual', e.target.value)}
-                          required
-                        />
-                      </td>
-                      <td>
-                        <select
-                          value={p.result}
-                          onChange={(e) => handleParamChange(idx, 'result', e.target.value)}
-                          style={{ color: p.result === 'Pass' ? 'var(--success)' : 'var(--danger)', fontWeight: 700 }}
-                        >
-                          <option value="Pass">Pass</option>
-                          <option value="Fail">Fail</option>
-                        </select>
-                      </td>
-                      <td style={{ textAlign: 'center' }}>
-                        <button
-                          type="button"
-                          className="btn btn-icon btn-sm"
-                          style={{ color: 'var(--danger)' }}
-                          onClick={() => handleRemoveParam(idx)}
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </td>
+              <div className="subtable-box">
+                <table className="subtable">
+                  <thead>
+                    <tr>
+                      <th>Test Parameter</th>
+                      <th>Expected Value / Standard</th>
+                      <th>Observed Value</th>
+                      <th style={{ width: 100 }}>Result</th>
+                      <th style={{ width: 40 }}></th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {formData.testParameters.map((p, idx) => (
+                      <tr key={idx}>
+                        <td>
+                          <input
+                            type="text"
+                            className="form-input"
+                            value={p.parameter}
+                            onChange={(e) => handleParamChange(idx, 'parameter', e.target.value)}
+                            required
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="text"
+                            className="form-input"
+                            value={p.expected}
+                            onChange={(e) => handleParamChange(idx, 'expected', e.target.value)}
+                            required
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="text"
+                            className="form-input"
+                            value={p.actual}
+                            onChange={(e) => handleParamChange(idx, 'actual', e.target.value)}
+                            required
+                          />
+                        </td>
+                        <td>
+                          <select
+                            className="form-select"
+                            value={p.result}
+                            onChange={(e) => handleParamChange(idx, 'result', e.target.value)}
+                          >
+                            <option value="Pass">Pass</option>
+                            <option value="Fail">Fail</option>
+                          </select>
+                        </td>
+                        <td>
+                          {formData.testParameters.length > 1 && (
+                            <button
+                              type="button"
+                              className="icon-btn"
+                              onClick={() => handleRemoveParam(idx)}
+                              title="Remove"
+                            >
+                              <Trash2 size={13} style={{ color: 'var(--danger)' }} />
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
 
-            {/* Final QA Decision */}
-            <div className="form-grid" style={{ marginTop: 18 }}>
-              <div className="form-group">
-                <label>Overall QA Result</label>
-                <select
-                  value={formData.overallResult}
-                  onChange={(e) => setFormData({ ...formData, overallResult: e.target.value })}
-                >
-                  <option value="Pass">Pass (All Parameters Cleared)</option>
-                  <option value="Partial Pass">Partial Pass (Some Units Failed)</option>
-                  <option value="Fail">Fail (Critical Defect)</option>
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label>QA Final Decision</label>
-                <select
-                  value={formData.decision}
-                  onChange={(e) => setFormData({ ...formData, decision: e.target.value })}
-                  style={{ fontWeight: 700 }}
-                >
-                  <option value="Finished Goods">Approve for Finished Goods Warehouse</option>
-                  <option value="Rework">Send Failed Units for Rework / Rebuild</option>
-                  <option value="Reject / Scrap">Permanently Scrap / Engineering Review</option>
-                </select>
-              </div>
-
-              {formData.failedQuantity > 0 && (
-                <>
-                  <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                    <label style={{ color: 'var(--danger)' }}>Defect Description & Failure Reason</label>
-                    <textarea
-                      rows="2"
-                      value={formData.defectDescription}
-                      onChange={(e) => setFormData({ ...formData, defectDescription: e.target.value, failureReason: e.target.value })}
-                      placeholder="Specify thermal trip, sensor deviation, loose connection for rework technician..."
-                      required
-                    />
-                  </div>
-                </>
-              )}
-
-              <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                <label>Inspector Final Remarks</label>
-                <textarea
-                  rows="2"
-                  value={formData.remarks}
-                  onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
-                />
-              </div>
-            </div>
-
-            <div className="modal-footer" style={{ marginTop: 24, padding: '16px 0 0 0', background: 'transparent' }}>
+            <div className="modal-footer" style={{ marginTop: 20, padding: '16px 0 0 0', display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
               <button type="button" className="btn btn-secondary" onClick={() => setIsModalOpen(false)}>
                 Cancel
               </button>
               <button type="submit" className="btn btn-primary">
-                Save QA Decision & Route Batch
+                Save & Certify QA Report
               </button>
             </div>
           </form>
         </Modal>
       )}
+
+      {/* Modal: View QA Test Report Details */}
+      {selectedQA && (
+        <Modal
+          title={`QA Inspection Certificate: ${selectedQA.qaNumber}`}
+          subtitle={`Inspection report for Work Order ${selectedQA.workOrderNumber}`}
+          isOpen={!!selectedQA}
+          onClose={() => setSelectedQA(null)}
+          size="lg"
+        >
+          <div>
+            <div className="detail-grid">
+              <div className="detail-item">
+                <div className="detail-label">QA Certificate No</div>
+                <div className="detail-value" style={{ fontWeight: 700, color: 'var(--primary)' }}>{selectedQA.qaNumber}</div>
+              </div>
+              <div className="detail-item">
+                <div className="detail-label">Overall Result</div>
+                <div className="detail-value"><StatusBadge status={selectedQA.overallResult || 'Pass'} /></div>
+              </div>
+              <div className="detail-item">
+                <div className="detail-label">Work Order Ref</div>
+                <div className="detail-value">{selectedQA.workOrderNumber}</div>
+              </div>
+              <div className="detail-item">
+                <div className="detail-label">Target Product</div>
+                <div className="detail-value">{selectedQA.productName || 'Cryo Unit'}</div>
+              </div>
+              <div className="detail-item">
+                <div className="detail-label">Batch Serial No</div>
+                <div className="detail-value" style={{ fontFamily: 'var(--font-mono)' }}>{selectedQA.batchSerialNumber || 'STANDARD-BATCH'}</div>
+              </div>
+              <div className="detail-item">
+                <div className="detail-label">Inspector</div>
+                <div className="detail-value">{selectedQA.inspectorName}</div>
+              </div>
+              <div className="detail-item">
+                <div className="detail-label">Tested vs Passed</div>
+                <div className="detail-value" style={{ fontWeight: 600 }}>
+                  {selectedQA.testedQuantity} Tested • <span style={{ color: 'var(--success)' }}>{selectedQA.passedQuantity} Passed</span>
+                  {selectedQA.failedQuantity > 0 && <span style={{ color: 'var(--danger)', marginLeft: 6 }}>({selectedQA.failedQuantity} Failed)</span>}
+                </div>
+              </div>
+              <div className="detail-item">
+                <div className="detail-label">Inspection Date</div>
+                <div className="detail-value">{selectedQA.testDate ? new Date(selectedQA.testDate).toLocaleDateString('en-GB') : '-'}</div>
+              </div>
+            </div>
+
+            {/* Test Parameters */}
+            <div style={{ marginTop: 18 }}>
+              <div style={{ fontWeight: 700, fontSize: '0.85rem', marginBottom: 8, color: 'var(--text-primary)' }}>
+                Certified Engineering Check Results:
+              </div>
+              <div className="subtable-box">
+                <table className="subtable">
+                  <thead>
+                    <tr>
+                      <th>Test Parameter</th>
+                      <th>Specification Standard</th>
+                      <th>Observed Value</th>
+                      <th>Result</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(selectedQA.testParameters || []).map((tp, idx) => (
+                      <tr key={idx}>
+                        <td><strong>{tp.parameter}</strong></td>
+                        <td>{tp.expected}</td>
+                        <td style={{ fontFamily: 'var(--font-mono)' }}>{tp.actual}</td>
+                        <td><StatusBadge status={tp.result || 'Pass'} /></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div style={{ marginTop: 24, display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setSelectedQA(null)}
+              >
+                Close Report
+              </button>
+              {(selectedQA.overallResult === 'Pass' || selectedQA.decision === 'Finished Goods') && onNavigateToFG && (
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={() => {
+                    const qa = selectedQA;
+                    setSelectedQA(null);
+                    onNavigateToFG(qa);
+                  }}
+                >
+                  <PackageCheck size={14} /> Send to Finished Goods ➔
+                </button>
+              )}
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
-
