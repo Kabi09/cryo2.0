@@ -36,8 +36,7 @@ const followUpSchema = new mongoose.Schema({
   },
   contactMethod: {
     type: String,
-    enum: ['Call', 'Phone Call', 'Email', 'Meeting', 'In-Person Meeting', 'WhatsApp'],
-    default: 'Call'
+    default: 'Phone Call'
   },
   discussionNotes: {
     type: String,
@@ -45,7 +44,6 @@ const followUpSchema = new mongoose.Schema({
   },
   customerResponse: {
     type: String,
-    enum: ['Interested', 'Negotiation', 'Not Interested', 'No Response', 'Call Scheduled'],
     default: 'Interested'
   },
   nextFollowUpDate: {
@@ -62,7 +60,6 @@ const followUpSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['Pending', 'Completed', 'Scheduled'],
     default: 'Pending'
   }
 }, { timestamps: true });
