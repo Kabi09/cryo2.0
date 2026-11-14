@@ -14,7 +14,11 @@ const SalesOrder = require('../models/SalesOrder');
 // --------------------------------------------------------------------
 exports.getProducts = async (req, res) => {
   try {
-    const products = await Product.find({ status: 'Active' }).sort({ productCode: 1 });
+    const filter = {};
+    if (req.query.status) {
+      filter.status = req.query.status;
+    }
+    const products = await Product.find(filter).sort({ productCode: 1 });
     res.json({ success: true, count: products.length, data: products });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -25,6 +29,21 @@ exports.createProduct = async (req, res) => {
   try {
     const product = await Product.create(req.body);
     res.status(201).json({ success: true, data: product });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+exports.updateProduct = async (req, res) => {
+  try {
+    const product = await Product.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+      runValidators: true
+    });
+    if (!product) {
+      return res.status(404).json({ success: false, message: 'Product not found' });
+    }
+    res.json({ success: true, data: product });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
   }
@@ -291,10 +310,25 @@ exports.convertEnquiryToLead = async (req, res) => {
       notes: `Converted from ${enquiry.enquiryNumber}. ${enquiry.additionalRequirements || ''}`
     });
 
-    enquiry.status = 'Converted to Lead';
+    enquiry.status = 'Qualified';
     await enquiry.save();
 
-    res.json({ success: true, message: 'Enquiry successfully converted to Lead', data: lead });
+    res.json({ success: true, message: 'Enquiry successfully converted to Qualified Lead', data: lead });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+exports.updateEnquiryStatus = async (req, res) => {
+  try {
+    const { status, lostReason } = req.body;
+    const update = { status };
+    if (lostReason !== undefined) update.lostReason = lostReason;
+    const enquiry = await Enquiry.findByIdAndUpdate(req.params.id, update, { new: true });
+    if (!enquiry) {
+      return res.status(404).json({ success: false, message: 'Enquiry not found' });
+    }
+    res.json({ success: true, data: enquiry });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
   }
@@ -442,18 +476,59 @@ exports.createFollowUp = async (req, res) => {
     let {
       followUpNumber,
       customer,
+      companyName,
       enquiryReference,
       relatedLead,
       relatedQuotation,
       contactDate,
       contactMethod,
+      contactType,
       discussionNotes,
       customerResponse,
+      responseStatus,
       nextFollowUpDate,
       nextAction,
       assignedEmployee,
       status
     } = req.body;
+
+    // Normalize field names
+    contactMethod = contactMethod || contactType || 'Call';
+    customerResponse = customerResponse || responseStatus || 'Interested';
+    status = status || 'Pending';
+
+    // If customer is an object ({ _id }), extract string ID
+    if (customer && typeof customer === 'object' && customer._id) {
+      customer = customer._id;
+    }
+
+    // If customer ID is missing but enquiryReference is present, resolve customer
+    if (!customer && enquiryReference) {
+      const enq = await Enquiry.findById(enquiryReference);
+      if (enq) {
+        companyName = companyName || enq.companyName;
+        if (enq.customer) {
+          customer = enq.customer;
+        } else if (enq.companyName) {
+          // Find or create customer
+          let existingCust = await Customer.findOne({ companyName: enq.companyName });
+          if (!existingCust) {
+            const count = await Customer.countDocuments();
+            existingCust = await Customer.create({
+              customerCode: `CUS-${String(count + 1).padStart(3, '0')}`,
+              companyName: enq.companyName,
+              contactPerson: enq.contactPerson || 'Procurement Contact',
+              mobileNumber: enq.mobileNumber || '9999999999',
+              email: enq.email || '',
+              billingAddress: enq.address || ''
+            });
+            enq.customer = existingCust._id;
+            await enq.save();
+          }
+          if (existingCust) customer = existingCust._id;
+        }
+      }
+    }
 
     if (!followUpNumber) {
       const count = await FollowUp.countDocuments();
@@ -462,18 +537,19 @@ exports.createFollowUp = async (req, res) => {
 
     const followUp = await FollowUp.create({
       followUpNumber: followUpNumber.toUpperCase(),
-      customer,
+      customer: customer || null,
+      companyName: companyName || '',
       enquiryReference: enquiryReference || null,
       relatedLead: relatedLead || null,
       relatedQuotation: relatedQuotation || null,
       contactDate: contactDate || Date.now(),
-      contactMethod: contactMethod || 'Call',
+      contactMethod,
       discussionNotes,
-      customerResponse: customerResponse || 'Interested',
+      customerResponse,
       nextFollowUpDate,
       nextAction: nextAction || 'Follow-up Call',
       assignedEmployee: assignedEmployee || 'Sales Representative',
-      status: status || 'Pending'
+      status
     });
 
     const populated = await FollowUp.findById(followUp._id)

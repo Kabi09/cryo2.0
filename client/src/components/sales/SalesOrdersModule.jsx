@@ -12,6 +12,7 @@ export default function SalesOrdersModule({
   quotations = [],
   proformaInvoices = [],
   products = [],
+  finishedGoods = [],
   onSave,
   onSendToProduction,
   preSelectedPI,
@@ -19,6 +20,8 @@ export default function SalesOrdersModule({
 }) {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [selectedSO, setSelectedSO] = useState(null);
+  const [activeTab, setActiveTab] = useState('all'); // 'all' | 'Confirmed' | 'In Process' | 'Completed'
+  const [stockCheckResult, setStockCheckResult] = useState(null);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -149,6 +152,26 @@ export default function SalesOrdersModule({
     }
   };
 
+  const handleCheckStock = (so) => {
+    const requiredQty = so.items?.reduce((sum, it) => sum + (it.quantity || 1), 0) || 1;
+    const availableStock = finishedGoods.filter(fg => fg.status === 'In Stock' || fg.status === 'Ready for Dispatch').length;
+    setStockCheckResult({
+      soNumber: so.soNumber,
+      soId: so._id,
+      requiredQty,
+      availableStock,
+      isAvailable: availableStock >= requiredQty
+    });
+  };
+
+  const filteredOrders = salesOrders.filter(s => {
+    if (activeTab === 'all') return true;
+    if (activeTab === 'Confirmed') return s.status === 'Confirmed' && s.productionStatus !== 'Sent to Production';
+    if (activeTab === 'In Process') return s.productionStatus === 'Sent to Production' || s.status === 'In Production';
+    if (activeTab === 'Completed') return s.status === 'Completed' || s.status === 'Delivered';
+    return true;
+  });
+
   const columns = [
     {
       header: 'SO Number',
@@ -181,7 +204,7 @@ export default function SalesOrdersModule({
       accessor: 'orderAmount',
       render: (row) => (
         <div>
-          <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 800, color: 'var(--success)' }}>
+          <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 800, color: '#16A36A' }}>
             ₹{row.orderAmount?.toLocaleString('en-IN')}
           </span>
           <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
@@ -207,6 +230,18 @@ export default function SalesOrdersModule({
           <button className="icon-btn" title="View Order Particulars" onClick={() => setSelectedSO(row)}>
             <Eye size={15} />
           </button>
+
+          {/* Check Stock Action */}
+          <button
+            className="btn btn-secondary"
+            style={{ padding: '3px 8px', fontSize: '0.72rem', gap: 4, height: 26, borderRadius: 6 }}
+            title="Check Finished Goods Stock"
+            onClick={() => handleCheckStock(row)}
+          >
+            Check Stock
+          </button>
+
+          {/* Send to Production Handover */}
           {row.productionStatus !== 'Sent to Production' && (
             <button
               className="btn btn-primary"
@@ -214,7 +249,7 @@ export default function SalesOrdersModule({
               title="Dispatch to Production Planning"
               onClick={() => handleSendToProductionClick(row._id)}
             >
-              <Factory size={12} /> Dispatch to Prod ➔
+              <Factory size={12} /> Send to Prod ➔
             </button>
           )}
         </div>
@@ -223,20 +258,127 @@ export default function SalesOrdersModule({
   ];
 
   return (
-    <div>
+    <div className="module-container">
       {/* KPI Cards */}
       <div className="kpi-grid">
-        <KpiCard title="Total Sales Orders" value={salesOrders.length} subtext="Confirmed Contracts" icon={ShoppingBag} color="#6366F1" />
-        <KpiCard title="In Production Shopfloor" value={salesOrders.filter(s => s.productionStatus === 'Sent to Production').length} subtext="Fabrication / Assembly" icon={Factory} color="var(--warning)" />
-        <KpiCard title="Delivered & Closed" value={salesOrders.filter(s => s.status === 'Completed').length} subtext="Fulfilled Deliveries" icon={CheckCircle2} color="var(--success)" />
+        <KpiCard title="Total Sales Orders" value={salesOrders.length} subtext="Confirmed Contracts" icon={ShoppingBag} color="var(--primary)" />
+        <KpiCard title="In Production Shopfloor" value={salesOrders.filter(s => s.productionStatus === 'Sent to Production').length} subtext="Fabrication / Assembly" icon={Factory} color="#F59E0B" />
+        <KpiCard title="Delivered & Closed" value={salesOrders.filter(s => s.status === 'Completed').length} subtext="Fulfilled Deliveries" icon={CheckCircle2} color="#16A36A" />
       </div>
+
+      {/* Sub-tabs Navigation */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: 12,
+        marginBottom: 16,
+        paddingBottom: 8,
+        borderBottom: '1px solid var(--border-subtle)'
+      }}>
+        <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
+          {[
+            { key: 'all', label: 'All Orders', count: salesOrders.length },
+            {
+              key: 'Confirmed',
+              label: 'Confirmed',
+              count: salesOrders.filter(s => s.status === 'Confirmed' && s.productionStatus !== 'Sent to Production').length
+            },
+            {
+              key: 'In Process',
+              label: 'In Process / Production',
+              count: salesOrders.filter(s => s.productionStatus === 'Sent to Production' || s.status === 'In Production').length
+            },
+            {
+              key: 'Completed',
+              label: 'Completed',
+              count: salesOrders.filter(s => s.status === 'Completed' || s.status === 'Delivered').length
+            }
+          ].map(tab => (
+            <button
+              key={tab.key}
+              type="button"
+              className={`btn ${activeTab === tab.key ? 'btn-primary' : 'btn-secondary'}`}
+              style={{ padding: '6px 14px', fontSize: '0.82rem', whiteSpace: 'nowrap' }}
+              onClick={() => setActiveTab(tab.key)}
+            >
+              {tab.label} ({tab.count})
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Stock Check Notification / Modal */}
+      {stockCheckResult && (
+        <Modal
+          isOpen={!!stockCheckResult}
+          onClose={() => setStockCheckResult(null)}
+          title={`Stock Check for Order: ${stockCheckResult.soNumber}`}
+          maxWidth="500px"
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div style={{
+              padding: '14px 16px',
+              borderRadius: 8,
+              background: stockCheckResult.isAvailable ? '#ECFDF5' : '#FFFBEB',
+              border: `1px solid ${stockCheckResult.isAvailable ? '#A7F3D0' : '#FDE68A'}`
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                <span style={{
+                  fontWeight: 700,
+                  fontSize: '0.95rem',
+                  color: stockCheckResult.isAvailable ? '#16A36A' : '#D97706'
+                }}>
+                  {stockCheckResult.isAvailable ? '✓ Finished Goods Available in Warehouse' : '⚠ Insufficient Finished Goods in Stock'}
+                </span>
+              </div>
+              <p style={{ margin: 0, fontSize: '0.84rem', color: 'var(--text-primary)' }}>
+                Required: <strong>{stockCheckResult.requiredQty} Units</strong> | Currently in Warehouse:{' '}
+                <strong>{stockCheckResult.availableStock} Units</strong>
+              </p>
+            </div>
+
+            <div style={{ fontSize: '0.84rem', color: 'var(--text-secondary)' }}>
+              {stockCheckResult.isAvailable ? (
+                <span>Units are in stock. You can reserve items from Finished Goods inventory and mark ready for Dispatch.</span>
+              ) : (
+                <span>Since stock is not available in warehouse, send this Sales Order to Production to trigger shopfloor assembly.</span>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 10 }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setStockCheckResult(null)}
+              >
+                Close
+              </button>
+              {!stockCheckResult.isAvailable && (
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={() => {
+                    const soId = stockCheckResult.soId;
+                    setStockCheckResult(null);
+                    handleSendToProductionClick(soId);
+                  }}
+                >
+                  <Factory size={14} /> Send to Production ➔
+                </button>
+              )}
+            </div>
+          </div>
+        </Modal>
+      )}
 
       {/* Main Table */}
       <DataTable
         columns={columns}
-        data={salesOrders}
+        data={filteredOrders}
         searchPlaceholder="Search sales order no, customer, PO ref..."
-        actions={
+        toolbarAction={
           <button className="btn btn-primary" onClick={handleOpenAdd}>
             <Plus size={16} /> Create Sales Order
           </button>

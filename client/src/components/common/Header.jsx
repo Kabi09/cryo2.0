@@ -99,7 +99,7 @@ export default function Header({
       <div className="header-dept-pills">
         {[
           { key: 'scm', label: 'SCM (6)', icon: Package },
-          { key: 'sales', label: 'Sales (6)', icon: Briefcase },
+          { key: 'sales', label: 'Sales (7)', icon: Briefcase },
           { key: 'production', label: 'Production (7)', icon: Factory },
           { key: 'logistics', label: 'Logistics (5)', icon: Truck },
           { key: 'employee', label: 'HR & RBAC (4)', icon: Users }

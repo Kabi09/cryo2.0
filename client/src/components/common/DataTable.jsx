@@ -10,6 +10,7 @@ export default function DataTable({
   searchField = null,
   filters = null,
   actions = null,
+  toolbarAction = null,
   onAdd = null,
   addLabel = 'Add New',
   pageSize = 8,
@@ -104,7 +105,7 @@ export default function DataTable({
           {filters}
         </div>
         <div className="toolbar-right" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {actions}
+          {actions || toolbarAction}
           {onAdd && (
             <button className="btn btn-primary" onClick={onAdd}>
               <Plus size={16} /> {addLabel}

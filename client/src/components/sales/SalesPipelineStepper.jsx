@@ -1,23 +1,19 @@
 import React from 'react';
-import { HelpCircle, PhoneCall, CheckCircle, FileText, Receipt, ShoppingBag, ChevronRight } from 'lucide-react';
+import { HelpCircle, FileText, Receipt, ShoppingBag, ChevronRight } from 'lucide-react';
 
 const STAGES = [
-  { id: 'sales-enquiries', num: '1', title: 'Enquiry', desc: 'Customer & Product Specs', icon: HelpCircle },
-  { id: 'sales-follow-ups', num: '2', title: 'Follow-up', desc: 'Calls & Touchpoints', icon: PhoneCall },
-  { id: 'sales-leads', num: '3', title: 'Qualified / Not Qualified Lead', desc: 'Opportunity & Value', icon: CheckCircle },
-  { id: 'sales-quotations', num: '4', title: 'Quotation', desc: 'Proposals & V1/V2 Rev', icon: FileText },
-  { id: 'sales-proforma-invoices', num: '5', title: 'Proforma Invoice (PI)', desc: 'Commercial Advance Bill', icon: Receipt },
-  { id: 'sales-orders', num: '6', title: 'Sales Order (SO)', desc: 'Production Handover', icon: ShoppingBag }
+  { id: 'sales-enquiries', num: '1', title: '1. Enquiry', desc: 'Requirements, Follow-up & Qualify', icon: HelpCircle },
+  { id: 'sales-quotations', num: '2', title: '2. Quotation', desc: 'Proposals, V1/V2 & Acceptance', icon: FileText },
+  { id: 'sales-proforma-invoices', num: '3', title: '3. Proforma Invoice', desc: 'Advance Commercials & Terms', icon: Receipt },
+  { id: 'sales-orders', num: '4', title: '4. Sales Order', desc: 'Stock Check & Send to Production', icon: ShoppingBag }
 ];
 
 export default function SalesPipelineStepper({ currentModule, onNavigate }) {
   const getStageIndex = (mod) => {
-    if (mod === 'sales-enquiries' || mod === 'sales-enquiry' || mod === 'sales-customers-enquiries') return 0;
-    if (mod === 'sales-follow-ups' || mod === 'sales-followup') return 1;
-    if (mod === 'sales-leads' || mod === 'sales-customers-leads') return 2;
-    if (mod === 'sales-quotations' || mod === 'sales-quotation' || mod === 'sales-quotations-pi') return 3;
-    if (mod === 'sales-proforma-invoices' || mod === 'sales-pi') return 4;
-    if (mod === 'sales-orders' || mod === 'sales-so' || mod === 'sales-orders-payments' || mod === 'sales-customer-pos' || mod === 'sales-payments') return 5;
+    if (mod === 'sales-enquiries' || mod === 'sales-enquiry' || mod === 'sales-customers-enquiries' || mod === 'sales-follow-ups' || mod === 'sales-leads') return 0;
+    if (mod === 'sales-quotations' || mod === 'sales-quotation' || mod === 'sales-quotations-pi') return 1;
+    if (mod === 'sales-proforma-invoices' || mod === 'sales-pi') return 2;
+    if (mod === 'sales-orders' || mod === 'sales-so' || mod === 'sales-orders-payments' || mod === 'sales-customer-pos' || mod === 'sales-payments') return 3;
     return -1;
   };
 
@@ -36,6 +32,8 @@ export default function SalesPipelineStepper({ currentModule, onNavigate }) {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: 8,
         marginBottom: 10
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -53,11 +51,11 @@ export default function SalesPipelineStepper({ currentModule, onNavigate }) {
             Sales Workflow Pipeline
           </span>
           <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-            Follow the 6 stages: Enquiry ➔ Follow-up ➔ Qualified Lead / Not Qualified ➔ Follow-up ➔ Quotation ➔ PI ➔ SO
+            4 Transaction Stages: Enquiry (with follow-ups & qualify) ➔ Quotation ➔ Proforma Invoice ➔ Sales Order
           </span>
         </div>
         <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>
-          Stage {currentIndex >= 0 ? currentIndex + 1 : 1} of 6
+          Stage {currentIndex >= 0 ? currentIndex + 1 : 1} of 4
         </span>
       </div>
 
@@ -100,33 +98,41 @@ export default function SalesPipelineStepper({ currentModule, onNavigate }) {
                     ? 'var(--success)'
                     : 'var(--text-secondary)',
                   cursor: 'pointer',
-                  fontSize: '0.8rem',
-                  fontWeight: isActive ? 700 : 600,
-                  transition: 'all 0.15s ease',
+                  fontWeight: isActive ? 700 : 500,
+                  fontSize: '0.82rem',
                   whiteSpace: 'nowrap',
+                  transition: 'all 0.15s ease',
                   flexShrink: 0
                 }}
               >
                 <div style={{
-                  width: 20,
-                  height: 20,
-                  borderRadius: '50%',
+                  width: 22,
+                  height: 22,
+                  borderRadius: 6,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
                   background: isActive
                     ? 'var(--primary)'
                     : isPassed
                     ? 'var(--success)'
                     : 'var(--border-subtle)',
-                  color: isActive || isPassed ? '#FFFFFF' : 'var(--text-secondary)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
+                  color: isActive || isPassed ? '#FFFFFF' : 'var(--text-muted)',
                   fontSize: '0.72rem',
                   fontWeight: 700
                 }}>
                   {stg.num}
                 </div>
-                <Icon size={14} />
-                <span>{stg.title}</span>
+                <div style={{ textAlign: 'left' }}>
+                  <div style={{ lineHeight: 1.2 }}>{stg.title}</div>
+                  <div style={{
+                    fontSize: '0.68rem',
+                    color: isActive ? 'var(--primary)' : 'var(--text-muted)',
+                    fontWeight: 400
+                  }}>
+                    {stg.desc}
+                  </div>
+                </div>
               </button>
 
               {idx < STAGES.length - 1 && (

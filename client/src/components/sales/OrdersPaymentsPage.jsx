@@ -12,6 +12,7 @@ export default function OrdersPaymentsPage({
   proformaInvoices = [],
   quotations = [],
   products = [],
+  finishedGoods = [],
   onSaveCustomerPO,
   onVerifyCustomerPO,
   onSavePayment,
@@ -62,6 +63,7 @@ export default function OrdersPaymentsPage({
           quotations={quotations}
           proformaInvoices={proformaInvoices}
           products={products}
+          finishedGoods={finishedGoods}
           onSave={onSaveSalesOrder}
           onSendToProduction={onSendToProduction}
           preSelectedPI={preSelectedPI}

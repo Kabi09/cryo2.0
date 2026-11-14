@@ -12,6 +12,7 @@ import MaterialRequestsPage from './components/modules/MaterialRequestsPage';
 
 // 2. Sales Management (Step-by-Step Funnel Pipeline)
 import DashboardModule from './components/sales/DashboardModule';
+import ProductsModule from './components/sales/ProductsModule';
 import EnquiriesModule from './components/sales/EnquiriesModule';
 import FollowUpsModule from './components/sales/FollowUpsModule';
 import CustomersLeadsModule from './components/sales/CustomersLeadsModule';
@@ -420,6 +421,14 @@ export default function App() {
   };
 
   // Sales Handlers
+  const handleSaveProduct = async (data) => {
+    await api.createProduct(data);
+    await loadAllData();
+  };
+  const handleUpdateProduct = async (id, data) => {
+    await api.updateProduct(id, data);
+    await loadAllData();
+  };
   const handleSaveEnquiry = async (data) => {
     await api.createEnquiry(data);
     await loadAllData();
@@ -427,7 +436,11 @@ export default function App() {
   const handleConvertToLead = async (enquiryId) => {
     await api.convertEnquiryToLead(enquiryId);
     await loadAllData();
-    showToast('Enquiry successfully converted to Lead without duplicate customer entry', 'success');
+    showToast('Enquiry marked as Qualified Lead opportunity!', 'success');
+  };
+  const handleUpdateEnquiryStatus = async (id, data) => {
+    await api.updateEnquiryStatus(id, data);
+    await loadAllData();
   };
   const handleSaveSalesCustomer = async (data) => {
     await api.createCustomer(data);
@@ -792,12 +805,14 @@ export default function App() {
             <DashboardModule
               dashboardData={salesDashboardData}
               onNavigateModule={(mod) => {
-                if (mod === 'enquiries' || mod === 'enquiry') {
+                if (mod === 'products' || mod === 'product') {
+                  setActiveModule('sales-products');
+                } else if (mod === 'enquiries' || mod === 'enquiry') {
                   setActiveModule('sales-enquiries');
                 } else if (mod === 'leads' || mod === 'customers-leads' || mod === 'customers') {
-                  setActiveModule('sales-leads');
+                  setActiveModule('sales-enquiries');
                 } else if (mod === 'follow-ups' || mod === 'followup') {
-                  setActiveModule('sales-follow-ups');
+                  setActiveModule('sales-enquiries');
                 } else if (mod === 'quotations' || mod === 'quotation') {
                   setActiveModule('sales-quotations');
                 } else if (mod === 'proforma-invoices' || mod === 'pi') {
@@ -811,8 +826,18 @@ export default function App() {
             />
           )}
 
+          {/* 1. PRODUCTS MASTER */}
+          {activeModule === 'sales-products' && (
+            <ProductsModule
+              products={products}
+              onSave={handleSaveProduct}
+              onUpdate={handleUpdateProduct}
+              showToast={showToast}
+            />
+          )}
+
           {/* STAGE 1: ENQUIRY */}
-          {(activeModule === 'sales-enquiries' || activeModule === 'sales-enquiry' || activeModule === 'sales-customers-enquiries') && (
+          {(activeModule === 'sales-enquiries' || activeModule === 'sales-enquiry' || activeModule === 'sales-customers-enquiries' || activeModule === 'sales-follow-ups' || activeModule === 'sales-leads') && (
             <EnquiriesModule
               enquiries={enquiries}
               products={products}
@@ -821,8 +846,8 @@ export default function App() {
               onSave={handleSaveEnquiry}
               onConvertToLead={async (enqId) => {
                 await handleConvertToLead(enqId);
-                setActiveModule('sales-leads');
               }}
+              onUpdateStatus={handleUpdateEnquiryStatus}
               onSaveFollowUp={handleSaveFollowUp}
               onNavigateToQuotation={(enq) => {
                 setPreSelectedLeadForQuotation({
@@ -915,6 +940,7 @@ export default function App() {
               quotations={quotations}
               proformaInvoices={proformaInvoices}
               products={products}
+              finishedGoods={finishedGoods}
               preSelectedPI={preSelectedPIForSO}
               onSaveCustomerPO={handleSaveCustomerPO}
               onVerifyCustomerPO={handleVerifyCustomerPO}

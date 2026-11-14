@@ -5,6 +5,7 @@ const salesController = require('../controllers/salesController');
 // Product Master
 router.get('/products', salesController.getProducts);
 router.post('/products', salesController.createProduct);
+router.put('/products/:id', salesController.updateProduct);
 
 // 01. Dashboard
 router.get('/dashboard-summary', salesController.getDashboardSummary);
@@ -13,6 +14,7 @@ router.get('/dashboard-summary', salesController.getDashboardSummary);
 router.get('/enquiries', salesController.getEnquiries);
 router.post('/enquiries', salesController.createEnquiry);
 router.post('/enquiries/:id/convert-to-lead', salesController.convertEnquiryToLead);
+router.put('/enquiries/:id/status', salesController.updateEnquiryStatus);
 
 // 03. Customers & Leads
 router.get('/customers', salesController.getCustomers);

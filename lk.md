@@ -295,6 +295,12 @@
 ---
 
 ## Technical Decisions
+- **Decision**: Redesign Sales Management into 7 Simplified Pages with Embedded Follow-ups & 4-Stage Stepper.
+  - **Reason**: The sales workflow had fragmented tabs (Follow-ups and Qualified Leads as separate pages). Embedding follow-ups into Enquiry Details and managing qualification inside Enquiry status simplifies user experience for non-technical manufacturing staff while retaining 100% data integrity.
+  - **Date**: 2026-11-14
+- **Decision**: Mobile Responsiveness & Layout Overhaul matching Reference Screenshot 1 (VairaWorks ADMIN).
+  - **Reason**: Eliminated header horizontal overflow by hiding department pills under 1200px and breadcrumbs on mobile, docked the bottom navigation bar with fixed z-index, enhanced KPI cards with responsive 2-column squircle icons, and added mobile touch-friendly table scrolling.
+  - **Date**: 2026-11-14
 - **Decision**: Consolidate 47 separate tabs into 28 structured main pages with internal sub-tabs.
   - **Reason**: Having 47 flat sidebar tabs caused excessive cognitive load, cluttered navigation, and poor mobile UX. Grouping tightly-coupled steps (e.g. PO + GRN + Returns, Quotes + PI, Work Orders + Schedules) into unified tabbed pages improves ergonomics while maintaining 100% of existing workflows and data models.
   - **Date**: 2026-11-13

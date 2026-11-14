@@ -15,6 +15,7 @@ export default function ProformaInvoicesModule({
 }) {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [selectedPI, setSelectedPI] = useState(null);
+  const [activeTab, setActiveTab] = useState('all'); // 'all' | 'Draft' | 'Sent' | 'Confirmed'
 
   // Eligible quotations (Accepted or Sent)
   const eligibleQuotes = quotations.filter(q => q.status === 'Accepted' || q.status === 'Sent');
@@ -191,21 +192,64 @@ export default function ProformaInvoicesModule({
     }
   ];
 
+  const filteredPIs = proformaInvoices.filter(p => {
+    if (activeTab === 'all') return true;
+    if (activeTab === 'Draft') return p.status === 'Draft';
+    if (activeTab === 'Sent') return p.status === 'Sent';
+    if (activeTab === 'Confirmed') return p.status === 'Confirmed' || p.status === 'Partially Paid' || p.status === 'Paid';
+    return true;
+  });
+
   return (
-    <div>
+    <div className="module-container">
       {/* KPI Cards */}
       <div className="kpi-grid">
-        <KpiCard title="Total PIs Issued" value={proformaInvoices.length} subtext="Formal Pre-Invoices" icon={Receipt} color="#6366F1" />
-        <KpiCard title="Advance Invoiced" value={`₹${proformaInvoices.reduce((a, b) => a + (b.advanceAmount || 0), 0).toLocaleString('en-IN')}`} subtext="Target Inflows" icon={DollarSign} color="var(--warning)" />
-        <KpiCard title="Fully Paid PIs" value={proformaInvoices.filter(p => p.status === 'Paid').length} subtext="Settled in Full" icon={Receipt} color="var(--success)" />
+        <KpiCard title="Total PIs Issued" value={proformaInvoices.length} subtext="Formal Pre-Invoices" icon={Receipt} color="var(--primary)" />
+        <KpiCard title="Advance Invoiced" value={`₹${proformaInvoices.reduce((a, b) => a + (b.advanceAmount || 0), 0).toLocaleString('en-IN')}`} subtext="Target Inflows" icon={DollarSign} color="#F59E0B" />
+        <KpiCard title="Confirmed / Paid PIs" value={proformaInvoices.filter(p => p.status === 'Paid' || p.status === 'Confirmed' || p.status === 'Partially Paid').length} subtext="Ready for Production SO" icon={Receipt} color="#16A36A" />
+      </div>
+
+      {/* Sub-tabs Navigation */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: 12,
+        marginBottom: 16,
+        paddingBottom: 8,
+        borderBottom: '1px solid var(--border-subtle)'
+      }}>
+        <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
+          {[
+            { key: 'all', label: 'All Invoices', count: proformaInvoices.length },
+            { key: 'Draft', label: 'Draft', count: proformaInvoices.filter(p => p.status === 'Draft').length },
+            { key: 'Sent', label: 'Sent', count: proformaInvoices.filter(p => p.status === 'Sent').length },
+            {
+              key: 'Confirmed',
+              label: 'Confirmed / Advance Received',
+              count: proformaInvoices.filter(p => p.status === 'Confirmed' || p.status === 'Partially Paid' || p.status === 'Paid').length
+            }
+          ].map(tab => (
+            <button
+              key={tab.key}
+              type="button"
+              className={`btn ${activeTab === tab.key ? 'btn-primary' : 'btn-secondary'}`}
+              style={{ padding: '6px 14px', fontSize: '0.82rem', whiteSpace: 'nowrap' }}
+              onClick={() => setActiveTab(tab.key)}
+            >
+              {tab.label} ({tab.count})
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Main Table */}
       <DataTable
         columns={columns}
-        data={proformaInvoices}
+        data={filteredPIs}
         searchPlaceholder="Search PI number, customer, quote..."
-        actions={
+        toolbarAction={
           <button className="btn btn-primary" onClick={handleOpenAdd}>
             <Plus size={16} /> Generate Proforma Invoice
           </button>

@@ -51,62 +51,31 @@ export default function KpiCard({
   const iconBg = bgMap[resolvedColor] || '#EFF6FF';
 
   return (
-    <div className="kpi-card" style={{
-      background: '#FFFFFF',
-      border: '1px solid #E5EAF1',
-      borderRadius: 16,
-      padding: '20px 22px',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 10,
-      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.03)',
-      transition: 'all 0.18s ease'
-    }}>
+    <div className="kpi-card">
       {Icon && (
-        <div style={{
-          width: 42,
-          height: 42,
-          borderRadius: 12,
-          background: iconBg,
-          color: resolvedColor,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          border: `1px solid ${resolvedColor}20`
-        }}>
-          <Icon size={20} />
+        <div
+          className="kpi-icon-wrap"
+          style={{
+            background: iconBg,
+            color: resolvedColor,
+            border: `1px solid ${resolvedColor}25`
+          }}
+        >
+          <Icon size={18} />
         </div>
       )}
 
       <div>
-        <div className="kpi-value" style={{
-          fontSize: '2rem',
-          fontWeight: 800,
-          color: '#172033',
-          fontFamily: 'var(--font-mono)',
-          lineHeight: 1.15
-        }}>
+        <div className="kpi-value">
           {value !== undefined && value !== null ? value : 0}
         </div>
-        <div className="kpi-title" style={{
-          fontSize: '0.84rem',
-          fontWeight: 500,
-          color: '#64748B',
-          marginTop: 4
-        }}>
+        <div className="kpi-title">
           {displayTitle}
         </div>
       </div>
 
       {displaySubtext && (
-        <div className="kpi-footer" style={{
-          fontSize: '0.74rem',
-          color: '#94A3B8',
-          fontWeight: 500,
-          borderTop: '1px solid #F1F5F9',
-          paddingTop: 8,
-          marginTop: 'auto'
-        }}>
+        <div className="kpi-footer">
           {displaySubtext}
         </div>
       )}

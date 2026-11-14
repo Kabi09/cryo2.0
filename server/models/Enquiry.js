@@ -94,9 +94,13 @@ const enquirySchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  lostReason: {
+    type: String,
+    default: ''
+  },
   status: {
     type: String,
-    enum: ['New', 'Converted to Lead', 'Qualified', 'Closed'],
+    enum: ['New', 'Follow-up', 'Converted to Lead', 'Qualified', 'Lost', 'Closed'],
     default: 'New'
   }
 }, { timestamps: true });

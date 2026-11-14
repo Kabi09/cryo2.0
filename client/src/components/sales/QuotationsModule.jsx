@@ -35,6 +35,7 @@ export default function QuotationsModule({
   const [isReviseOpen, setIsReviseOpen] = useState(false);
   const [selectedQuote, setSelectedQuote] = useState(null);
   const [quickFollowUpQuote, setQuickFollowUpQuote] = useState(null);
+  const [activeTab, setActiveTab] = useState('all'); // 'all' | 'Draft' | 'Sent' | 'Accepted' | 'Rejected'
 
   // Quick Follow-up Form State
   const [followUpData, setFollowUpData] = useState({
@@ -398,21 +399,62 @@ export default function QuotationsModule({
     }
   ];
 
+  const filteredQuotations = quotations.filter(q => {
+    if (activeTab === 'all') return true;
+    if (activeTab === 'Draft') return q.status === 'Draft';
+    if (activeTab === 'Sent') return q.status === 'Sent' || q.status === 'Under Review' || q.status === 'Negotiation';
+    if (activeTab === 'Accepted') return q.status === 'Accepted';
+    if (activeTab === 'Rejected') return q.status === 'Rejected';
+    return true;
+  });
+
   return (
-    <div>
+    <div className="module-container">
       {/* KPI Cards */}
       <div className="kpi-grid">
-        <KpiCard title="Total Quotes" value={quotations.length} subtext="Proposals Generated" icon={FileSpreadsheet} color="#6366F1" />
+        <KpiCard title="Total Quotes" value={quotations.length} subtext="Proposals Generated" icon={FileSpreadsheet} color="var(--primary)" />
         <KpiCard title="Under Negotiation" value={quotations.filter(q => q.status === 'Negotiation' || q.status === 'Under Review').length} subtext="Revised Versions" icon={GitBranch} color="#F59E0B" />
-        <KpiCard title="Accepted Quotes" value={quotations.filter(q => q.status === 'Accepted').length} subtext="Won for PI release" icon={Trophy} color="#10B981" />
+        <KpiCard title="Accepted Quotes" value={quotations.filter(q => q.status === 'Accepted').length} subtext="Won for PI release" icon={Trophy} color="#16A36A" />
+      </div>
+
+      {/* Sub-tabs Navigation */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: 12,
+        marginBottom: 16,
+        paddingBottom: 8,
+        borderBottom: '1px solid var(--border-subtle)'
+      }}>
+        <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
+          {[
+            { key: 'all', label: 'All Quotations', count: quotations.length },
+            { key: 'Draft', label: 'Draft', count: quotations.filter(q => q.status === 'Draft').length },
+            { key: 'Sent', label: 'Sent / Review', count: quotations.filter(q => q.status === 'Sent' || q.status === 'Under Review' || q.status === 'Negotiation').length },
+            { key: 'Accepted', label: 'Accepted', count: quotations.filter(q => q.status === 'Accepted').length },
+            { key: 'Rejected', label: 'Rejected', count: quotations.filter(q => q.status === 'Rejected').length }
+          ].map(tab => (
+            <button
+              key={tab.key}
+              type="button"
+              className={`btn ${activeTab === tab.key ? 'btn-primary' : 'btn-secondary'}`}
+              style={{ padding: '6px 14px', fontSize: '0.82rem', whiteSpace: 'nowrap' }}
+              onClick={() => setActiveTab(tab.key)}
+            >
+              {tab.label} ({tab.count})
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Main Table */}
       <DataTable
         columns={columns}
-        data={quotations}
+        data={filteredQuotations}
         searchPlaceholder="Search quotation number, customer, product..."
-        actions={
+        toolbarAction={
           <button className="btn btn-primary" onClick={handleOpenAdd}>
             <Plus size={16} /> Create Quotation
           </button>
@@ -922,7 +964,7 @@ export default function QuotationsModule({
                 discussionNotes: followUpData.discussionNotes,
                 nextFollowUpDate: followUpData.nextFollowUpDate,
                 priority: 'High',
-                status: 'Scheduled'
+                status: 'Pending'
               });
               showToast(`Follow-up note logged for ${quickFollowUpQuote.quotationNumber}!`, 'success');
             }

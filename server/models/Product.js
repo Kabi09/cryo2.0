@@ -30,6 +30,18 @@ const productSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  modelNumber: {
+    type: String,
+    default: ''
+  },
+  specifications: {
+    type: String,
+    default: ''
+  },
+  warranty: {
+    type: String,
+    default: '12 Months'
+  },
   status: {
     type: String,
     enum: ['Active', 'Inactive'],

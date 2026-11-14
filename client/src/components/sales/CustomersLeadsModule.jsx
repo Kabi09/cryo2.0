@@ -189,7 +189,7 @@ export default function CustomersLeadsModule({
           discussionNotes: followUpData.discussionNotes,
           nextFollowUpDate: followUpData.nextFollowUpDate,
           priority: 'High',
-          status: 'Scheduled'
+          status: 'Pending'
         });
         showToast(`Follow-up note logged for ${quickFollowUpLead.leadNumber}!`, 'success');
       }

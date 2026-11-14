@@ -168,10 +168,19 @@ export const api = {
   // ==========================================
   // SALES MANAGEMENT ENDPOINTS
   // ==========================================
-  getProducts: () => fetch(`${API_BASE}/sales/products`).then(handleResponse),
+  getProducts: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return fetch(`${API_BASE}/sales/products?${query}`).then(handleResponse);
+  },
   createProduct: (data) =>
     fetch(`${API_BASE}/sales/products`, {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    }).then(handleResponse),
+  updateProduct: (id, data) =>
+    fetch(`${API_BASE}/sales/products/${id}`, {
+      method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
     }).then(handleResponse),
@@ -191,6 +200,12 @@ export const api = {
   convertEnquiryToLead: (id) =>
     fetch(`${API_BASE}/sales/enquiries/${id}/convert-to-lead`, {
       method: 'POST'
+    }).then(handleResponse),
+  updateEnquiryStatus: (id, data) =>
+    fetch(`${API_BASE}/sales/enquiries/${id}/status`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
     }).then(handleResponse),
 
   getCustomers: (params = {}) => {

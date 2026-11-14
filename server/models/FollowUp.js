@@ -11,7 +11,11 @@ const followUpSchema = new mongoose.Schema({
   customer: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Customer',
-    required: true
+    required: false
+  },
+  companyName: {
+    type: String,
+    default: ''
   },
   enquiryReference: {
     type: mongoose.Schema.Types.ObjectId,
@@ -32,7 +36,7 @@ const followUpSchema = new mongoose.Schema({
   },
   contactMethod: {
     type: String,
-    enum: ['Call', 'Email', 'Meeting', 'WhatsApp'],
+    enum: ['Call', 'Phone Call', 'Email', 'Meeting', 'In-Person Meeting', 'WhatsApp'],
     default: 'Call'
   },
   discussionNotes: {
@@ -41,7 +45,7 @@ const followUpSchema = new mongoose.Schema({
   },
   customerResponse: {
     type: String,
-    enum: ['Interested', 'Negotiation', 'Not Interested', 'No Response'],
+    enum: ['Interested', 'Negotiation', 'Not Interested', 'No Response', 'Call Scheduled'],
     default: 'Interested'
   },
   nextFollowUpDate: {
@@ -58,7 +62,7 @@ const followUpSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['Pending', 'Completed'],
+    enum: ['Pending', 'Completed', 'Scheduled'],
     default: 'Pending'
   }
 }, { timestamps: true });
