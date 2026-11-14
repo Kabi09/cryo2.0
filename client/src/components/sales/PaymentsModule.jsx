@@ -186,7 +186,7 @@ export default function PaymentsModule({ payments, customers, proformaInvoices, 
       {/* Main Table */}
       <DataTable
         columns={columns}
-        data={payments}
+        data={payments.slice().sort((a, b) => new Date(b.createdAt || b.paymentDate || 0) - new Date(a.createdAt || a.paymentDate || 0))}
         searchPlaceholder="Search payment no, customer, UTR ref..."
         actions={
           <button className="btn btn-primary" onClick={handleOpenAdd}>

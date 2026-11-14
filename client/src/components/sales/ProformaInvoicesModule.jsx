@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Eye, Receipt, Send, Download, DollarSign, ShoppingBag, ArrowRight } from 'lucide-react';
+import { Plus, Eye, Receipt, Send, Download, DollarSign, ShoppingBag, ArrowRight, CreditCard, CheckCircle2 } from 'lucide-react';
 import DataTable from '../common/DataTable';
 import StatusBadge from '../common/StatusBadge';
 import Modal from '../common/Modal';
@@ -8,14 +8,33 @@ import KpiCard from '../common/KpiCard';
 export default function ProformaInvoicesModule({
   proformaInvoices = [],
   quotations = [],
+  payments = [],
   onSave,
+  onSavePayment,
   onNavigateToSO,
   preSelectedQuote,
+  selectedPIForView,
+  onClearViewPI,
+  onClearPreSelectedQuote,
   showToast
 }) {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [selectedPI, setSelectedPI] = useState(null);
+  const [recordPaymentPI, setRecordPaymentPI] = useState(null);
   const [activeTab, setActiveTab] = useState('all'); // 'all' | 'Draft' | 'Sent' | 'Confirmed'
+
+  // Payment form state
+  const [paymentData, setPaymentData] = useState({
+    amountReceived: '',
+    transactionReference: '',
+    paymentMethod: 'Bank Transfer',
+    paymentDate: new Date().toISOString().split('T')[0],
+    remarks: ''
+  });
+
+  const getPIPayments = (piId) => {
+    return payments.filter(p => (p.piReference?._id || p.piReference) === piId);
+  };
 
   // Eligible quotations (Accepted or Sent)
   const eligibleQuotes = quotations.filter(q => q.status === 'Accepted' || q.status === 'Sent');
@@ -34,9 +53,26 @@ export default function ProformaInvoicesModule({
     status: 'Sent'
   });
 
+  // Handle direct view navigation from Quotations
+  useEffect(() => {
+    if (selectedPIForView) {
+      setSelectedPI(selectedPIForView);
+      onClearViewPI?.();
+    }
+  }, [selectedPIForView]);
+
   // Pre-fill from quotation if navigated from Quotations module
   useEffect(() => {
     if (preSelectedQuote) {
+      // Check if a PI already exists for this quotation to prevent duplicate creation
+      const existingPI = proformaInvoices.find(pi => (pi.quotation?._id || pi.quotation) === preSelectedQuote._id);
+      if (existingPI) {
+        setSelectedPI(existingPI);
+        showToast?.(`Proforma Invoice ${existingPI.piNumber} already exists for this quotation.`, 'info');
+        onClearPreSelectedQuote?.();
+        return;
+      }
+
       setFormData({
         piNumber: '',
         customer: preSelectedQuote.customer?._id || preSelectedQuote.customer || '',
@@ -106,6 +142,52 @@ export default function ProformaInvoicesModule({
 
       showToast('Proforma Invoice issued successfully!', 'success');
       setIsAddOpen(false);
+      onClearPreSelectedQuote?.();
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  };
+
+  const handleSavePayment = async (e) => {
+    e.preventDefault();
+    try {
+      if (!paymentData.transactionReference.trim()) {
+        showToast('Please provide a Bank / UTR transaction reference', 'error');
+        return;
+      }
+      const amt = Number(paymentData.amountReceived);
+      if (!amt || amt <= 0) {
+        showToast('Please enter a valid positive payment amount', 'error');
+        return;
+      }
+
+      if (onSavePayment) {
+        await onSavePayment({
+          customer: recordPaymentPI.customer?._id || recordPaymentPI.customer,
+          piReference: recordPaymentPI._id,
+          amountReceived: amt,
+          paymentDate: paymentData.paymentDate,
+          paymentMethod: paymentData.paymentMethod,
+          transactionReference: paymentData.transactionReference.trim(),
+          paymentProof: 'Bank_Transfer_Slip.pdf',
+          remarks: paymentData.remarks || `Advance remittance received against ${recordPaymentPI.piNumber}`,
+          paymentType: (recordPaymentPI.totalReceived || 0) > 0 ? 'Partial' : 'Advance',
+          status: 'Received'
+        });
+        showToast(`Payment of ₹${amt.toLocaleString('en-IN')} with UTR ${paymentData.transactionReference.trim()} recorded successfully!`, 'success');
+      }
+
+      setRecordPaymentPI(null);
+      if (selectedPI && selectedPI._id === recordPaymentPI._id) {
+        const newTotal = (selectedPI.totalReceived || 0) + amt;
+        const newBal = Math.max(0, selectedPI.grandTotal - newTotal);
+        setSelectedPI({
+          ...selectedPI,
+          totalReceived: newTotal,
+          balanceAmount: newBal,
+          status: newBal === 0 ? 'Paid' : 'Partially Paid'
+        });
+      }
     } catch (err) {
       showToast(err.message, 'error');
     }
@@ -148,18 +230,21 @@ export default function ProformaInvoicesModule({
       )
     },
     {
-      header: 'Advance Required',
-      accessor: 'advanceAmount',
-      render: (row) => (
-        <div>
-          <span style={{ color: 'var(--warning)', fontWeight: 600, fontFamily: 'var(--font-mono)' }}>
-            ₹{row.advanceAmount?.toLocaleString('en-IN')}
-          </span>
-          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginLeft: 4 }}>
-            ({row.advancePercentage}%)
-          </span>
-        </div>
-      )
+      header: 'Advance / Received',
+      render: (row) => {
+        const received = row.totalReceived || 0;
+        const balance = row.balanceAmount !== undefined ? row.balanceAmount : Math.max(0, row.grandTotal - received);
+        return (
+          <div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', fontWeight: 600, color: received > 0 ? 'var(--success)' : 'var(--warning)' }}>
+              ₹{received.toLocaleString('en-IN')} recd
+            </div>
+            <div style={{ fontSize: '0.72rem', color: balance > 0 ? 'var(--text-muted)' : 'var(--success)' }}>
+              {balance > 0 ? `₹${balance.toLocaleString('en-IN')} bal` : 'Fully Paid'}
+            </div>
+          </div>
+        );
+      }
     },
     {
       header: 'Status',
@@ -168,37 +253,62 @@ export default function ProformaInvoicesModule({
     },
     {
       header: 'Actions',
-      render: (row) => (
-        <div className="action-btns" onClick={(e) => e.stopPropagation()}>
-          <button className="icon-btn" title="View PI Document" onClick={() => setSelectedPI(row)}>
-            <Eye size={15} />
-          </button>
-          <button
-            className="btn btn-primary"
-            style={{
-              padding: '3px 8px',
-              fontSize: '0.72rem',
-              gap: 4,
-              height: 26,
-              borderRadius: 6
-            }}
-            title="Convert to Confirmed Sales Order"
-            onClick={() => onNavigateToSO?.(row)}
-          >
-            <ShoppingBag size={12} /> Convert to SO ➔
-          </button>
-        </div>
-      )
+      render: (row) => {
+        const balance = row.balanceAmount !== undefined ? row.balanceAmount : Math.max(0, row.grandTotal - (row.totalReceived || 0));
+        return (
+          <div className="action-btns" onClick={(e) => e.stopPropagation()}>
+            <button className="icon-btn" title="View PI Document" onClick={() => setSelectedPI(row)}>
+              <Eye size={15} />
+            </button>
+            {balance > 0 && onSavePayment && (
+              <button
+                className="icon-btn"
+                title="Record Payment / Installment"
+                style={{ color: '#10B981' }}
+                onClick={() => {
+                  setRecordPaymentPI(row);
+                  setPaymentData({
+                    amountReceived: balance > 0 ? (row.advanceAmount && (!row.totalReceived || row.totalReceived === 0) ? row.advanceAmount : balance) : '',
+                    transactionReference: '',
+                    paymentMethod: 'Bank Transfer',
+                    paymentDate: new Date().toISOString().split('T')[0],
+                    remarks: `Advance remittance against ${row.piNumber}`
+                  });
+                }}
+              >
+                <CreditCard size={15} />
+              </button>
+            )}
+            <button
+              className="btn btn-primary"
+              style={{
+                padding: '3px 8px',
+                fontSize: '0.72rem',
+                gap: 4,
+                height: 26,
+                borderRadius: 6
+              }}
+              title="Convert to Confirmed Sales Order"
+              onClick={() => onNavigateToSO?.(row)}
+            >
+              <ShoppingBag size={12} /> Convert to SO ➔
+            </button>
+          </div>
+        );
+      }
     }
   ];
 
-  const filteredPIs = proformaInvoices.filter(p => {
-    if (activeTab === 'all') return true;
-    if (activeTab === 'Draft') return p.status === 'Draft';
-    if (activeTab === 'Sent') return p.status === 'Sent';
-    if (activeTab === 'Confirmed') return p.status === 'Confirmed' || p.status === 'Partially Paid' || p.status === 'Paid';
-    return true;
-  });
+  const filteredPIs = proformaInvoices
+    .filter(p => {
+      if (activeTab === 'all') return true;
+      if (activeTab === 'Draft') return p.status === 'Draft';
+      if (activeTab === 'Sent') return p.status === 'Sent';
+      if (activeTab === 'Confirmed') return p.status === 'Confirmed' || p.status === 'Partially Paid' || p.status === 'Paid';
+      return true;
+    })
+    .slice()
+    .sort((a, b) => new Date(b.createdAt || b.piDate || 0) - new Date(a.createdAt || a.piDate || 0));
 
   return (
     <div className="module-container">
@@ -449,8 +559,107 @@ export default function ProformaInvoicesModule({
               </div>
             </div>
 
+            {/* Payment & Installment Tracking Section */}
+            <div style={{ marginTop: 24, borderTop: '1px solid var(--border-subtle)', paddingTop: 18 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>
+                  Payments & Collections ({getPIPayments(selectedPI._id).length})
+                </span>
+                {onSavePayment && (selectedPI.balanceAmount > 0 || !selectedPI.totalReceived) && (
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    style={{ padding: '4px 10px', fontSize: '0.75rem', gap: 4, color: 'var(--success)', borderColor: 'var(--success-border)' }}
+                    onClick={() => {
+                      const pi = selectedPI;
+                      setRecordPaymentPI(pi);
+                      const bal = pi.balanceAmount !== undefined ? pi.balanceAmount : Math.max(0, pi.grandTotal - (pi.totalReceived || 0));
+                      setPaymentData({
+                        amountReceived: bal > 0 ? (pi.advanceAmount && (!pi.totalReceived || pi.totalReceived === 0) ? pi.advanceAmount : bal) : '',
+                        transactionReference: '',
+                        paymentMethod: 'Bank Transfer',
+                        paymentDate: new Date().toISOString().split('T')[0],
+                        remarks: `Remittance against ${pi.piNumber}`
+                      });
+                    }}
+                  >
+                    <CreditCard size={12} /> + Record Payment
+                  </button>
+                )}
+              </div>
+
+              {getPIPayments(selectedPI._id).length === 0 ? (
+                <div style={{ padding: '16px', background: 'var(--bg-surface-elevated)', borderRadius: 8, fontSize: '0.82rem', color: 'var(--text-muted)', textAlign: 'center' }}>
+                  No payments recorded for this Proforma Invoice yet. Click <strong>+ Record Payment</strong> to log customer advance or installments.
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxHeight: 200, overflowY: 'auto' }}>
+                  {getPIPayments(selectedPI._id).map((pay, idx) => (
+                    <div
+                      key={pay._id || idx}
+                      style={{
+                        padding: '12px 14px',
+                        borderRadius: 8,
+                        background: 'var(--bg-surface-elevated)',
+                        border: '1px solid var(--border-subtle)',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        flexWrap: 'wrap',
+                        gap: 8
+                      }}
+                    >
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                          <span className="code-badge">{pay.paymentNumber || `PAY-${idx + 1}`}</span>
+                          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                            {new Date(pay.paymentDate).toLocaleDateString('en-GB')}
+                          </span>
+                          <span style={{ fontSize: '0.72rem', background: 'var(--primary-light)', color: 'var(--primary)', padding: '2px 6px', borderRadius: 4, fontWeight: 600 }}>
+                            {pay.paymentMethod}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                          UTR / Ref: <strong style={{ fontFamily: 'var(--font-mono)' }}>{pay.transactionReference}</strong>
+                          {pay.remarks && <span> • {pay.remarks}</span>}
+                        </div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: '#10B981', fontSize: '0.95rem' }}>
+                          ₹{pay.amountReceived?.toLocaleString('en-IN')}
+                        </div>
+                        <span style={{ fontSize: '0.7rem', color: pay.status === 'Verified' ? 'var(--success)' : 'var(--warning)' }}>
+                          {pay.status || 'Received'}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
             {onNavigateToSO && (
-              <div style={{ marginTop: 20, display: 'flex', justifyContent: 'flex-end' }}>
+              <div style={{ marginTop: 24, display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+                {onSavePayment && (selectedPI.balanceAmount > 0 || !selectedPI.totalReceived) && (
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => {
+                      const pi = selectedPI;
+                      setRecordPaymentPI(pi);
+                      const bal = pi.balanceAmount !== undefined ? pi.balanceAmount : Math.max(0, pi.grandTotal - (pi.totalReceived || 0));
+                      setPaymentData({
+                        amountReceived: bal > 0 ? (pi.advanceAmount && (!pi.totalReceived || pi.totalReceived === 0) ? pi.advanceAmount : bal) : '',
+                        transactionReference: '',
+                        paymentMethod: 'Bank Transfer',
+                        paymentDate: new Date().toISOString().split('T')[0],
+                        remarks: `Remittance against ${pi.piNumber}`
+                      });
+                    }}
+                  >
+                    <CreditCard size={14} /> Record Payment
+                  </button>
+                )}
                 <button
                   type="button"
                   className="btn btn-primary"
@@ -467,6 +676,113 @@ export default function ProformaInvoicesModule({
           </div>
         )}
       </Modal>
+
+      {/* Record Payment / Advance Installment Modal */}
+      {recordPaymentPI && (
+        <Modal
+          isOpen={!!recordPaymentPI}
+          onClose={() => setRecordPaymentPI(null)}
+          title={`Record Payment: ${recordPaymentPI.piNumber}`}
+          subtitle={`Customer: ${recordPaymentPI.customer?.companyName || 'Valued Client'}`}
+        >
+          <form onSubmit={handleSavePayment}>
+            <div style={{
+              padding: '12px 14px',
+              background: 'var(--bg-surface-elevated)',
+              borderRadius: 8,
+              border: '1px solid var(--border-subtle)',
+              marginBottom: 16,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              fontSize: '0.82rem'
+            }}>
+              <div>
+                Total Invoice: <strong>₹{recordPaymentPI.grandTotal?.toLocaleString('en-IN')}</strong> • Advance Req: <strong>₹{recordPaymentPI.advanceAmount?.toLocaleString('en-IN')}</strong>
+              </div>
+              <div style={{ color: 'var(--danger)', fontWeight: 600 }}>
+                Remaining Balance: ₹{(recordPaymentPI.balanceAmount !== undefined ? recordPaymentPI.balanceAmount : Math.max(0, recordPaymentPI.grandTotal - (recordPaymentPI.totalReceived || 0))).toLocaleString('en-IN')}
+              </div>
+            </div>
+
+            <div className="form-grid">
+              <div className="form-group">
+                <label>Amount Received (₹) <span style={{ color: 'var(--danger)' }}>*</span></label>
+                <input
+                  type="number"
+                  required
+                  min="1"
+                  className="form-control"
+                  placeholder="e.g. 50000"
+                  value={paymentData.amountReceived}
+                  onChange={(e) => setPaymentData({ ...paymentData, amountReceived: e.target.value })}
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Payment Method</label>
+                <select
+                  className="form-control"
+                  value={paymentData.paymentMethod}
+                  onChange={(e) => setPaymentData({ ...paymentData, paymentMethod: e.target.value })}
+                >
+                  <option value="Bank Transfer">Bank Transfer (NEFT / RTGS / IMPS)</option>
+                  <option value="UPI">UPI / QR Remittance</option>
+                  <option value="Cheque">Corporate Cheque</option>
+                  <option value="Cash">Cash Receipt</option>
+                </select>
+              </div>
+
+              <div className="form-group col-span-2">
+                <label>Transaction / UTR Reference No <span style={{ color: 'var(--danger)' }}>*</span></label>
+                <input
+                  type="text"
+                  required
+                  className="form-control"
+                  placeholder="e.g. UTR-HDFC-99182301 or IMPS reference"
+                  value={paymentData.transactionReference}
+                  onChange={(e) => setPaymentData({ ...paymentData, transactionReference: e.target.value })}
+                />
+              </div>
+
+              <div className="form-group col-span-2">
+                <label>Payment Date</label>
+                <input
+                  type="date"
+                  required
+                  className="form-control"
+                  value={paymentData.paymentDate}
+                  onChange={(e) => setPaymentData({ ...paymentData, paymentDate: e.target.value })}
+                />
+              </div>
+
+              <div className="form-group col-span-2">
+                <label>Remarks / Notes</label>
+                <textarea
+                  rows={2}
+                  className="form-control"
+                  placeholder="Optional bank account or payment note..."
+                  value={paymentData.remarks}
+                  onChange={(e) => setPaymentData({ ...paymentData, remarks: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div style={{ marginTop: 24, display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setRecordPaymentPI(null)}
+              >
+                Cancel
+              </button>
+              <button type="submit" className="btn btn-primary">
+                <CheckCircle2 size={14} /> Save Payment Record
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
     </div>
   );
 }

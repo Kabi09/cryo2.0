@@ -58,7 +58,7 @@ export default function ProductsModule({
     if (selectedCategory !== 'All') {
       list = list.filter(p => p.category === selectedCategory);
     }
-    return list;
+    return list.slice().sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
   }, [products, selectedCategory]);
 
   const handleOpenAdd = () => {

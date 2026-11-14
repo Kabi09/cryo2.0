@@ -29,7 +29,6 @@ const paymentSchema = new mongoose.Schema({
   },
   paymentType: {
     type: String,
-    enum: ['Advance', 'Partial', 'Final'],
     default: 'Advance'
   },
   amountReceived: {
@@ -39,7 +38,6 @@ const paymentSchema = new mongoose.Schema({
   },
   paymentMethod: {
     type: String,
-    enum: ['Bank Transfer', 'UPI', 'Cheque', 'Cash'],
     default: 'Bank Transfer'
   },
   transactionReference: {
@@ -57,7 +55,6 @@ const paymentSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['Received', 'Verified'],
     default: 'Received'
   },
   verifiedBy: {

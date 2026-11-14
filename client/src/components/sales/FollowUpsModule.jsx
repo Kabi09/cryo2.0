@@ -102,13 +102,16 @@ export default function FollowUpsModule({
     }
   };
 
-  // Filter Data based on stage
-  const filteredData = followUps.filter(f => {
-    if (filterType === 'enquiry') return f.enquiryReference || (f.discussionNotes && f.discussionNotes.toLowerCase().includes('enq'));
-    if (filterType === 'lead') return f.relatedLead;
-    if (filterType === 'quotation') return f.relatedQuotation;
-    return true;
-  });
+  // Filter Data based on stage (sorted with recently added first)
+  const filteredData = followUps
+    .filter(f => {
+      if (filterType === 'enquiry') return f.enquiryReference || (f.discussionNotes && f.discussionNotes.toLowerCase().includes('enq'));
+      if (filterType === 'lead') return f.relatedLead;
+      if (filterType === 'quotation') return f.relatedQuotation;
+      return true;
+    })
+    .slice()
+    .sort((a, b) => new Date(b.createdAt || b.contactDate || 0) - new Date(a.createdAt || a.contactDate || 0));
 
   const columns = [
     {

@@ -133,7 +133,7 @@ exports.getEnquiries = async (req, res) => {
     const enquiries = await Enquiry.find(query)
       .populate('product', 'productName productCode unit standardPrice')
       .populate('customer', 'customerCode companyName contactPerson')
-      .sort({ enquiryDate: -1, createdAt: -1 });
+      .sort({ createdAt: -1, enquiryDate: -1 });
 
     res.json({ success: true, count: enquiries.length, data: enquiries });
   } catch (error) {
@@ -467,7 +467,7 @@ exports.getFollowUps = async (req, res) => {
       .populate('relatedLead', 'leadNumber productName interestedProduct')
       .populate('relatedQuotation', 'quotationNumber version grandTotal')
       .populate('quotationReference', 'quotationNumber version grandTotal')
-      .sort({ nextFollowUpDate: 1, contactDate: -1 });
+      .sort({ createdAt: -1, nextFollowUpDate: 1 });
 
     res.json({ success: true, count: followUps.length, data: followUps });
   } catch (error) {
@@ -607,7 +607,7 @@ exports.getQuotations = async (req, res) => {
       .populate('customer', 'customerCode companyName contactPerson mobileNumber email gstNumber')
       .populate('items.product', 'productName productCode unit standardPrice')
       .populate('leadReference', 'leadNumber')
-      .sort({ quotationDate: -1, createdAt: -1 });
+      .sort({ createdAt: -1, quotationDate: -1 });
 
     res.json({ success: true, count: quotations.length, data: quotations });
   } catch (error) {
@@ -820,7 +820,7 @@ exports.getProformaInvoices = async (req, res) => {
       .populate('customer', 'customerCode companyName contactPerson mobileNumber email gstNumber')
       .populate('quotation', 'quotationNumber version grandTotal items')
       .populate('items.product', 'productName productCode unit')
-      .sort({ piDate: -1, createdAt: -1 });
+      .sort({ createdAt: -1, piDate: -1 });
 
     res.json({ success: true, count: pis.length, data: pis });
   } catch (error) {
@@ -897,7 +897,7 @@ exports.getCustomerPOs = async (req, res) => {
       .populate('customer', 'customerCode companyName contactPerson mobileNumber')
       .populate('piReference', 'piNumber grandTotal advanceAmount balanceAmount')
       .populate('quotationReference', 'quotationNumber version')
-      .sort({ receivedDate: -1, createdAt: -1 });
+      .sort({ createdAt: -1, receivedDate: -1 });
 
     res.json({ success: true, count: pos.length, data: pos });
   } catch (error) {
@@ -986,7 +986,7 @@ exports.getPayments = async (req, res) => {
       .populate('customer', 'customerCode companyName contactPerson')
       .populate('piReference', 'piNumber grandTotal advanceAmount balanceAmount totalReceived')
       .populate('salesOrderReference', 'soNumber')
-      .sort({ paymentDate: -1, createdAt: -1 });
+      .sort({ createdAt: -1, paymentDate: -1 });
 
     res.json({ success: true, count: payments.length, data: payments });
   } catch (error) {
@@ -1088,7 +1088,7 @@ exports.getSalesOrders = async (req, res) => {
       .populate('quotationReference', 'quotationNumber version')
       .populate('piReference', 'piNumber advanceAmount totalReceived')
       .populate('items.product', 'productName productCode unit')
-      .sort({ soDate: -1, createdAt: -1 });
+      .sort({ createdAt: -1, soDate: -1 });
 
     res.json({ success: true, count: orders.length, data: orders });
   } catch (error) {

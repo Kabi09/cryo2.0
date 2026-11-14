@@ -24,12 +24,15 @@ export default function QuotationsModule({
   leads = [],
   products = [],
   followUps = [],
+  proformaInvoices = [],
   onSave,
   onRevise,
   onUpdateStatus,
   onNavigateToPI,
+  onViewPI,
   onSaveFollowUp,
   preSelectedLead,
+  onClearPreSelectedLead,
   showToast
 }) {
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -46,6 +49,10 @@ export default function QuotationsModule({
       f.quotationReference === quoteId ||
       (quoteNumber && f.discussionNotes && f.discussionNotes.includes(quoteNumber))
     );
+  };
+
+  const getExistingPI = (quoteId) => {
+    return proformaInvoices.find(pi => (pi.quotation?._id || pi.quotation) === quoteId);
   };
 
   // Quick Follow-up Form State
@@ -72,20 +79,30 @@ export default function QuotationsModule({
     items: []
   });
 
-  // Pre-fill from Lead if redirected from Qualified Leads
+  // Pre-fill from Lead or Enquiry if redirected
   useEffect(() => {
     if (preSelectedLead) {
       const custId = preSelectedLead.customer?._id || preSelectedLead.customer;
+      const qty = Number(preSelectedLead.quantity) || Number(preSelectedLead.expectedQuantity) || 1;
+      const unitPrice = preSelectedLead.unitPrice !== undefined && Number(preSelectedLead.unitPrice) > 0
+        ? Number(preSelectedLead.unitPrice)
+        : (preSelectedLead.expectedOrderValue ? Math.round(Number(preSelectedLead.expectedOrderValue) / qty) : 100000);
+      const discount = 0;
+      const gstRate = 18;
+      const base = (qty * unitPrice) - discount;
+      const tax = (base * gstRate) / 100;
+      const totalAmount = Math.round(base + tax);
+
       const initialItem = {
-        product: preSelectedLead.interestedProduct?._id || null,
+        product: preSelectedLead.interestedProduct?._id || preSelectedLead.product || null,
         productName: preSelectedLead.productName || preSelectedLead.interestedProduct?.productName || 'Cryogenic Equipment Specification',
-        description: preSelectedLead.productName || 'Custom Specification requirement from Lead opportunity',
-        quantity: preSelectedLead.expectedQuantity || 1,
-        unit: 'Nos',
-        unitPrice: Math.round((preSelectedLead.expectedOrderValue || 100000) / (preSelectedLead.expectedQuantity || 1)),
+        description: preSelectedLead.description || preSelectedLead.productDescription || preSelectedLead.productName || 'Custom Specification requirement from Opportunity',
+        quantity: qty,
+        unit: preSelectedLead.unit || 'Nos',
+        unitPrice: unitPrice,
         discount: 0,
-        gstPercent: 18,
-        amount: preSelectedLead.expectedOrderValue || 100000
+        gstPercent: gstRate,
+        amount: totalAmount
       };
 
       setFormData({
@@ -93,12 +110,14 @@ export default function QuotationsModule({
         version: 'V1',
         quotationDate: new Date().toISOString().split('T')[0],
         customer: custId || '',
-        leadReference: preSelectedLead._id || '',
+        leadReference: preSelectedLead._id && !preSelectedLead.enquiryReference ? preSelectedLead._id : '',
         validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         deliveryTerms: 'Ex-Factory, 4 to 6 weeks from PO confirmation',
         paymentTerms: '50% Advance with PO, 50% Before Dispatch',
         warranty: '12 Months comprehensive manufacturer warranty',
-        notes: `Proposal generated for Lead ${preSelectedLead.leadNumber}. Standard testing and pre-dispatch inspection included.`,
+        notes: preSelectedLead.enquiryNumber
+          ? `Quotation generated for Enquiry ${preSelectedLead.enquiryNumber} (${preSelectedLead.companyName || ''}). Standard testing and pre-dispatch inspection included.`
+          : `Proposal generated for Lead ${preSelectedLead.leadNumber || ''}. Standard testing and pre-dispatch inspection included.`,
         status: 'Sent',
         items: [initialItem]
       });
@@ -240,6 +259,7 @@ export default function QuotationsModule({
       await onSave(formData);
       showToast('Quotation proposal issued successfully!', 'success');
       setIsAddOpen(false);
+      onClearPreSelectedLead?.();
     } catch (err) {
       showToast(err.message, 'error');
     }
@@ -390,22 +410,45 @@ export default function QuotationsModule({
               >
                 <Trophy size={15} />
               </button>
-            ) : (
-              <button
-                className="btn btn-primary"
-                style={{
-                  padding: '3px 8px',
-                  fontSize: '0.72rem',
-                  gap: 4,
-                  height: 26,
-                  borderRadius: 6
-                }}
-                title="Generate Proforma Invoice (PI)"
-                onClick={() => onNavigateToPI?.(row)}
-              >
-                <Receipt size={12} /> PI ➔
-              </button>
-            )}
+            ) : (() => {
+              const existingPI = getExistingPI(row._id);
+              if (existingPI) {
+                return (
+                  <button
+                    className="btn btn-secondary"
+                    style={{
+                      padding: '3px 8px',
+                      fontSize: '0.72rem',
+                      gap: 4,
+                      height: 26,
+                      borderRadius: 6,
+                      borderColor: 'var(--success-border)',
+                      color: 'var(--success)'
+                    }}
+                    title={`View Linked Proforma Invoice (${existingPI.piNumber})`}
+                    onClick={() => onViewPI ? onViewPI(existingPI) : onNavigateToPI?.(row)}
+                  >
+                    <Receipt size={12} /> View PI ({existingPI.piNumber}) ➔
+                  </button>
+                );
+              }
+              return (
+                <button
+                  className="btn btn-primary"
+                  style={{
+                    padding: '3px 8px',
+                    fontSize: '0.72rem',
+                    gap: 4,
+                    height: 26,
+                    borderRadius: 6
+                  }}
+                  title="Generate Proforma Invoice (PI)"
+                  onClick={() => onNavigateToPI?.(row)}
+                >
+                  <Receipt size={12} /> Generate PI ➔
+                </button>
+              );
+            })()}
 
             {/* Follow-up logger */}
             <button
@@ -430,14 +473,17 @@ export default function QuotationsModule({
     }
   ];
 
-  const filteredQuotations = quotations.filter(q => {
-    if (activeTab === 'all') return true;
-    if (activeTab === 'Draft') return q.status === 'Draft';
-    if (activeTab === 'Sent') return q.status === 'Sent' || q.status === 'Under Review' || q.status === 'Negotiation';
-    if (activeTab === 'Accepted') return q.status === 'Accepted';
-    if (activeTab === 'Rejected') return q.status === 'Rejected';
-    return true;
-  });
+  const filteredQuotations = quotations
+    .filter(q => {
+      if (activeTab === 'all') return true;
+      if (activeTab === 'Draft') return q.status === 'Draft';
+      if (activeTab === 'Sent') return q.status === 'Sent' || q.status === 'Under Review' || q.status === 'Negotiation';
+      if (activeTab === 'Accepted') return q.status === 'Accepted';
+      if (activeTab === 'Rejected') return q.status === 'Rejected';
+      return true;
+    })
+    .slice()
+    .sort((a, b) => new Date(b.createdAt || b.quotationDate || 0) - new Date(a.createdAt || a.quotationDate || 0));
 
   return (
     <div className="module-container">
@@ -495,7 +541,10 @@ export default function QuotationsModule({
       {/* Create Quotation Modal */}
       <Modal
         isOpen={isAddOpen}
-        onClose={() => setIsAddOpen(false)}
+        onClose={() => {
+          setIsAddOpen(false);
+          onClearPreSelectedLead?.();
+        }}
         size="lg"
         title="Create Product Quotation"
         subtitle="Prepare official commercial proposal with multi-line items, taxes, and validity terms"
@@ -752,7 +801,14 @@ export default function QuotationsModule({
           </div>
 
           <div className="modal-footer" style={{ marginTop: 24, padding: '16px 0 0 0' }}>
-            <button type="button" className="btn btn-secondary" onClick={() => setIsAddOpen(false)}>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => {
+                setIsAddOpen(false);
+                onClearPreSelectedLead?.();
+              }}
+            >
               Cancel
             </button>
             <button type="submit" className="btn btn-primary">
@@ -916,6 +972,43 @@ export default function QuotationsModule({
               </div>
             </div>
 
+            {/* Linked PI Banner if already generated */}
+            {(() => {
+              const existingPI = getExistingPI(selectedQuote._id);
+              if (!existingPI) return null;
+              return (
+                <div style={{
+                  marginTop: 16,
+                  padding: '10px 14px',
+                  background: 'rgba(52, 211, 153, 0.08)',
+                  border: '1px solid rgba(52, 211, 153, 0.25)',
+                  borderRadius: 8,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 10,
+                  flexWrap: 'wrap'
+                }}>
+                  <div style={{ fontSize: '0.82rem' }}>
+                    <strong style={{ color: 'var(--success)' }}>Proforma Invoice Generated:</strong>{' '}
+                    <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{existingPI.piNumber}</span> • Status: <span style={{ fontWeight: 600 }}>{existingPI.status}</span> • Total: ₹{existingPI.grandTotal?.toLocaleString('en-IN')}
+                  </div>
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm"
+                    style={{ padding: '3px 10px', fontSize: '0.75rem', color: 'var(--success)', borderColor: 'var(--success-border)' }}
+                    onClick={() => {
+                      const pi = existingPI;
+                      setSelectedQuote(null);
+                      onViewPI ? onViewPI(pi) : onNavigateToPI?.(selectedQuote);
+                    }}
+                  >
+                    <Receipt size={12} /> View PI ({existingPI.piNumber}) ➔
+                  </button>
+                </div>
+              );
+            })()}
+
             <div style={{
               marginTop: 18,
               padding: '12px 18px',
@@ -935,18 +1028,39 @@ export default function QuotationsModule({
               </div>
 
               <div style={{ display: 'flex', gap: 8 }}>
-                {selectedQuote.status === 'Accepted' && onNavigateToPI && (
-                  <button
-                    type="button"
-                    className="btn btn-primary btn-sm"
-                    onClick={() => {
-                      const q = selectedQuote;
-                      setSelectedQuote(null);
-                      onNavigateToPI(q);
-                    }}
-                  >
-                    <Receipt size={14} /> Generate Proforma Invoice (PI) ➔
-                  </button>
+                {selectedQuote.status === 'Accepted' && (
+                  (() => {
+                    const existingPI = getExistingPI(selectedQuote._id);
+                    if (existingPI) {
+                      return (
+                        <button
+                          type="button"
+                          className="btn btn-secondary btn-sm"
+                          style={{ color: 'var(--success)', borderColor: 'var(--success-border)', fontWeight: 600 }}
+                          onClick={() => {
+                            const pi = existingPI;
+                            setSelectedQuote(null);
+                            onViewPI ? onViewPI(pi) : onNavigateToPI?.(selectedQuote);
+                          }}
+                        >
+                          <Receipt size={14} /> View Linked PI ({existingPI.piNumber}) ➔
+                        </button>
+                      );
+                    }
+                    return (
+                      <button
+                        type="button"
+                        className="btn btn-primary btn-sm"
+                        onClick={() => {
+                          const q = selectedQuote;
+                          setSelectedQuote(null);
+                          onNavigateToPI(q);
+                        }}
+                      >
+                        <Receipt size={14} /> Generate Proforma Invoice (PI) ➔
+                      </button>
+                    );
+                  })()
                 )}
                 {selectedQuote.status !== 'Accepted' && (
                   <button

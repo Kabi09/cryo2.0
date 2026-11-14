@@ -171,7 +171,7 @@ export default function CustomerPOsModule({ customerPOs, customers, proformaInvo
       {/* Main Table */}
       <DataTable
         columns={columns}
-        data={customerPOs}
+        data={customerPOs.slice().sort((a, b) => new Date(b.createdAt || b.receivedDate || 0) - new Date(a.createdAt || a.receivedDate || 0))}
         searchPlaceholder="Search customer PO number, company..."
         actions={
           <button className="btn btn-primary" onClick={handleOpenAdd}>

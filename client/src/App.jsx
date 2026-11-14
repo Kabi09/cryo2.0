@@ -61,6 +61,7 @@ export default function App() {
   const [preSelectedGRNForQC, setPreSelectedGRNForQC] = useState(null);
   const [preSelectedLeadForQuotation, setPreSelectedLeadForQuotation] = useState(null);
   const [preSelectedQuoteForPI, setPreSelectedQuoteForPI] = useState(null);
+  const [preSelectedPIForView, setPreSelectedPIForView] = useState(null);
   const [preSelectedPIForSO, setPreSelectedPIForSO] = useState(null);
 
   // 1. SCM State
@@ -850,11 +851,20 @@ export default function App() {
               onUpdateStatus={handleUpdateEnquiryStatus}
               onSaveFollowUp={handleSaveFollowUp}
               onNavigateToQuotation={(enq) => {
+                const qty = Number(enq.quantity) || 1;
+                const unitPrice = Number(enq.targetPrice) || 0;
                 setPreSelectedLeadForQuotation({
-                  customer: enq.customer,
+                  customer: enq.customer?._id || enq.customer,
+                  companyName: enq.companyName || enq.customer?.companyName || '',
                   productName: enq.productName,
-                  expectedQuantity: enq.quantity || 1,
-                  expectedOrderValue: enq.targetPrice || 100000
+                  description: enq.productDescription || enq.additionalRequirements || enq.productName,
+                  quantity: qty,
+                  expectedQuantity: qty,
+                  unitPrice: unitPrice > 0 ? unitPrice : 100000,
+                  expectedOrderValue: unitPrice > 0 ? (unitPrice * qty) : (100000 * qty),
+                  unit: enq.unit || 'Nos',
+                  enquiryReference: enq._id,
+                  enquiryNumber: enq.enquiryNumber
                 });
                 setActiveModule('sales-quotations');
               }}
@@ -903,13 +913,19 @@ export default function App() {
               leads={leads}
               products={products}
               followUps={followUps}
+              proformaInvoices={proformaInvoices}
               onSave={handleSaveQuotation}
               onRevise={handleReviseQuotation}
               onUpdateStatus={handleUpdateQuotationStatus}
               onSaveFollowUp={handleSaveFollowUp}
               preSelectedLead={preSelectedLeadForQuotation}
+              onClearPreSelectedLead={() => setPreSelectedLeadForQuotation(null)}
               onNavigateToPI={(quote) => {
                 setPreSelectedQuoteForPI(quote);
+                setActiveModule('sales-proforma-invoices');
+              }}
+              onViewPI={(pi) => {
+                setPreSelectedPIForView(pi);
                 setActiveModule('sales-proforma-invoices');
               }}
               showToast={showToast}
@@ -921,8 +937,13 @@ export default function App() {
             <ProformaInvoicesModule
               proformaInvoices={proformaInvoices}
               quotations={quotations}
+              payments={payments}
               onSave={handleSavePI}
+              onSavePayment={handleSavePayment}
               preSelectedQuote={preSelectedQuoteForPI}
+              selectedPIForView={preSelectedPIForView}
+              onClearViewPI={() => setPreSelectedPIForView(null)}
+              onClearPreSelectedQuote={() => setPreSelectedQuoteForPI(null)}
               onNavigateToSO={(pi) => {
                 setPreSelectedPIForSO(pi);
                 setActiveModule('sales-orders');

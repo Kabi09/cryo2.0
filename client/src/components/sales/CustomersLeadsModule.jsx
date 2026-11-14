@@ -391,14 +391,15 @@ export default function CustomersLeadsModule({
     }
   ];
 
-  const currentData =
+  const currentData = (
     activeTab === 'qualified'
       ? qualifiedLeads
       : activeTab === 'not-qualified'
       ? notQualifiedLeads
       : activeTab === 'customers'
       ? customers
-      : leads;
+      : leads
+  ).slice().sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
 
   return (
     <div>

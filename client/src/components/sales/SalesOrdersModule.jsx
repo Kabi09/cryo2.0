@@ -164,13 +164,16 @@ export default function SalesOrdersModule({
     });
   };
 
-  const filteredOrders = salesOrders.filter(s => {
-    if (activeTab === 'all') return true;
-    if (activeTab === 'Confirmed') return s.status === 'Confirmed' && s.productionStatus !== 'Sent to Production';
-    if (activeTab === 'In Process') return s.productionStatus === 'Sent to Production' || s.status === 'In Production';
-    if (activeTab === 'Completed') return s.status === 'Completed' || s.status === 'Delivered';
-    return true;
-  });
+  const filteredOrders = salesOrders
+    .filter(s => {
+      if (activeTab === 'all') return true;
+      if (activeTab === 'Confirmed') return s.status === 'Confirmed' && s.productionStatus !== 'Sent to Production';
+      if (activeTab === 'In Process') return s.productionStatus === 'Sent to Production' || s.status === 'In Production';
+      if (activeTab === 'Completed') return s.status === 'Completed' || s.status === 'Delivered';
+      return true;
+    })
+    .slice()
+    .sort((a, b) => new Date(b.createdAt || b.soDate || 0) - new Date(a.createdAt || a.soDate || 0));
 
   const columns = [
     {

@@ -90,21 +90,21 @@ export default function EnquiriesModule({
     return list.slice().sort((a, b) => new Date(b.createdAt || b.contactDate) - new Date(a.createdAt || a.contactDate))[0];
   };
 
-  // Filter enquiries by subtabs
+  // Filter enquiries by subtabs (sorted with recently added first)
   const filteredEnquiries = useMemo(() => {
-    if (activeTab === 'all') return enquiries;
-    if (activeTab === 'New') return enquiries.filter(e => e.status === 'New');
-    if (activeTab === 'Follow-up') {
-      return enquiries.filter(e => {
+    let list = enquiries;
+    if (activeTab === 'New') list = enquiries.filter(e => e.status === 'New');
+    else if (activeTab === 'Follow-up') {
+      list = enquiries.filter(e => {
         const count = getEnquiryFollowUps(e._id).length;
         return e.status === 'Follow-up' || (e.status === 'New' && count > 0);
       });
+    } else if (activeTab === 'Qualified') {
+      list = enquiries.filter(e => e.status === 'Qualified' || e.status === 'Converted to Lead');
+    } else if (activeTab === 'Lost') {
+      list = enquiries.filter(e => e.status === 'Lost');
     }
-    if (activeTab === 'Qualified') {
-      return enquiries.filter(e => e.status === 'Qualified' || e.status === 'Converted to Lead');
-    }
-    if (activeTab === 'Lost') return enquiries.filter(e => e.status === 'Lost');
-    return enquiries;
+    return list.slice().sort((a, b) => new Date(b.createdAt || b.enquiryDate || 0) - new Date(a.createdAt || a.enquiryDate || 0));
   }, [enquiries, activeTab, followUps]);
 
   const handleOpenAdd = () => {
