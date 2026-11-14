@@ -28,7 +28,8 @@ export const SALES_MODULES = [
   { id: 'sales-quotations', num: '04', title: 'Quotations' },
   { id: 'sales-proforma-invoices', num: '05', title: 'Proforma Invoices' },
   { id: 'sales-orders', num: '06', title: 'Sales Orders' },
-  { id: 'sales-reports', num: '07', title: 'Reports' }
+  { id: 'sales-payments', num: '07', title: 'Payments' },
+  { id: 'sales-reports', num: '08', title: 'Reports' }
 ];
 
 export const PRODUCTION_MODULES = [
@@ -235,11 +236,11 @@ export default function Sidebar({
                 </div>
                 <div className="tree-parent-text">
                   <span className="tree-parent-title">Sales Management</span>
-                  <span className="tree-parent-subtitle">7 Modules</span>
+                  <span className="tree-parent-subtitle">8 Modules</span>
                 </div>
               </div>
               <div className="tree-parent-right">
-                <span className="tree-badge">7</span>
+                <span className="tree-badge">8</span>
                 {openDropdowns.sales ? (
                   <ChevronUp size={16} className="tree-chevron open" />
                 ) : (

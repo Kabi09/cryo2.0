@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import CustomerPOsModule from './CustomerPOsModule';
 import PaymentsModule from './PaymentsModule';
 import SalesOrdersModule from './SalesOrdersModule';
@@ -24,6 +24,12 @@ export default function OrdersPaymentsPage({
   defaultTab = 'so'
 }) {
   const [activeTab, setActiveTab] = useState(defaultTab);
+
+  useEffect(() => {
+    if (defaultTab) {
+      setActiveTab(defaultTab);
+    }
+  }, [defaultTab]);
 
   return (
     <div className="module-container">

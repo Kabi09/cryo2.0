@@ -1,11 +1,15 @@
 import React, { useState } from 'react';
-import { Plus, Eye, CreditCard, CheckCircle2, DollarSign, FileCheck } from 'lucide-react';
+import { Plus, Eye, CreditCard, CheckCircle2, DollarSign, Clock, AlertCircle } from 'lucide-react';
 import DataTable from '../common/DataTable';
 import StatusBadge from '../common/StatusBadge';
 import Modal from '../common/Modal';
 import KpiCard from '../common/KpiCard';
 
-export default function PaymentsModule({ payments, customers, proformaInvoices, onSave, onVerify, showToast }) {
+export default function PaymentsModule({ payments = [], customers = [], proformaInvoices = [], onSave, onVerify, showToast }) {
+  const [subTab, setSubTab] = useState('paid'); // 'paid' | 'pending'
+  const [paidFilter, setPaidFilter] = useState('all'); // 'all' | 'Advance' | 'Partial' | 'Verified'
+  const [pendingFilter, setPendingFilter] = useState('all'); // 'all' | 'advance-pending' | 'balance-pending'
+
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState(null);
 
@@ -16,28 +20,42 @@ export default function PaymentsModule({ payments, customers, proformaInvoices, 
     piReference: '',
     paymentDate: new Date().toISOString().split('T')[0],
     paymentType: 'Advance',
-    amountReceived: 50000,
+    amountReceived: '',
     paymentMethod: 'Bank Transfer',
     transactionReference: '',
     paymentProof: 'NEFT_Payment_Slip.pdf',
-    remarks: 'Advance remittance received into HDFC bank account.'
+    remarks: ''
   });
 
-  const handleOpenAdd = () => {
-    const defaultCust = customers[0]?._id || '';
-    const custPI = proformaInvoices.find(p => (p.customer?._id || p.customer) === defaultCust);
+  // Calculate pending Proforma Invoices (where balanceAmount > 0 or totalReceived < grandTotal)
+  const pendingPIs = proformaInvoices.filter(pi => {
+    const bal = pi.balanceAmount !== undefined ? pi.balanceAmount : Math.max(0, (pi.grandTotal || 0) - (pi.totalReceived || 0));
+    return bal > 0 && pi.status !== 'Draft';
+  });
+
+  const totalCollected = payments.reduce((acc, p) => acc + (Number(p.amountReceived) || 0), 0);
+  const totalPendingBalance = pendingPIs.reduce((acc, pi) => {
+    const bal = pi.balanceAmount !== undefined ? pi.balanceAmount : Math.max(0, (pi.grandTotal || 0) - (pi.totalReceived || 0));
+    return acc + bal;
+  }, 0);
+
+  const handleOpenAdd = (targetPI = null) => {
+    const activePI = targetPI || pendingPIs[0] || proformaInvoices[0];
+    const targetCust = activePI ? (activePI.customer?._id || activePI.customer) : (customers[0]?._id || '');
+    const bal = activePI ? (activePI.balanceAmount !== undefined ? activePI.balanceAmount : Math.max(0, (activePI.grandTotal || 0) - (activePI.totalReceived || 0))) : 50000;
+    const defaultAmt = activePI ? (activePI.advanceAmount && (!activePI.totalReceived || activePI.totalReceived === 0) ? activePI.advanceAmount : bal) : 50000;
 
     setFormData({
       paymentNumber: '',
-      customer: defaultCust,
-      piReference: custPI?._id || '',
+      customer: targetCust,
+      piReference: activePI?._id || '',
       paymentDate: new Date().toISOString().split('T')[0],
-      paymentType: 'Advance',
-      amountReceived: custPI?.advanceAmount || 50000,
+      paymentType: activePI?.totalReceived > 0 ? 'Partial' : 'Advance',
+      amountReceived: defaultAmt || 50000,
       paymentMethod: 'Bank Transfer',
       transactionReference: `UTR-${Math.floor(100000000 + Math.random() * 900000000)}`,
-      paymentProof: 'NEFT_Payment_Slip.pdf',
-      remarks: 'Advance remittance received into company bank account.'
+      paymentProof: 'Bank_Transfer_Slip.pdf',
+      remarks: activePI ? `Remittance received against ${activePI.piNumber}` : 'Customer remittance received.'
     });
     setIsAddOpen(true);
   };
@@ -45,12 +63,16 @@ export default function PaymentsModule({ payments, customers, proformaInvoices, 
   const handlePIChange = (piId) => {
     const pi = proformaInvoices.find(p => p._id === piId);
     if (pi) {
-      setFormData({
-        ...formData,
+      const bal = pi.balanceAmount !== undefined ? pi.balanceAmount : Math.max(0, (pi.grandTotal || 0) - (pi.totalReceived || 0));
+      const targetAmt = pi.advanceAmount && (!pi.totalReceived || pi.totalReceived === 0) ? pi.advanceAmount : bal;
+      setFormData(prev => ({
+        ...prev,
         piReference: piId,
         customer: pi.customer?._id || pi.customer,
-        amountReceived: pi.balanceAmount > 0 ? pi.balanceAmount : pi.advanceAmount
-      });
+        amountReceived: targetAmt || 50000,
+        paymentType: (pi.totalReceived || 0) > 0 ? 'Partial' : 'Advance',
+        remarks: `Remittance against ${pi.piNumber}`
+      }));
     }
   };
 
@@ -61,13 +83,22 @@ export default function PaymentsModule({ payments, customers, proformaInvoices, 
         showToast('Please select a Proforma Invoice reference', 'error');
         return;
       }
-      if (!formData.transactionReference) {
+      if (!formData.transactionReference.trim()) {
         showToast('Please provide a Bank / UTR transaction reference', 'error');
         return;
       }
+      const amt = Number(formData.amountReceived);
+      if (!amt || amt <= 0) {
+        showToast('Please enter a valid positive payment amount', 'error');
+        return;
+      }
 
-      await onSave(formData);
-      showToast('Payment recorded successfully! PI balance automatically adjusted.', 'success');
+      await onSave({
+        ...formData,
+        amountReceived: amt,
+        transactionReference: formData.transactionReference.trim()
+      });
+      showToast(`Payment of ₹${amt.toLocaleString('en-IN')} recorded successfully! Invoiced balance adjusted.`, 'success');
       setIsAddOpen(false);
     } catch (err) {
       showToast(err.message, 'error');
@@ -86,9 +117,31 @@ export default function PaymentsModule({ payments, customers, proformaInvoices, 
     }
   };
 
-  const totalCollected = payments.reduce((acc, p) => acc + (p.amountReceived || 0), 0);
+  // Filtered Payments (Paid)
+  const filteredPayments = payments
+    .filter(p => {
+      if (paidFilter === 'all') return true;
+      if (paidFilter === 'Advance') return p.paymentType === 'Advance';
+      if (paidFilter === 'Partial') return p.paymentType === 'Partial';
+      if (paidFilter === 'Verified') return p.status === 'Verified';
+      return true;
+    })
+    .slice()
+    .sort((a, b) => new Date(b.createdAt || b.paymentDate || 0) - new Date(a.createdAt || a.paymentDate || 0));
 
-  const columns = [
+  // Filtered Pending PIs
+  const filteredPendingPIs = pendingPIs
+    .filter(pi => {
+      const received = pi.totalReceived || 0;
+      if (pendingFilter === 'advance-pending') return received === 0;
+      if (pendingFilter === 'balance-pending') return received > 0;
+      return true;
+    })
+    .slice()
+    .sort((a, b) => new Date(b.createdAt || b.piDate || 0) - new Date(a.createdAt || a.piDate || 0));
+
+  // Columns for Paid Payments
+  const paidColumns = [
     {
       header: 'Payment No',
       accessor: 'paymentNumber',
@@ -131,13 +184,13 @@ export default function PaymentsModule({ payments, customers, proformaInvoices, 
       render: (row) => <span className="nav-badge-pill">{row.paymentType}</span>
     },
     {
-      header: 'Method',
+      header: 'Method & UTR',
       accessor: 'paymentMethod',
       render: (row) => (
         <div>
-          <div>{row.paymentMethod}</div>
+          <div style={{ fontWeight: 500 }}>{row.paymentMethod}</div>
           <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
-            {row.transactionReference}
+            UTR: {row.transactionReference}
           </div>
         </div>
       )
@@ -174,34 +227,208 @@ export default function PaymentsModule({ payments, customers, proformaInvoices, 
     }
   ];
 
+  // Columns for Pending Payments (Invoices Awaiting Remittance)
+  const pendingColumns = [
+    {
+      header: 'PI Number',
+      accessor: 'piNumber',
+      render: (row) => (
+        <span className="code-badge">
+          {row.piNumber}
+        </span>
+      )
+    },
+    {
+      header: 'Customer',
+      accessor: 'customer',
+      render: (row) => (
+        <div>
+          <strong style={{ color: 'var(--text-primary)' }}>{row.customer?.companyName || '—'}</strong>
+          <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+            Quote Ref: {row.quotation?.quotationNumber || '—'}
+          </div>
+        </div>
+      )
+    },
+    {
+      header: 'PI Date',
+      accessor: 'piDate',
+      render: (row) => new Date(row.piDate).toLocaleDateString('en-GB')
+    },
+    {
+      header: 'Invoice Amount',
+      accessor: 'grandTotal',
+      render: (row) => (
+        <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
+          ₹{row.grandTotal?.toLocaleString('en-IN')}
+        </span>
+      )
+    },
+    {
+      header: 'Advance Target',
+      accessor: 'advanceAmount',
+      render: (row) => (
+        <div style={{ fontSize: '0.8rem', color: 'var(--warning)', fontFamily: 'var(--font-mono)' }}>
+          ₹{row.advanceAmount?.toLocaleString('en-IN')} ({row.advancePercentage}%)
+        </div>
+      )
+    },
+    {
+      header: 'Received So Far',
+      render: (row) => (
+        <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, color: (row.totalReceived || 0) > 0 ? '#10B981' : 'var(--text-muted)' }}>
+          ₹{(row.totalReceived || 0).toLocaleString('en-IN')}
+        </div>
+      )
+    },
+    {
+      header: 'Pending Balance',
+      render: (row) => {
+        const bal = row.balanceAmount !== undefined ? row.balanceAmount : Math.max(0, (row.grandTotal || 0) - (row.totalReceived || 0));
+        return (
+          <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 800, color: 'var(--danger)', fontSize: '0.88rem' }}>
+            ₹{bal.toLocaleString('en-IN')}
+          </span>
+        );
+      }
+    },
+    {
+      header: 'Payment Status',
+      accessor: 'status',
+      render: (row) => <StatusBadge status={row.status} />
+    },
+    {
+      header: 'Actions',
+      render: (row) => (
+        <div className="action-btns" onClick={(e) => e.stopPropagation()}>
+          <button
+            className="btn btn-primary"
+            style={{
+              padding: '3px 8px',
+              fontSize: '0.72rem',
+              gap: 4,
+              height: 26,
+              borderRadius: 6
+            }}
+            title="Record Customer Payment"
+            onClick={() => handleOpenAdd(row)}
+          >
+            <CreditCard size={12} /> Record Payment ➔
+          </button>
+        </div>
+      )
+    }
+  ];
+
   return (
     <div>
-      {/* KPI Cards */}
+      {/* Top KPI Cards */}
       <div className="kpi-grid">
         <KpiCard title="Total Cash Inward" value={`₹${totalCollected.toLocaleString('en-IN')}`} subtext="Verified Receipts" icon={DollarSign} color="#10B981" />
+        <KpiCard title="Pending Receivables" value={`₹${totalPendingBalance.toLocaleString('en-IN')}`} subtext="Unsettled Balances" icon={AlertCircle} color="var(--danger)" />
+        <KpiCard title="Pending Invoices" value={pendingPIs.length} subtext="Awaiting Customer Payment" icon={Clock} color="#F59E0B" />
         <KpiCard title="Verified Remittances" value={payments.filter(p => p.status === 'Verified').length} subtext="Account Reconciled" icon={CheckCircle2} color="#6366F1" />
-        <KpiCard title="Pending Audit" value={payments.filter(p => p.status === 'Received').length} subtext="Awaiting Bank Clearance" icon={CreditCard} color="#F59E0B" />
       </div>
 
-      {/* Main Table */}
-      <DataTable
-        columns={columns}
-        data={payments.slice().sort((a, b) => new Date(b.createdAt || b.paymentDate || 0) - new Date(a.createdAt || a.paymentDate || 0))}
-        searchPlaceholder="Search payment no, customer, UTR ref..."
-        actions={
-          <button className="btn btn-primary" onClick={handleOpenAdd}>
-            <Plus size={16} /> Record Inward Payment
+      {/* Sub-Tabs: Customer Paid Payments vs Pending Payments */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: 12,
+        marginBottom: 16,
+        paddingBottom: 8,
+        borderBottom: '1px solid var(--border-subtle)'
+      }}>
+        {/* Main Tab Switcher */}
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            type="button"
+            className={`btn ${subTab === 'paid' ? 'btn-primary' : 'btn-secondary'}`}
+            style={{ padding: '6px 14px', fontSize: '0.85rem' }}
+            onClick={() => setSubTab('paid')}
+          >
+            <CheckCircle2 size={14} style={{ marginRight: 6 }} />
+            Customer Paid Payments ({payments.length})
           </button>
-        }
-      />
+          <button
+            type="button"
+            className={`btn ${subTab === 'pending' ? 'btn-primary' : 'btn-secondary'}`}
+            style={{ padding: '6px 14px', fontSize: '0.85rem' }}
+            onClick={() => setSubTab('pending')}
+          >
+            <Clock size={14} style={{ marginRight: 6 }} />
+            Pending Payments ({pendingPIs.length})
+          </button>
+        </div>
 
-      {/* Add Payment Modal */}
+        {/* Action Button */}
+        <button className="btn btn-primary" onClick={() => handleOpenAdd()}>
+          <Plus size={16} /> Record Inward Payment
+        </button>
+      </div>
+
+      {/* Filter Badges depending on active sub-tab */}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 14, overflowX: 'auto', paddingBottom: 4 }}>
+        {subTab === 'paid' ? (
+          [
+            { key: 'all', label: 'All Paid', count: payments.length },
+            { key: 'Advance', label: 'Advance Payments', count: payments.filter(p => p.paymentType === 'Advance').length },
+            { key: 'Partial', label: 'Partials / Installments', count: payments.filter(p => p.paymentType === 'Partial').length },
+            { key: 'Verified', label: 'Verified Settlements', count: payments.filter(p => p.status === 'Verified').length }
+          ].map(f => (
+            <button
+              key={f.key}
+              type="button"
+              className={`btn btn-sm ${paidFilter === f.key ? 'btn-primary' : 'btn-secondary'}`}
+              style={{ fontSize: '0.75rem', padding: '3px 10px' }}
+              onClick={() => setPaidFilter(f.key)}
+            >
+              {f.label} ({f.count})
+            </button>
+          ))
+        ) : (
+          [
+            { key: 'all', label: 'All Pending Invoices', count: pendingPIs.length },
+            { key: 'advance-pending', label: 'Zero Advance Received', count: pendingPIs.filter(p => !p.totalReceived || p.totalReceived === 0).length },
+            { key: 'balance-pending', label: 'Partial Paid (Balance Remaining)', count: pendingPIs.filter(p => (p.totalReceived || 0) > 0).length }
+          ].map(f => (
+            <button
+              key={f.key}
+              type="button"
+              className={`btn btn-sm ${pendingFilter === f.key ? 'btn-primary' : 'btn-secondary'}`}
+              style={{ fontSize: '0.75rem', padding: '3px 10px' }}
+              onClick={() => setPendingFilter(f.key)}
+            >
+              {f.label} ({f.count})
+            </button>
+          ))
+        )}
+      </div>
+
+      {/* Main Data Table */}
+      {subTab === 'paid' ? (
+        <DataTable
+          columns={paidColumns}
+          data={filteredPayments}
+          searchPlaceholder="Search payment no, customer company, UTR ref..."
+        />
+      ) : (
+        <DataTable
+          columns={pendingColumns}
+          data={filteredPendingPIs}
+          searchPlaceholder="Search pending invoices by PI no, customer..."
+        />
+      )}
+
+      {/* Add / Record Payment Modal */}
       <Modal
         isOpen={isAddOpen}
         onClose={() => setIsAddOpen(false)}
         size="lg"
         title="Record Customer Payment Receipt"
-        subtitle="Post customer bank transfers, advance payments, and reconcile Proforma Invoice balances"
+        subtitle="Post customer bank transfers, advance remittances, or milestone installments with UTR proof"
       >
         <form onSubmit={handleSubmit}>
           <div className="form-grid">
@@ -225,11 +452,14 @@ export default function PaymentsModule({ payments, customers, proformaInvoices, 
                 onChange={(e) => handlePIChange(e.target.value)}
               >
                 <option value="">Select PI to Settle</option>
-                {proformaInvoices.map(p => (
-                  <option key={p._id} value={p._id}>
-                    {p.piNumber} — {p.customer?.companyName} (Balance: ₹{p.balanceAmount?.toLocaleString('en-IN')})
-                  </option>
-                ))}
+                {proformaInvoices.map(p => {
+                  const bal = p.balanceAmount !== undefined ? p.balanceAmount : Math.max(0, (p.grandTotal || 0) - (p.totalReceived || 0));
+                  return (
+                    <option key={p._id} value={p._id}>
+                      {p.piNumber} — {p.customer?.companyName || 'Client'} (Pending: ₹{bal.toLocaleString('en-IN')})
+                    </option>
+                  );
+                })}
               </select>
             </div>
 
@@ -252,7 +482,7 @@ export default function PaymentsModule({ payments, customers, proformaInvoices, 
                 onChange={(e) => setFormData({ ...formData, paymentType: e.target.value })}
               >
                 <option value="Advance">Advance Payment</option>
-                <option value="Partial">Partial / Milestone Payment</option>
+                <option value="Partial">Partial / Milestone Installment</option>
                 <option value="Final">Final Full Settlement</option>
               </select>
             </div>
@@ -265,9 +495,9 @@ export default function PaymentsModule({ payments, customers, proformaInvoices, 
                 step="any"
                 required
                 className="form-input"
-                style={{ color: '#34D399', fontWeight: 700 }}
+                style={{ color: '#16A36A', fontWeight: 700 }}
                 value={formData.amountReceived}
-                onChange={(e) => setFormData({ ...formData, amountReceived: Number(e.target.value) })}
+                onChange={(e) => setFormData({ ...formData, amountReceived: e.target.value })}
               />
             </div>
 
@@ -278,8 +508,8 @@ export default function PaymentsModule({ payments, customers, proformaInvoices, 
                 value={formData.paymentMethod}
                 onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value })}
               >
-                <option value="Bank Transfer">Bank Transfer (NEFT / RTGS)</option>
-                <option value="UPI">UPI Remittance</option>
+                <option value="Bank Transfer">Bank Transfer (NEFT / RTGS / IMPS)</option>
+                <option value="UPI">UPI / QR Remittance</option>
                 <option value="Cheque">Corporate Cheque</option>
                 <option value="Cash">Cash Receipt</option>
               </select>
@@ -291,17 +521,18 @@ export default function PaymentsModule({ payments, customers, proformaInvoices, 
                 type="text"
                 required
                 className="form-input"
-                placeholder="e.g. UTR-HDFC-99182301"
+                placeholder="e.g. UTR-HDFC-99182301 or IMPS reference number"
                 value={formData.transactionReference}
                 onChange={(e) => setFormData({ ...formData, transactionReference: e.target.value })}
               />
             </div>
 
             <div className="form-group col-span-2">
-              <label className="form-label">Remarks</label>
+              <label className="form-label">Remarks / Bank Notes</label>
               <textarea
                 rows="2"
                 className="form-textarea"
+                placeholder="e.g. Cleared via corporate online banking into HDFC primary current account"
                 value={formData.remarks}
                 onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
               />
@@ -313,7 +544,7 @@ export default function PaymentsModule({ payments, customers, proformaInvoices, 
               Cancel
             </button>
             <button type="submit" className="btn btn-primary">
-              Post Payment Receipt
+              <CreditCard size={15} style={{ marginRight: 6 }} /> Post Payment Receipt
             </button>
           </div>
         </form>
@@ -324,7 +555,7 @@ export default function PaymentsModule({ payments, customers, proformaInvoices, 
         isOpen={!!selectedPayment}
         onClose={() => setSelectedPayment(null)}
         title={`Payment Voucher: ${selectedPayment?.paymentNumber}`}
-        subtitle={`From ${selectedPayment?.customer?.companyName}`}
+        subtitle={`From ${selectedPayment?.customer?.companyName || 'Valued Client'}`}
       >
         {selectedPayment && (
           <div>
@@ -339,16 +570,16 @@ export default function PaymentsModule({ payments, customers, proformaInvoices, 
               </div>
               <div className="detail-item">
                 <div className="detail-label">Customer</div>
-                <div className="detail-value">{selectedPayment.customer?.companyName}</div>
+                <div className="detail-value">{selectedPayment.customer?.companyName || '—'}</div>
               </div>
               <div className="detail-item">
                 <div className="detail-label">Amount Cleared</div>
-                <div className="detail-value" style={{ color: '#34D399', fontFamily: 'var(--font-mono)' }}>
+                <div className="detail-value" style={{ color: '#10B981', fontFamily: 'var(--font-mono)' }}>
                   ₹{selectedPayment.amountReceived?.toLocaleString('en-IN')}
                 </div>
               </div>
               <div className="detail-item">
-                <div className="detail-label">Transaction Ref</div>
+                <div className="detail-label">Transaction Ref (UTR)</div>
                 <div className="detail-value" style={{ fontFamily: 'var(--font-mono)' }}>
                   {selectedPayment.transactionReference}
                 </div>
@@ -360,7 +591,7 @@ export default function PaymentsModule({ payments, customers, proformaInvoices, 
               <div className="detail-item col-span-2">
                 <div className="detail-label">Proforma Invoice Context</div>
                 <div className="detail-value" style={{ fontSize: '0.85rem' }}>
-                  PI Ref: <strong>{selectedPayment.piReference?.piNumber}</strong> • Total Value: ₹{selectedPayment.piReference?.grandTotal?.toLocaleString('en-IN')} • Current Remaining Balance: ₹{selectedPayment.piReference?.balanceAmount?.toLocaleString('en-IN')}
+                  PI Ref: <strong>{selectedPayment.piReference?.piNumber || '—'}</strong> • Total Value: ₹{selectedPayment.piReference?.grandTotal?.toLocaleString('en-IN')} • Current Remaining Balance: ₹{selectedPayment.piReference?.balanceAmount?.toLocaleString('en-IN')}
                 </div>
               </div>
             </div>
@@ -381,4 +612,3 @@ export default function PaymentsModule({ payments, customers, proformaInvoices, 
     </div>
   );
 }
-
