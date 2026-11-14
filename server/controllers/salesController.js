@@ -133,6 +133,9 @@ exports.createEnquiry = async (req, res) => {
       mobileNumber,
       email,
       address,
+      productName,
+      productDescription,
+      targetPrice,
       product,
       quantity,
       unit,
@@ -141,7 +144,8 @@ exports.createEnquiry = async (req, res) => {
       enquirySource,
       assignedSalesPerson,
       remarks,
-      convertToLead
+      convertToLead,
+      initialFollowUp
     } = req.body;
 
     if (!enquiryNumber) {
@@ -171,6 +175,8 @@ exports.createEnquiry = async (req, res) => {
       }
     }
 
+    const resolvedProductName = (productName && productName.trim()) ? productName.trim() : 'Custom Cryo Equipment';
+
     const enquiry = await Enquiry.create({
       enquiryNumber: enquiryNumber.toUpperCase(),
       customerType: customerType || 'New',
@@ -180,7 +186,10 @@ exports.createEnquiry = async (req, res) => {
       mobileNumber: mobileNumber || targetCustomer?.mobileNumber,
       email: email || targetCustomer?.email,
       address,
-      product,
+      productName: resolvedProductName,
+      productDescription: productDescription || additionalRequirements || '',
+      product: product || null,
+      targetPrice: Number(targetPrice) || 0,
       quantity: Number(quantity) || 1,
       unit: unit || 'Nos',
       requiredDeliveryDate: requiredDeliveryDate || new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
@@ -191,17 +200,40 @@ exports.createEnquiry = async (req, res) => {
       status: convertToLead ? 'Converted to Lead' : 'New'
     });
 
+    // Optional initial follow-up logged directly on creation
+    if (initialFollowUp && initialFollowUp.notes && targetCustomer) {
+      const fuCount = await FollowUp.countDocuments();
+      await FollowUp.create({
+        followUpNumber: `FU-${String(fuCount + 1).padStart(3, '0')}`,
+        customer: targetCustomer._id,
+        enquiryReference: enquiry._id,
+        contactDate: Date.now(),
+        contactMethod: initialFollowUp.contactMethod || 'Call',
+        discussionNotes: initialFollowUp.notes,
+        customerResponse: initialFollowUp.response || 'Interested',
+        nextFollowUpDate: initialFollowUp.nextDate || new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+        nextAction: 'Follow-up on Requirement Specs',
+        assignedEmployee: assignedSalesPerson || 'Sales Executive',
+        status: 'Pending'
+      });
+    }
+
     // If convertToLead was requested at creation time
     if (convertToLead && targetCustomer) {
       const leadCount = await Lead.countDocuments();
-      const prd = await Product.findById(product);
+      const prd = product ? await Product.findById(product) : null;
+      const expectedVal = Number(targetPrice) && Number(targetPrice) > 0
+        ? Number(targetPrice) * (Number(quantity) || 1)
+        : (prd ? prd.standardPrice * (Number(quantity) || 1) : 100000);
+
       await Lead.create({
         leadNumber: `LD-${String(leadCount + 1).padStart(3, '0')}`,
         customer: targetCustomer._id,
         enquiryReference: enquiry._id,
-        interestedProduct: product,
+        productName: resolvedProductName,
+        interestedProduct: product || null,
         expectedQuantity: Number(quantity) || 1,
-        expectedOrderValue: prd ? prd.standardPrice * (Number(quantity) || 1) : 100000,
+        expectedOrderValue: expectedVal,
         expectedClosingDate: requiredDeliveryDate || new Date(Date.now() + 21 * 24 * 60 * 60 * 1000),
         leadOwner: assignedSalesPerson || 'Sales Executive',
         leadStatus: 'Qualified',
@@ -240,15 +272,19 @@ exports.convertEnquiryToLead = async (req, res) => {
     }
 
     const leadCount = await Lead.countDocuments();
-    const prd = await Product.findById(enquiry.product);
+    const prd = enquiry.product ? await Product.findById(enquiry.product) : null;
+    const expectedVal = enquiry.targetPrice && enquiry.targetPrice > 0
+      ? enquiry.targetPrice * (enquiry.quantity || 1)
+      : (prd ? prd.standardPrice * (enquiry.quantity || 1) : 100000);
 
     const lead = await Lead.create({
       leadNumber: `LD-${String(leadCount + 1).padStart(3, '0')}`,
       customer,
       enquiryReference: enquiry._id,
-      interestedProduct: enquiry.product,
-      expectedQuantity: enquiry.quantity,
-      expectedOrderValue: prd ? prd.standardPrice * enquiry.quantity : 100000,
+      productName: enquiry.productName || 'Custom Equipment Requirement',
+      interestedProduct: enquiry.product || null,
+      expectedQuantity: enquiry.quantity || 1,
+      expectedOrderValue: expectedVal,
       expectedClosingDate: enquiry.requiredDeliveryDate || new Date(Date.now() + 21 * 24 * 60 * 60 * 1000),
       leadOwner: enquiry.assignedSalesPerson || 'Sales Executive',
       leadStatus: 'Qualified',
@@ -383,13 +419,15 @@ exports.updateLeadStatus = async (req, res) => {
 // --------------------------------------------------------------------
 exports.getFollowUps = async (req, res) => {
   try {
-    const { status } = req.query;
+    const { status, enquiryId } = req.query;
     let query = {};
     if (status && status !== 'All') query.status = status;
+    if (enquiryId) query.enquiryReference = enquiryId;
 
     const followUps = await FollowUp.find(query)
       .populate('customer', 'customerCode companyName contactPerson mobileNumber email')
-      .populate('relatedLead', 'leadNumber interestedProduct')
+      .populate('enquiryReference', 'enquiryNumber companyName productName contactPerson')
+      .populate('relatedLead', 'leadNumber productName interestedProduct')
       .populate('relatedQuotation', 'quotationNumber version grandTotal')
       .sort({ nextFollowUpDate: 1, contactDate: -1 });
 
@@ -404,6 +442,7 @@ exports.createFollowUp = async (req, res) => {
     let {
       followUpNumber,
       customer,
+      enquiryReference,
       relatedLead,
       relatedQuotation,
       contactDate,
@@ -424,6 +463,7 @@ exports.createFollowUp = async (req, res) => {
     const followUp = await FollowUp.create({
       followUpNumber: followUpNumber.toUpperCase(),
       customer,
+      enquiryReference: enquiryReference || null,
       relatedLead: relatedLead || null,
       relatedQuotation: relatedQuotation || null,
       contactDate: contactDate || Date.now(),
@@ -438,8 +478,9 @@ exports.createFollowUp = async (req, res) => {
 
     const populated = await FollowUp.findById(followUp._id)
       .populate('customer', 'customerCode companyName contactPerson mobileNumber')
-      .populate('relatedLead', 'leadNumber')
-      .populate('relatedQuotation', 'quotationNumber');
+      .populate('enquiryReference', 'enquiryNumber productName')
+      .populate('relatedLead', 'leadNumber productName')
+      .populate('relatedQuotation', 'quotationNumber version');
 
     res.status(201).json({ success: true, data: populated });
   } catch (error) {
@@ -525,7 +566,8 @@ exports.createQuotation = async (req, res) => {
       gstTotal += tax;
 
       return {
-        product: item.product,
+        product: item.product || null,
+        productName: item.productName || item.description || '',
         description: item.description || '',
         quantity: qty,
         unit: item.unit || 'Nos',
@@ -604,7 +646,8 @@ exports.reviseQuotation = async (req, res) => {
       gstTotal += tax;
 
       return {
-        product: item.product,
+        product: item.product || null,
+        productName: item.productName || item.description || '',
         description: item.description || '',
         quantity: qty,
         unit: item.unit || 'Nos',

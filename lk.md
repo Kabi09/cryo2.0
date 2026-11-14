@@ -205,10 +205,70 @@
 - **Reason**: User requested restructuring: "complersory entha tabes la venuma? reduce panni easy ya irrukanum clicent website not compleex".
 - **Impact**: Clean, production-grade navigation tree with fast rendering; `vite build` completed in 1.29s with zero errors.
 
+### 2026-11-14
+#### Change: Sales CRM Workflow Simplification & Numbered Funnel Tabs
+- **What was changed**: Reorganized the Sales Management department from complex multi-concept bundles into an intuitive, sequential 6-stage sales pipeline that matches the requested workflow:
+  $$\textbf{Enquiry} \xrightarrow{\textbf{+ Follow-up}} \textbf{Qualified / Not Qualified Lead} \xrightarrow{\textbf{+ Follow-up}} \textbf{Quotation} \xrightarrow{\textbf{Accept}} \textbf{Proforma Invoice (PI)} \xrightarrow{\textbf{Convert}} \textbf{Sales Order (SO)}$$
+  1. **Numbered Sidebar Tabs**:
+     - `Dashboard`: Executive KPI and revenue overview
+     - `1. Enquiry`: Log customer enquiries with free-text manual product specifications (no catalog dropdown blockers) + target budget + instant first follow-up note + 1-click **"Move to Lead ➔"**
+     - `2. Follow-up`: Centralized touchpoint log for phone calls, meetings, WhatsApp notes, and upcoming reminder dates
+     - `3. Qualified / Not Qualified Lead`: Dedicated qualification view with clear segmentation:
+       - **Qualified Leads**: Active opportunities ready for quotation, with 1-click **"Quote ➔"** action button, **"+ Follow-up"** logger, and **"Mark Lost"**
+       - **Not Qualified / Lost**: Budget mismatch or dropped leads with 1-click **"Requalify"** button to restore back to active pipeline
+       - **All Pipeline & Client Accounts**: Registered account master directory
+     - `4. Quotation`: Commercial proposals with V1/V2 revisions, manual line items, follow-up logs, and 1-click **"Generate PI ➔"** on accepted quotes
+     - `5. Proforma Invoice (PI)`: Commercial advance payment bill with payment terms, advance tracking, and 1-click **"Convert to SO ➔"**
+     - `6. Sales Order (SO)`: Confirmed orders ready for factory execution with 1-click **"Dispatch to Production ➔"**, plus sub-tabs for Customer POs and Payments
+     - `Sales Reports`: Sales analytics and performance breakdown
+  2. **Top Visual Stepper (`SalesPipelineStepper.jsx`)**:
+     - Built an interactive 6-stage horizontal stepper shown across all sales pages:
+       `[1. Enquiry] ➔ [2. Follow-up] ➔ [3. Qualified / Not Qualified Lead] ➔ [4. Quotation] ➔ [5. Proforma Invoice] ➔ [6. Sales Order]`
+     - Highlights active stage with blue branding (`#2451C5`), completed stages in green (`#16A36A`), and allows 1-click direct navigation between any stage.
+  3. **Seamless Cross-Stage Pre-filling (Zero Duplicate Typing)**:
+     - Enquiry ➔ Lead carries over customer particulars, manual product specification, and expected deal value (`targetPrice * quantity`).
+     - Qualified Lead ➔ Quotation pre-fills customer, lead ref, and manual product line items into `QuotationsModule`.
+     - Quotation ➔ PI pre-fills commercial quote lines and payment terms into `ProformaInvoicesModule`.
+     - PI ➔ SO pre-fills confirmed line items, advance received, and balance amount into `SalesOrdersModule`.
+     - SO ➔ Production dispatches the work order directly to shopfloor engineering.
+  4. **Backend Mongoose Schemas & Controller Handlers**:
+     - `server/models/Enquiry.js`: Made `product` optional; added `productName: { type: String, required: true }`, `productDescription`, `targetPrice`.
+     - `server/models/Lead.js`: Added `productName`.
+     - `server/models/FollowUp.js`: Added `enquiryReference` linking directly to `Enquiry`.
+     - `server/models/Quotation.js`: Made item `product` optional and added `productName`.
+     - `server/models/SalesOrder.js`: Made item `product` optional and added `productName`.
+     - `server/controllers/salesController.js`: Updated `createEnquiry`, `convertEnquiryToLead`, `getFollowUps`, `createFollowUp`, `createQuotation`, and `reviseQuotation`.
+- **Files changed**:
+  - `client/src/components/common/Sidebar.jsx`
+  - `client/src/components/sales/SalesPipelineStepper.jsx`
+  - `client/src/components/sales/CustomersLeadsModule.jsx`
+  - `client/src/components/sales/EnquiriesModule.jsx`
+  - `client/src/components/sales/FollowUpsModule.jsx`
+  - `client/src/components/sales/QuotationsModule.jsx`
+  - `client/src/components/sales/ProformaInvoicesModule.jsx`
+  - `client/src/components/sales/SalesOrdersModule.jsx`
+  - `client/src/components/sales/OrdersPaymentsPage.jsx`
+  - `client/src/App.jsx`
+  - `server/models/Enquiry.js`
+  - `server/models/Lead.js`
+  - `server/models/FollowUp.js`
+  - `server/models/Quotation.js`
+  - `server/models/SalesOrder.js`
+  - `server/controllers/salesController.js`
+  - `lk.md`
+- **Reason**: User requested: "sales management-complex irruku tabes change panni make user fiendly and simply understanable; fix;enquiry-follow-qualified lead/not qualified-follow-quation-pi-so;fix the worflow; make simply ; easy to use and client web easy use; fix; easy tabs and esay make; worflow;".
+- **Impact**: Extremely simple and intuitive navigation. Eliminates confusing tab bundles and reflects the natural sales funnel sequentially with 1-click progression.
+
 ---
 
 ## Current Progress
 - **Completed**:
+  - Sales CRM Workflow Simplification: Sidebar reorganized into 6 sequential stages with top interactive visual stepper.
+  - Manual Product Specifications: Free-text manual product entry preserved from Enquiry ➔ Lead ➔ Quote ➔ PI ➔ SO.
+  - Qualified vs Not Qualified Leads: Distinct segmented views with 1-click `Quote ➔`, `+ Follow-up`, `Requalify`, and `Mark Lost`.
+  - Backend Mongoose Models & REST Endpoints: Full support for manual product specs, enquiry follow-ups, and converted leads.
+  - Full Production Build: `npm --prefix client run build` passed in 759ms with 0 errors.
+  - Backend Daemon: Active on port 5000 with MongoDB connected.
   - Enterprise Navigation Restructuring: 47 tabs simplified into 28 main pages across all 5 departments.
   - Sub-Tab Navigation: 13 consolidated tabbed containers created and wired into global state.
   - Backward Compatibility: Route aliases and cross-module deep-linking preserved for all 47 workflow steps.

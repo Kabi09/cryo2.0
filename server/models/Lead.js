@@ -17,6 +17,10 @@ const leadSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Enquiry'
   },
+  productName: {
+    type: String,
+    default: ''
+  },
   interestedProduct: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Product'

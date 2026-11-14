@@ -1,15 +1,39 @@
 import React, { useState } from 'react';
-import { Plus, Eye, MessageSquarePlus, UserCheck, ArrowRight } from 'lucide-react';
+import {
+  Plus,
+  Eye,
+  MessageSquarePlus,
+  UserCheck,
+  ArrowRight,
+  PhoneCall,
+  Calendar,
+  Clock,
+  CheckCircle,
+  FileText,
+  Building,
+  Sparkles
+} from 'lucide-react';
 import DataTable from '../common/DataTable';
 import StatusBadge from '../common/StatusBadge';
 import Modal from '../common/Modal';
 import KpiCard from '../common/KpiCard';
 
-export default function EnquiriesModule({ enquiries, products, customers, onSave, onConvertToLead, showToast }) {
+export default function EnquiriesModule({
+  enquiries = [],
+  products = [],
+  customers = [],
+  followUps = [],
+  onSave,
+  onConvertToLead,
+  onSaveFollowUp,
+  onNavigateToQuotation,
+  showToast
+}) {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [selectedEnquiry, setSelectedEnquiry] = useState(null);
+  const [quickFollowUpEnquiry, setQuickFollowUpEnquiry] = useState(null);
 
-  // Form State
+  // Form State for New Enquiry
   const [formData, setFormData] = useState({
     enquiryNumber: '',
     enquiryDate: new Date().toISOString().split('T')[0],
@@ -20,14 +44,29 @@ export default function EnquiriesModule({ enquiries, products, customers, onSave
     mobileNumber: '',
     email: '',
     address: '',
-    product: '',
+    // Manual product requirement
+    productName: '',
+    productDescription: '',
+    targetPrice: '',
     quantity: 1,
     unit: 'Nos',
-    requiredDeliveryDate: '',
+    requiredDeliveryDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     additionalRequirements: '',
     enquirySource: 'Website',
     assignedSalesPerson: 'Sales Executive',
-    remarks: ''
+    remarks: '',
+    // Optional initial follow-up note
+    logInitialFollowUp: true,
+    initialFollowUpNotes: 'First inquiry logged from client. Requirement captured and specs requested.',
+    initialFollowUpDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+  });
+
+  // Quick Follow-up Form State
+  const [inlineFollowUp, setInlineFollowUp] = useState({
+    contactType: 'Phone Call',
+    responseStatus: 'Interested',
+    discussionNotes: '',
+    nextFollowUpDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
   });
 
   const handleOpenAdd = () => {
@@ -41,89 +80,70 @@ export default function EnquiriesModule({ enquiries, products, customers, onSave
       mobileNumber: '',
       email: '',
       address: '',
-      product: products[0]?._id || '',
+      productName: '',
+      productDescription: '',
+      targetPrice: '',
       quantity: 1,
-      unit: products[0]?.unit || 'Nos',
+      unit: 'Nos',
       requiredDeliveryDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       additionalRequirements: '',
       enquirySource: 'Website',
       assignedSalesPerson: 'Sales Executive',
-      remarks: ''
+      remarks: '',
+      logInitialFollowUp: true,
+      initialFollowUpNotes: 'First inquiry logged. Awaiting technical discussions and quotation request.',
+      initialFollowUpDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
     });
     setIsAddOpen(true);
   };
 
-  const handleCustomerTypeChange = (type) => {
-    if (type === 'Existing' && customers.length > 0) {
-      const firstCust = customers[0];
-      setFormData({
-        ...formData,
-        customerType: 'Existing',
-        customer: firstCust._id,
-        companyName: firstCust.companyName,
-        contactPerson: firstCust.contactPerson,
-        mobileNumber: firstCust.mobileNumber,
-        email: firstCust.email,
-        address: firstCust.billingAddress
-      });
-    } else {
-      setFormData({
-        ...formData,
-        customerType: 'New',
-        customer: '',
-        companyName: '',
-        contactPerson: '',
-        mobileNumber: '',
-        email: '',
-        address: ''
-      });
-    }
-  };
-
-  const handleSelectCustomer = (custId) => {
+  const handleCustomerSelect = (custId) => {
     const cust = customers.find(c => c._id === custId);
     if (cust) {
-      setFormData({
-        ...formData,
+      setFormData(prev => ({
+        ...prev,
         customer: cust._id,
+        customerType: 'Existing',
         companyName: cust.companyName,
         contactPerson: cust.contactPerson,
         mobileNumber: cust.mobileNumber,
-        email: cust.email,
-        address: cust.billingAddress
-      });
+        email: cust.email || '',
+        address: `${cust.billingAddress || ''} ${cust.city || ''}`.trim()
+      }));
     }
   };
 
-  const handleProductChange = (prodId) => {
-    const prod = products.find(p => p._id === prodId);
-    setFormData({
-      ...formData,
-      product: prodId,
-      unit: prod?.unit || 'Nos'
-    });
-  };
-
-  const handleSubmit = async (convertToLead = false) => {
+  const handleSubmit = async (e, convertToLead = false) => {
+    e.preventDefault();
     try {
-      if (!formData.companyName || !formData.contactPerson) {
-        showToast('Please enter company and contact details', 'error');
+      if (!formData.companyName || !formData.contactPerson || !formData.mobileNumber) {
+        showToast('Please fill Company Name, Contact Person, and Mobile Number', 'error');
         return;
       }
-      if (!formData.product) {
-        showToast('Please select a product requirement', 'error');
+      if (!formData.productName.trim()) {
+        showToast('Please enter the requested Product or Equipment Specification', 'error');
         return;
       }
 
-      await onSave({
+      const payload = {
         ...formData,
-        convertToLead
-      });
+        productName: formData.productName.trim(),
+        targetPrice: Number(formData.targetPrice) || 0,
+        quantity: Number(formData.quantity) || 1,
+        convertToLead: !!convertToLead,
+        initialFollowUp: formData.logInitialFollowUp ? {
+          contactMethod: 'Call',
+          notes: formData.initialFollowUpNotes,
+          response: 'Interested',
+          nextDate: formData.initialFollowUpDate
+        } : null
+      };
 
+      await onSave(payload);
       showToast(
         convertToLead
-          ? 'Enquiry saved & automatically converted to Lead!'
-          : 'Enquiry registered successfully!',
+          ? 'Enquiry created and automatically converted to Lead!'
+          : 'Customer Enquiry saved successfully!',
         'success'
       );
       setIsAddOpen(false);
@@ -135,8 +155,8 @@ export default function EnquiriesModule({ enquiries, products, customers, onSave
   const handleConvertLeadClick = async (enquiryId) => {
     try {
       await onConvertToLead(enquiryId);
-      showToast('Enquiry converted to Lead without duplicate customer entry!', 'success');
-      if (selectedEnquiry) {
+      showToast('Enquiry successfully moved to Lead opportunity!', 'success');
+      if (selectedEnquiry && selectedEnquiry._id === enquiryId) {
         setSelectedEnquiry({ ...selectedEnquiry, status: 'Converted to Lead' });
       }
     } catch (err) {
@@ -144,18 +164,52 @@ export default function EnquiriesModule({ enquiries, products, customers, onSave
     }
   };
 
+  const handleSaveInlineFollowUp = async (enquiry) => {
+    try {
+      if (!inlineFollowUp.discussionNotes.trim()) {
+        showToast('Please enter discussion notes for the follow-up', 'error');
+        return;
+      }
+      if (onSaveFollowUp) {
+        await onSaveFollowUp({
+          customer: enquiry.customer?._id || enquiry.customer,
+          enquiryReference: enquiry._id,
+          contactType: inlineFollowUp.contactType,
+          responseStatus: inlineFollowUp.responseStatus,
+          discussionNotes: inlineFollowUp.discussionNotes,
+          nextFollowUpDate: inlineFollowUp.nextFollowUpDate,
+          priority: 'High',
+          status: 'Scheduled'
+        });
+        showToast('Follow-up discussion note logged successfully!', 'success');
+      }
+      setQuickFollowUpEnquiry(null);
+      setInlineFollowUp({
+        contactType: 'Phone Call',
+        responseStatus: 'Interested',
+        discussionNotes: '',
+        nextFollowUpDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+      });
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  };
+
+  // Get follow-ups associated with this enquiry
+  const getEnquiryFollowUps = (enquiryId) => {
+    return followUps.filter(f =>
+      f.enquiryReference?._id === enquiryId ||
+      f.enquiryReference === enquiryId ||
+      (f.discussionNotes && f.discussionNotes.includes(enquiryId))
+    );
+  };
+
   const columns = [
     {
       header: 'Enquiry No',
       accessor: 'enquiryNumber',
       render: (row) => (
-        <span
-          className="code-badge"
-          onClick={(e) => {
-            e.stopPropagation();
-            setSelectedEnquiry(row);
-          }}
-        >
+        <span className="code-badge" onClick={() => setSelectedEnquiry(row)}>
           {row.enquiryNumber}
         </span>
       )
@@ -166,38 +220,50 @@ export default function EnquiriesModule({ enquiries, products, customers, onSave
       render: (row) => new Date(row.enquiryDate).toLocaleDateString('en-GB')
     },
     {
-      header: 'Customer',
+      header: 'Customer Particulars',
       accessor: 'companyName',
       render: (row) => (
         <div>
           <strong style={{ color: 'var(--text-primary)' }}>{row.companyName}</strong>
-          <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{row.contactPerson}</div>
-        </div>
-      )
-    },
-    {
-      header: 'Product',
-      accessor: 'product',
-      render: (row) => (
-        <div>
-          <span style={{ fontWeight: 600, color: 'var(--primary)' }}>
-            {row.product?.productName || 'Custom Product'}
-          </span>
           <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-            Code: {row.product?.productCode}
+            {row.contactPerson} • {row.mobileNumber}
           </div>
         </div>
       )
     },
     {
-      header: 'Quantity',
-      accessor: 'quantity',
-      render: (row) => `${row.quantity} ${row.unit || 'Nos'}`
+      header: 'Product Requirement (Manual Specification)',
+      render: (row) => (
+        <div>
+          <span style={{ color: 'var(--primary)', fontWeight: 600 }}>
+            {row.productName || row.product?.productName || 'Custom Specification'}
+          </span>
+          <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+            Qty: {row.quantity} {row.unit}
+            {row.targetPrice > 0 && ` • Budget: ₹${Number(row.targetPrice).toLocaleString('en-IN')}`}
+          </div>
+        </div>
+      )
     },
     {
-      header: 'Source',
-      accessor: 'enquirySource',
-      render: (row) => <span className="nav-badge-pill">{row.enquirySource}</span>
+      header: 'Touchpoints',
+      render: (row) => {
+        const count = getEnquiryFollowUps(row._id).length;
+        return (
+          <span
+            className="badge"
+            style={{
+              background: count > 0 ? 'var(--primary-light)' : 'var(--bg-surface-elevated)',
+              color: count > 0 ? 'var(--primary)' : 'var(--text-muted)',
+              border: `1px solid ${count > 0 ? 'var(--primary-border)' : 'var(--border-subtle)'}`,
+              fontSize: '0.72rem',
+              fontWeight: 600
+            }}
+          >
+            {count} {count === 1 ? 'Touchpoint' : 'Touchpoints'}
+          </span>
+        );
+      }
     },
     {
       header: 'Status',
@@ -208,17 +274,65 @@ export default function EnquiriesModule({ enquiries, products, customers, onSave
       header: 'Actions',
       render: (row) => (
         <div className="action-btns" onClick={(e) => e.stopPropagation()}>
-          <button className="icon-btn" title="View Enquiry Details" onClick={() => setSelectedEnquiry(row)}>
+          <button
+            className="icon-btn"
+            title="View Details & Follow-up History"
+            onClick={() => setSelectedEnquiry(row)}
+          >
             <Eye size={15} />
           </button>
+
+          {/* Quick Follow-up Button */}
+          <button
+            className="icon-btn"
+            title="Log Discussion / Follow-up Note"
+            style={{ color: 'var(--primary)' }}
+            onClick={() => {
+              setQuickFollowUpEnquiry(row);
+              setInlineFollowUp({
+                contactType: 'Phone Call',
+                responseStatus: 'Interested',
+                discussionNotes: '',
+                nextFollowUpDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+              });
+            }}
+          >
+            <PhoneCall size={14} />
+          </button>
+
+          {/* Move to Lead Action */}
           {row.status === 'New' && (
             <button
-              className="icon-btn"
-              title="Convert to Lead Opportunity"
-              style={{ color: '#10B981', borderColor: 'rgba(16, 185, 129, 0.3)' }}
+              className="btn btn-primary"
+              title="Convert / Move to Lead Opportunity"
+              style={{
+                padding: '3px 8px',
+                fontSize: '0.72rem',
+                gap: 4,
+                height: 26,
+                borderRadius: 6
+              }}
               onClick={() => handleConvertLeadClick(row._id)}
             >
-              <UserCheck size={15} />
+              Move to Lead <ArrowRight size={12} />
+            </button>
+          )}
+
+          {/* Direct Quote Shortcut if converted */}
+          {row.status === 'Converted to Lead' && onNavigateToQuotation && (
+            <button
+              className="btn btn-secondary"
+              title="Create Quotation"
+              style={{
+                padding: '3px 8px',
+                fontSize: '0.72rem',
+                gap: 4,
+                height: 26,
+                borderRadius: 6
+              }}
+              onClick={() => onNavigateToQuotation(row)}
+            >
+              Quote <FileText size={12} />
             </button>
           )}
         </div>
@@ -228,114 +342,198 @@ export default function EnquiriesModule({ enquiries, products, customers, onSave
 
   return (
     <div>
-      {/* Summary KPI Cards */}
+      {/* KPI Cards */}
       <div className="kpi-grid">
-        <KpiCard title="Total Enquiries" value={enquiries.length} subtext="Prospect Inward" icon={MessageSquarePlus} color="#6366F1" />
-        <KpiCard title="New Unprocessed" value={enquiries.filter(e => e.status === 'New').length} subtext="Pending Qualification" icon={MessageSquarePlus} color="#F59E0B" />
-        <KpiCard title="Converted to Leads" value={enquiries.filter(e => e.status === 'Converted to Lead').length} subtext="Pipeline Qualified" icon={UserCheck} color="#10B981" />
+        <KpiCard
+          title="Total Enquiries"
+          value={enquiries.length}
+          subtext="Customer Touchpoints"
+          icon={MessageSquarePlus}
+          color="var(--primary)"
+        />
+        <KpiCard
+          title="Active Open"
+          value={enquiries.filter(e => e.status === 'New').length}
+          subtext="Awaiting Conversion"
+          icon={Clock}
+          color="var(--warning)"
+        />
+        <KpiCard
+          title="Moved to Lead"
+          value={enquiries.filter(e => e.status === 'Converted to Lead').length}
+          subtext="In Sales Pipeline"
+          icon={UserCheck}
+          color="var(--success)"
+        />
+        <KpiCard
+          title="Follow-ups Logged"
+          value={followUps.length}
+          subtext="Client Interactions"
+          icon={PhoneCall}
+          color="#6366F1"
+        />
       </div>
 
       {/* Main Table */}
       <DataTable
         columns={columns}
         data={enquiries}
-        searchPlaceholder="Search enquiry no, customer, product..."
+        searchPlaceholder="Search enquiries by customer, company, product, or enquiry number..."
         actions={
           <button className="btn btn-primary" onClick={handleOpenAdd}>
-            <Plus size={16} /> New Customer Enquiry
+            <Plus size={16} /> New Enquiry
           </button>
         }
       />
 
-      {/* Add Enquiry Modal */}
+      {/* Quick Follow-up Modal for Table Row */}
+      <Modal
+        isOpen={!!quickFollowUpEnquiry}
+        onClose={() => setQuickFollowUpEnquiry(null)}
+        title={`Log Follow-up: ${quickFollowUpEnquiry?.enquiryNumber}`}
+        subtitle={`Record discussion note for ${quickFollowUpEnquiry?.companyName}`}
+        size="md"
+      >
+        <form onSubmit={(e) => {
+          e.preventDefault();
+          if (quickFollowUpEnquiry) {
+            handleSaveInlineFollowUp(quickFollowUpEnquiry);
+          }
+        }}>
+          <div className="form-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)', gap: 14 }}>
+            <div className="form-group">
+              <label className="form-label">Contact Method</label>
+              <select
+                className="form-select"
+                value={inlineFollowUp.contactType}
+                onChange={(e) => setInlineFollowUp({ ...inlineFollowUp, contactType: e.target.value })}
+              >
+                <option value="Phone Call">Phone Call</option>
+                <option value="WhatsApp">WhatsApp</option>
+                <option value="Email">Email</option>
+                <option value="In-Person Meeting">In-Person Meeting</option>
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Client Response</label>
+              <select
+                className="form-select"
+                value={inlineFollowUp.responseStatus}
+                onChange={(e) => setInlineFollowUp({ ...inlineFollowUp, responseStatus: e.target.value })}
+              >
+                <option value="Interested">Interested (High Chance)</option>
+                <option value="Call Scheduled">Follow-up Call Scheduled</option>
+                <option value="Negotiation">Commercial Negotiation</option>
+                <option value="No Response">Awaiting Reply</option>
+                <option value="Not Interested">Not Interested</option>
+              </select>
+            </div>
+
+            <div className="form-group" style={{ gridColumn: 'span 2' }}>
+              <label className="form-label">Discussion Notes & Next Steps *</label>
+              <textarea
+                className="form-textarea"
+                rows={3}
+                placeholder="e.g. Spoke with Mr. Rajesh. Explained vessel design specs, agreed to send quotation by tomorrow..."
+                value={inlineFollowUp.discussionNotes}
+                onChange={(e) => setInlineFollowUp({ ...inlineFollowUp, discussionNotes: e.target.value })}
+                required
+              />
+            </div>
+
+            <div className="form-group" style={{ gridColumn: 'span 2' }}>
+              <label className="form-label">Next Reminder Date</label>
+              <input
+                type="date"
+                className="form-input"
+                value={inlineFollowUp.nextFollowUpDate}
+                onChange={(e) => setInlineFollowUp({ ...inlineFollowUp, nextFollowUpDate: e.target.value })}
+              />
+            </div>
+          </div>
+
+          <div style={{ marginTop: 20, display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => setQuickFollowUpEnquiry(null)}
+            >
+              Cancel
+            </button>
+            <button type="submit" className="btn btn-primary">
+              Save Follow-up Note
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Modal: New Customer Enquiry */}
       <Modal
         isOpen={isAddOpen}
         onClose={() => setIsAddOpen(false)}
+        title="Create Customer Enquiry"
+        subtitle="Capture new client request with manual equipment specifications and initial follow-up"
         size="lg"
-        title="Record New Customer Enquiry"
-        subtitle="Log prospect interest and specifications with 1-click lead conversion"
       >
-        <form onSubmit={(e) => { e.preventDefault(); handleSubmit(false); }}>
+        <form onSubmit={(e) => handleSubmit(e, false)}>
           {/* Section 1: Customer Details */}
-          <div style={{ fontWeight: 700, fontSize: '0.85rem', color: '#818CF8', marginBottom: 12 }}>
-            1. Customer Information
+          <div style={{ marginBottom: 14, paddingBottom: 8, borderBottom: '1px solid var(--border-subtle)', fontWeight: 700, fontSize: '0.85rem', color: 'var(--primary)' }}>
+            1. Customer Particulars
           </div>
 
-          <div className="form-grid">
-            <div className="form-group">
-              <label className="form-label">Customer Type</label>
-              <div style={{ display: 'flex', gap: 12, marginTop: 4 }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: '0.85rem' }}>
-                  <input
-                    type="radio"
-                    name="custType"
-                    checked={formData.customerType === 'New'}
-                    onChange={() => handleCustomerTypeChange('New')}
-                  />
-                  <span>New Customer</span>
-                </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: '0.85rem' }}>
-                  <input
-                    type="radio"
-                    name="custType"
-                    checked={formData.customerType === 'Existing'}
-                    onChange={() => handleCustomerTypeChange('Existing')}
-                  />
-                  <span>Existing Client</span>
-                </label>
-              </div>
+          {customers.length > 0 && (
+            <div className="form-group" style={{ marginBottom: 14 }}>
+              <label className="form-label">Select Existing Client (Optional)</label>
+              <select
+                className="form-select"
+                value={formData.customer}
+                onChange={(e) => handleCustomerSelect(e.target.value)}
+              >
+                <option value="">-- Or enter new client details below --</option>
+                {customers.map(c => (
+                  <option key={c._id} value={c._id}>
+                    {c.companyName} ({c.contactPerson} - {c.mobileNumber})
+                  </option>
+                ))}
+              </select>
             </div>
+          )}
 
-            {formData.customerType === 'Existing' && (
-              <div className="form-group">
-                <label className="form-label">Select Existing Customer <span className="req">*</span></label>
-                <select
-                  className="form-select"
-                  value={formData.customer}
-                  onChange={(e) => handleSelectCustomer(e.target.value)}
-                >
-                  {customers.map(c => (
-                    <option key={c._id} value={c._id}>
-                      {c.companyName} ({c.customerCode})
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
+          <div className="form-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
             <div className="form-group">
-              <label className="form-label">Company Name <span className="req">*</span></label>
+              <label className="form-label">Company / Client Name *</label>
               <input
                 type="text"
-                required
                 className="form-input"
-                placeholder="e.g. ABC Industries Pvt Ltd"
+                placeholder="e.g. Apex Cryo Engineering Pvt Ltd"
                 value={formData.companyName}
                 onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
+                required
               />
             </div>
 
             <div className="form-group">
-              <label className="form-label">Contact Person <span className="req">*</span></label>
+              <label className="form-label">Contact Person *</label>
               <input
                 type="text"
-                required
                 className="form-input"
-                placeholder="e.g. Kumar Mohan"
+                placeholder="e.g. Rajesh Kumar (Procurement Manager)"
                 value={formData.contactPerson}
                 onChange={(e) => setFormData({ ...formData, contactPerson: e.target.value })}
+                required
               />
             </div>
 
             <div className="form-group">
-              <label className="form-label">Mobile Number <span className="req">*</span></label>
+              <label className="form-label">Mobile Number *</label>
               <input
-                type="tel"
-                required
+                type="text"
                 className="form-input"
-                placeholder="9876543210"
+                placeholder="e.g. 9876543210"
                 value={formData.mobileNumber}
                 onChange={(e) => setFormData({ ...formData, mobileNumber: e.target.value })}
+                required
               />
             </div>
 
@@ -344,66 +542,73 @@ export default function EnquiriesModule({ enquiries, products, customers, onSave
               <input
                 type="email"
                 className="form-input"
-                placeholder="kumar@abcindustries.com"
+                placeholder="e.g. rajesh@apexcryo.com"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               />
             </div>
 
-            <div className="form-group col-span-2">
-              <label className="form-label">Customer Plant / Delivery Address</label>
+            <div className="form-group" style={{ gridColumn: 'span 2' }}>
+              <label className="form-label">Plant / Delivery Location</label>
               <input
                 type="text"
                 className="form-input"
-                placeholder="Industrial Plot, City, State..."
+                placeholder="e.g. Plot 14, SIPCOT Industrial Park, Sriperumbudur"
                 value={formData.address}
                 onChange={(e) => setFormData({ ...formData, address: e.target.value })}
               />
             </div>
           </div>
 
-          {/* Section 2: Product Details */}
-          <div style={{ margin: '22px 0 12px', fontWeight: 700, fontSize: '0.85rem', color: '#818CF8' }}>
-            2. Product Requirement Details
+          {/* Section 2: Product & Requirements (Manual Fill, No Dropdown Lock) */}
+          <div style={{ marginTop: 20, marginBottom: 14, paddingBottom: 8, borderBottom: '1px solid var(--border-subtle)', fontWeight: 700, fontSize: '0.85rem', color: 'var(--primary)' }}>
+            2. Product Requirement (Manual Specification)
           </div>
 
-          <div className="form-grid">
-            <div className="form-group">
-              <label className="form-label">Product Required <span className="req">*</span></label>
-              <select
-                className="form-select"
+          <div className="form-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
+            <div className="form-group" style={{ gridColumn: 'span 2' }}>
+              <label className="form-label">Product / Equipment Name & Specification *</label>
+              <input
+                type="text"
+                className="form-input"
+                placeholder="e.g. Cryogenic Liquid Nitrogen Storage Vessel 5000L - Dual Safety Valve"
+                value={formData.productName}
+                onChange={(e) => setFormData({ ...formData, productName: e.target.value })}
                 required
-                value={formData.product}
-                onChange={(e) => handleProductChange(e.target.value)}
-              >
-                <option value="">Select Product from Master</option>
-                {products.map(p => (
-                  <option key={p._id} value={p._id}>
-                    {p.productName} ({p.productCode})
-                  </option>
-                ))}
-              </select>
+              />
             </div>
 
             <div className="form-group">
-              <label className="form-label">Quantity Required <span className="req">*</span></label>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <input
-                  type="number"
-                  min="1"
-                  required
-                  className="form-input"
-                  value={formData.quantity}
-                  onChange={(e) => setFormData({ ...formData, quantity: Number(e.target.value) })}
-                />
-                <input
-                  type="text"
-                  readOnly
-                  className="form-input"
-                  style={{ width: 80, textAlign: 'center' }}
-                  value={formData.unit}
-                />
-              </div>
+              <label className="form-label">Target Budget / Unit Price (₹)</label>
+              <input
+                type="number"
+                className="form-input"
+                placeholder="e.g. 750000"
+                value={formData.targetPrice}
+                onChange={(e) => setFormData({ ...formData, targetPrice: e.target.value })}
+              />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Required Quantity</label>
+              <input
+                type="number"
+                min="1"
+                className="form-input"
+                value={formData.quantity}
+                onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
+              />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Unit of Measure</label>
+              <input
+                type="text"
+                className="form-input"
+                placeholder="Nos, Sets, Units"
+                value={formData.unit}
+                onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
+              />
             </div>
 
             <div className="form-group">
@@ -416,98 +621,89 @@ export default function EnquiriesModule({ enquiries, products, customers, onSave
               />
             </div>
 
-            <div className="form-group">
-              <label className="form-label">Enquiry Source</label>
-              <select
-                className="form-select"
-                value={formData.enquirySource}
-                onChange={(e) => setFormData({ ...formData, enquirySource: e.target.value })}
-              >
-                <option value="Website">Website</option>
-                <option value="Phone">Phone</option>
-                <option value="Email">Email</option>
-                <option value="Referral">Referral</option>
-                <option value="Direct">Direct</option>
-              </select>
-            </div>
-
-            <div className="form-group col-span-2">
-              <label className="form-label">Additional Technical Requirements</label>
+            <div className="form-group" style={{ gridColumn: 'span 3' }}>
+              <label className="form-label">Technical Notes & Custom Requirements</label>
               <textarea
-                rows="2"
                 className="form-textarea"
-                placeholder="Voltage specs, customization options, speed parameters..."
+                rows={2}
+                placeholder="e.g. Requires multi-layer vacuum insulation, ASME Section VIII compliance, and dual rupture discs..."
                 value={formData.additionalRequirements}
                 onChange={(e) => setFormData({ ...formData, additionalRequirements: e.target.value })}
               />
             </div>
           </div>
 
-          {/* Section 3: Commercial Meta */}
-          <div style={{ margin: '22px 0 12px', fontWeight: 700, fontSize: '0.85rem', color: '#818CF8' }}>
-            3. Assignment & Remarks
+          {/* Section 3: Optional Initial Follow-up */}
+          <div style={{ marginTop: 20, marginBottom: 14, paddingBottom: 8, borderBottom: '1px solid var(--border-subtle)', fontWeight: 700, fontSize: '0.85rem', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span>3. Initial Follow-up & Reminder</span>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-primary)', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={formData.logInitialFollowUp}
+                onChange={(e) => setFormData({ ...formData, logInitialFollowUp: e.target.checked })}
+              />
+              Log First Discussion Note
+            </label>
           </div>
 
-          <div className="form-grid">
-            <div className="form-group">
-              <label className="form-label">Assigned Sales Executive</label>
-              <input
-                type="text"
-                className="form-input"
-                value={formData.assignedSalesPerson}
-                onChange={(e) => setFormData({ ...formData, assignedSalesPerson: e.target.value })}
-              />
-            </div>
+          {formData.logInitialFollowUp && (
+            <div className="form-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)', gap: 14 }}>
+              <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                <label className="form-label">Initial Discussion Note</label>
+                <textarea
+                  className="form-textarea"
+                  rows={2}
+                  value={formData.initialFollowUpNotes}
+                  onChange={(e) => setFormData({ ...formData, initialFollowUpNotes: e.target.value })}
+                />
+              </div>
 
-            <div className="form-group">
-              <label className="form-label">Internal Remarks</label>
-              <input
-                type="text"
-                className="form-input"
-                placeholder="Urgent lead, competitor quotes in play..."
-                value={formData.remarks}
-                onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
-              />
+              <div className="form-group">
+                <label className="form-label">Next Reminder Date</label>
+                <input
+                  type="date"
+                  className="form-input"
+                  value={formData.initialFollowUpDate}
+                  onChange={(e) => setFormData({ ...formData, initialFollowUpDate: e.target.value })}
+                />
+              </div>
             </div>
-          </div>
+          )}
 
-          <div className="modal-footer" style={{ marginTop: 24, padding: '16px 0 0 0' }}>
-            <button type="button" className="btn btn-secondary" onClick={() => setIsAddOpen(false)}>
+          <div style={{ marginTop: 24, display: 'flex', gap: 10, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => setIsAddOpen(false)}
+            >
               Cancel
             </button>
             <button
               type="button"
-              className="btn btn-outline"
-              onClick={() => handleSubmit(false)}
+              className="btn btn-secondary"
+              style={{ color: 'var(--primary)', borderColor: 'var(--primary-border)' }}
+              onClick={(e) => handleSubmit(e, true)}
             >
-              Save Enquiry
+              Save & Move to Lead ➔
             </button>
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={() => handleSubmit(true)}
-            >
-              Save & Convert to Lead Opportunity
+            <button type="submit" className="btn btn-primary">
+              Save Enquiry
             </button>
           </div>
         </form>
       </Modal>
 
-      {/* View Enquiry Details Modal */}
+      {/* Modal: View Details & Follow-up History */}
       <Modal
         isOpen={!!selectedEnquiry}
         onClose={() => setSelectedEnquiry(null)}
-        size="lg"
         title={`Enquiry: ${selectedEnquiry?.enquiryNumber}`}
-        subtitle={`From ${selectedEnquiry?.companyName}`}
+        subtitle={`Submitted on ${selectedEnquiry ? new Date(selectedEnquiry.enquiryDate).toLocaleDateString('en-GB') : ''}`}
+        size="lg"
       >
         {selectedEnquiry && (
           <div>
             <div className="detail-grid">
-              <div className="detail-item">
-                <div className="detail-label">Enquiry No</div>
-                <div className="detail-value">{selectedEnquiry.enquiryNumber}</div>
-              </div>
               <div className="detail-item">
                 <div className="detail-label">Status</div>
                 <div className="detail-value"><StatusBadge status={selectedEnquiry.status} /></div>
@@ -521,49 +717,121 @@ export default function EnquiriesModule({ enquiries, products, customers, onSave
                 <div className="detail-value">{selectedEnquiry.contactPerson}</div>
               </div>
               <div className="detail-item">
-                <div className="detail-label">Phone & Email</div>
-                <div className="detail-value" style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem' }}>
-                  {selectedEnquiry.mobileNumber} • {selectedEnquiry.email || '—'}
-                </div>
+                <div className="detail-label">Mobile Number</div>
+                <div className="detail-value" style={{ fontFamily: 'var(--font-mono)' }}>{selectedEnquiry.mobileNumber}</div>
               </div>
               <div className="detail-item">
-                <div className="detail-label">Enquiry Source</div>
-                <div className="detail-value">{selectedEnquiry.enquirySource}</div>
+                <div className="detail-label">Email</div>
+                <div className="detail-value">{selectedEnquiry.email || '—'}</div>
               </div>
               <div className="detail-item">
                 <div className="detail-label">Product Requirement</div>
-                <div className="detail-value" style={{ color: '#A5B4FC' }}>
-                  {selectedEnquiry.product?.productName}
+                <div className="detail-value" style={{ color: 'var(--primary)' }}>
+                  {selectedEnquiry.productName || selectedEnquiry.product?.productName || 'Custom Specification'}
                 </div>
               </div>
               <div className="detail-item">
-                <div className="detail-label">Requested Quantity</div>
-                <div className="detail-value">
-                  {selectedEnquiry.quantity} {selectedEnquiry.unit}
-                </div>
+                <div className="detail-label">Quantity & Unit</div>
+                <div className="detail-value">{selectedEnquiry.quantity} {selectedEnquiry.unit}</div>
               </div>
-              <div className="detail-item col-span-2">
-                <div className="detail-label">Technical Notes & Requirements</div>
-                <div className="detail-value" style={{ fontWeight: 400, fontSize: '0.85rem' }}>
-                  {selectedEnquiry.additionalRequirements || 'Standard catalog requirements.'}
+              <div className="detail-item">
+                <div className="detail-label">Target Budget</div>
+                <div className="detail-value" style={{ fontFamily: 'var(--font-mono)', color: 'var(--success)' }}>
+                  {selectedEnquiry.targetPrice > 0 ? `₹${Number(selectedEnquiry.targetPrice).toLocaleString('en-IN')}` : 'To be estimated'}
                 </div>
               </div>
             </div>
 
-            {selectedEnquiry.status === 'New' && (
-              <div style={{ marginTop: 20, textAlign: 'right' }}>
+            {/* Follow-up Discussion History */}
+            <div style={{ marginTop: 24 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>
+                  Follow-up Discussion History ({getEnquiryFollowUps(selectedEnquiry._id).length})
+                </span>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  style={{ padding: '4px 10px', fontSize: '0.75rem', gap: 4 }}
+                  onClick={() => {
+                    const enq = selectedEnquiry;
+                    setSelectedEnquiry(null);
+                    setQuickFollowUpEnquiry(enq);
+                  }}
+                >
+                  <PhoneCall size={12} /> + Add Follow-up Note
+                </button>
+              </div>
+
+              {getEnquiryFollowUps(selectedEnquiry._id).length === 0 ? (
+                <div style={{ padding: '16px', background: 'var(--bg-surface-elevated)', borderRadius: 8, fontSize: '0.82rem', color: 'var(--text-muted)', textAlign: 'center' }}>
+                  No previous follow-up notes logged for this enquiry yet. Click <strong>+ Add Follow-up Note</strong> to record discussions.
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {getEnquiryFollowUps(selectedEnquiry._id).map((fu, idx) => (
+                    <div
+                      key={fu._id || idx}
+                      style={{
+                        padding: '12px 14px',
+                        borderRadius: 8,
+                        background: 'var(--bg-surface-elevated)',
+                        border: '1px solid var(--border-subtle)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 4
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{ fontWeight: 700, fontSize: '0.82rem', color: 'var(--primary)' }}>
+                            {fu.contactMethod || 'Call'}
+                          </span>
+                          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                            {new Date(fu.contactDate || fu.createdAt).toLocaleDateString('en-GB')}
+                          </span>
+                        </div>
+                        <StatusBadge status={fu.customerResponse || fu.status || 'Completed'} />
+                      </div>
+                      <div style={{ fontSize: '0.82rem', color: 'var(--text-primary)', marginTop: 4 }}>
+                        {fu.discussionNotes}
+                      </div>
+                      {fu.nextFollowUpDate && (
+                        <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: 4 }}>
+                          Next Reminder: <strong>{new Date(fu.nextFollowUpDate).toLocaleDateString('en-GB')}</strong>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Modal Actions */}
+            <div style={{ marginTop: 24, display: 'flex', gap: 10, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+              {selectedEnquiry.status === 'New' && (
                 <button
                   className="btn btn-primary"
                   onClick={() => handleConvertLeadClick(selectedEnquiry._id)}
                 >
-                  <UserCheck size={16} /> Convert to Lead Opportunity
+                  <UserCheck size={15} /> Move to Lead Opportunity ➔
                 </button>
-              </div>
-            )}
+              )}
+              {onNavigateToQuotation && (
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    const enq = selectedEnquiry;
+                    setSelectedEnquiry(null);
+                    onNavigateToQuotation(enq);
+                  }}
+                >
+                  <FileText size={15} /> Create Quotation ➔
+                </button>
+              )}
+            </div>
           </div>
         )}
       </Modal>
     </div>
   );
 }
-

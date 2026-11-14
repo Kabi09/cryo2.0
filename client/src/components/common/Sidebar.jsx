@@ -23,11 +23,13 @@ export const SCM_MODULES = [
 
 export const SALES_MODULES = [
   { id: 'sales-dashboard', num: '01', title: 'Dashboard' },
-  { id: 'sales-customers-enquiries', num: '02', title: 'Customers & Enquiries' },
-  { id: 'sales-follow-ups', num: '03', title: 'Follow-ups' },
-  { id: 'sales-quotations-pi', num: '04', title: 'Quotations & PI' },
-  { id: 'sales-orders-payments', num: '05', title: 'Orders & Payments' },
-  { id: 'sales-reports', num: '06', title: 'Sales Reports' }
+  { id: 'sales-enquiries', num: '02', title: '1. Enquiry' },
+  { id: 'sales-follow-ups', num: '03', title: '2. Follow-up' },
+  { id: 'sales-leads', num: '04', title: '3. Qualified / Not Qualified Lead' },
+  { id: 'sales-quotations', num: '05', title: '4. Quotation' },
+  { id: 'sales-proforma-invoices', num: '06', title: '5. Proforma Invoice (PI)' },
+  { id: 'sales-orders', num: '07', title: '6. Sales Order (SO)' },
+  { id: 'sales-reports', num: '08', title: 'Sales Reports' }
 ];
 
 export const PRODUCTION_MODULES = [
@@ -234,11 +236,11 @@ export default function Sidebar({
                 </div>
                 <div className="tree-parent-text">
                   <span className="tree-parent-title">Sales Management</span>
-                  <span className="tree-parent-subtitle">6 Modules</span>
+                  <span className="tree-parent-subtitle">6 Funnel Stages</span>
                 </div>
               </div>
               <div className="tree-parent-right">
-                <span className="tree-badge">6</span>
+                <span className="tree-badge">8</span>
                 {openDropdowns.sales ? (
                   <ChevronUp size={16} className="tree-chevron open" />
                 ) : (

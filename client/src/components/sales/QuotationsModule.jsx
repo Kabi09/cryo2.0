@@ -1,14 +1,48 @@
-import React, { useState } from 'react';
-import { Plus, Eye, FileSpreadsheet, Trash2, Send, GitBranch, Trophy, XCircle, FileText } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import {
+  Plus,
+  Eye,
+  FileSpreadsheet,
+  Trash2,
+  Send,
+  GitBranch,
+  Trophy,
+  XCircle,
+  FileText,
+  Receipt,
+  PhoneCall,
+  ArrowRight
+} from 'lucide-react';
 import DataTable from '../common/DataTable';
 import StatusBadge from '../common/StatusBadge';
 import Modal from '../common/Modal';
 import KpiCard from '../common/KpiCard';
 
-export default function QuotationsModule({ quotations, customers, leads, products, onSave, onRevise, onUpdateStatus, showToast }) {
+export default function QuotationsModule({
+  quotations = [],
+  customers = [],
+  leads = [],
+  products = [],
+  onSave,
+  onRevise,
+  onUpdateStatus,
+  onNavigateToPI,
+  onSaveFollowUp,
+  preSelectedLead,
+  showToast
+}) {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isReviseOpen, setIsReviseOpen] = useState(false);
   const [selectedQuote, setSelectedQuote] = useState(null);
+  const [quickFollowUpQuote, setQuickFollowUpQuote] = useState(null);
+
+  // Quick Follow-up Form State
+  const [followUpData, setFollowUpData] = useState({
+    contactType: 'Phone Call',
+    responseStatus: 'Negotiation',
+    discussionNotes: '',
+    nextFollowUpDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+  });
 
   // Form State
   const [formData, setFormData] = useState({
@@ -26,14 +60,49 @@ export default function QuotationsModule({ quotations, customers, leads, product
     items: []
   });
 
+  // Pre-fill from Lead if redirected from Qualified Leads
+  useEffect(() => {
+    if (preSelectedLead) {
+      const custId = preSelectedLead.customer?._id || preSelectedLead.customer;
+      const initialItem = {
+        product: preSelectedLead.interestedProduct?._id || null,
+        productName: preSelectedLead.productName || preSelectedLead.interestedProduct?.productName || 'Cryogenic Equipment Specification',
+        description: preSelectedLead.productName || 'Custom Specification requirement from Lead opportunity',
+        quantity: preSelectedLead.expectedQuantity || 1,
+        unit: 'Nos',
+        unitPrice: Math.round((preSelectedLead.expectedOrderValue || 100000) / (preSelectedLead.expectedQuantity || 1)),
+        discount: 0,
+        gstPercent: 18,
+        amount: preSelectedLead.expectedOrderValue || 100000
+      };
+
+      setFormData({
+        quotationNumber: '',
+        version: 'V1',
+        quotationDate: new Date().toISOString().split('T')[0],
+        customer: custId || '',
+        leadReference: preSelectedLead._id || '',
+        validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        deliveryTerms: 'Ex-Factory, 4 to 6 weeks from PO confirmation',
+        paymentTerms: '50% Advance with PO, 50% Before Dispatch',
+        warranty: '12 Months comprehensive manufacturer warranty',
+        notes: `Proposal generated for Lead ${preSelectedLead.leadNumber}. Standard testing and pre-dispatch inspection included.`,
+        status: 'Sent',
+        items: [initialItem]
+      });
+      setIsAddOpen(true);
+    }
+  }, [preSelectedLead]);
+
   const getInitialItem = (prodId) => {
     const prd = products.find(p => p._id === prodId) || products[0];
     const price = prd ? prd.standardPrice : 100000;
     const qty = 1;
     const tax = (price * 18) / 100;
     return {
-      product: prd?._id || '',
-      description: prd?.description || prd?.productName || '',
+      product: prd?._id || null,
+      productName: prd?.productName || 'Cryo Vessel / Equipment Spec',
+      description: prd?.description || prd?.productName || 'Standard equipment specification',
       quantity: qty,
       unit: prd?.unit || 'Nos',
       unitPrice: price,
@@ -71,6 +140,7 @@ export default function QuotationsModule({ quotations, customers, leads, product
       ...quote,
       items: quote.items.map(i => ({
         product: i.product?._id || i.product,
+        productName: i.productName || i.product?.productName || i.description || 'Cryo Equipment',
         description: i.description,
         quantity: i.quantity,
         unit: i.unit,
@@ -83,85 +153,80 @@ export default function QuotationsModule({ quotations, customers, leads, product
     setIsReviseOpen(true);
   };
 
-  const handleCustomerChange = (custId) => {
-    const custLeads = leads.filter(l => (l.customer?._id || l.customer) === custId);
-    setFormData({
-      ...formData,
-      customer: custId,
-      leadReference: custLeads[0]?._id || ''
-    });
-  };
-
-  const handleItemChange = (index, field, value) => {
-    const newItems = [...formData.items];
-    const item = { ...newItems[index] };
-
-    if (field === 'product') {
-      const prd = products.find(p => p._id === value);
-      item.product = value;
-      item.description = prd?.description || prd?.productName || '';
-      item.unit = prd?.unit || 'Nos';
-      item.unitPrice = prd?.standardPrice || 100000;
-    } else {
-      item[field] = value;
-    }
-
-    const qty = Number(item.quantity) || 1;
-    const price = Number(item.unitPrice) || 0;
-    const disc = Number(item.discount) || 0;
-    const taxRate = Number(item.gstPercent) || 18;
-
-    const base = qty * price;
-    const discounted = Math.max(0, base - disc);
-    const tax = (discounted * taxRate) / 100;
-    item.amount = Math.round((discounted + tax) * 100) / 100;
-
-    newItems[index] = item;
-    setFormData({ ...formData, items: newItems });
-  };
-
   const handleAddItem = () => {
-    const item = getInitialItem(products[0]?._id);
-    if (item) {
-      setFormData({ ...formData, items: [...formData.items, item] });
+    const initialItem = getInitialItem(products[0]?._id);
+    if (initialItem) {
+      setFormData(prev => ({
+        ...prev,
+        items: [...prev.items, initialItem]
+      }));
     }
   };
 
   const handleRemoveItem = (index) => {
-    if (formData.items.length <= 1) {
+    if (formData.items.length === 1) {
       showToast('Quotation must contain at least one line item', 'error');
       return;
     }
-    setFormData({
-      ...formData,
-      items: formData.items.filter((_, i) => i !== index)
-    });
+    setFormData(prev => ({
+      ...prev,
+      items: prev.items.filter((_, i) => i !== index)
+    }));
   };
 
-  // Calculations
-  const subtotal = formData.items.reduce((acc, i) => acc + (Number(i.quantity) * Number(i.unitPrice)), 0);
-  const discountTotal = formData.items.reduce((acc, i) => acc + Number(i.discount || 0), 0);
-  const gstTotal = formData.items.reduce((acc, i) => {
-    const base = (Number(i.quantity) * Number(i.unitPrice)) - Number(i.discount || 0);
-    return acc + ((Math.max(0, base) * (Number(i.gstPercent) || 18)) / 100);
+  const handleItemChange = (index, field, value) => {
+    const newItems = [...formData.items];
+    const itm = { ...newItems[index], [field]: value };
+
+    if (field === 'product') {
+      const selectedPrd = products.find(p => p._id === value);
+      if (selectedPrd) {
+        itm.unitPrice = selectedPrd.standardPrice;
+        itm.unit = selectedPrd.unit || 'Nos';
+        itm.description = selectedPrd.description || selectedPrd.productName;
+        itm.productName = selectedPrd.productName;
+      }
+    }
+
+    if (field === 'quantity' || field === 'unitPrice' || field === 'discount' || field === 'gstPercent') {
+      const qty = Number(itm.quantity) || 0;
+      const price = Number(itm.unitPrice) || 0;
+      const disc = Number(itm.discount) || 0;
+      const taxRate = Number(itm.gstPercent) || 18;
+
+      const base = qty * price;
+      const discountedBase = Math.max(0, base - disc);
+      const tax = (discountedBase * taxRate) / 100;
+      itm.amount = Math.round(discountedBase + tax);
+    }
+
+    newItems[index] = itm;
+    setFormData(prev => ({ ...prev, items: newItems }));
+  };
+
+  const subtotal = formData.items.reduce((sum, item) => sum + ((Number(item.quantity) || 0) * (Number(item.unitPrice) || 0)), 0);
+  const discountTotal = formData.items.reduce((sum, item) => sum + (Number(item.discount) || 0), 0);
+  const taxableBase = Math.max(0, subtotal - discountTotal);
+  const gstTotal = formData.items.reduce((sum, item) => {
+    const base = ((Number(item.quantity) || 0) * (Number(item.unitPrice) || 0)) - (Number(item.discount) || 0);
+    return sum + (Math.max(0, base) * (Number(item.gstPercent) || 18)) / 100;
   }, 0);
-  const grandTotal = Math.round(subtotal - discountTotal + gstTotal);
+  const grandTotal = Math.round(taxableBase + gstTotal);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      if (formData.items.length === 0) {
-        showToast('Please add at least one product item', 'error');
+      if (!formData.customer) {
+        showToast('Please select a customer for this quotation', 'error');
         return;
       }
-      await onSave({
-        ...formData,
-        subtotal,
-        discountTotal,
-        gstTotal,
-        grandTotal
-      });
-      showToast('Quotation proposal generated and sent to customer!', 'success');
+      if (formData.items.length === 0) {
+        showToast('Please add at least one line item', 'error');
+        return;
+      }
+
+      await onSave(formData);
+      showToast('Quotation proposal issued successfully!', 'success');
       setIsAddOpen(false);
     } catch (err) {
       showToast(err.message, 'error');
@@ -171,16 +236,17 @@ export default function QuotationsModule({ quotations, customers, leads, product
   const handleReviseSubmit = async (e) => {
     e.preventDefault();
     try {
+      const currentVerNum = parseInt(selectedQuote.version?.replace('V', '') || '1', 10);
+      const nextVersion = `V${currentVerNum + 1}`;
+
       await onRevise(selectedQuote._id, {
-        items: formData.items,
-        validUntil: formData.validUntil,
-        deliveryTerms: formData.deliveryTerms,
-        paymentTerms: formData.paymentTerms,
-        warranty: formData.warranty,
-        notes: formData.notes
+        ...formData,
+        version: nextVersion,
+        status: 'Sent'
       });
-      showToast('New quotation version created for negotiation!', 'success');
+      showToast(`Quotation revised successfully to version ${nextVersion}!`, 'success');
       setIsReviseOpen(false);
+      setSelectedQuote(null);
     } catch (err) {
       showToast(err.message, 'error');
     }
@@ -243,8 +309,8 @@ export default function QuotationsModule({ quotations, customers, leads, product
       render: (row) => (
         <div>
           {row.items?.map((it, idx) => (
-            <div key={idx} style={{ fontSize: '0.8rem', color: '#C7D2FE' }}>
-              {it.product?.productName}: <strong>{it.quantity} {it.unit}</strong>
+            <div key={idx} style={{ fontSize: '0.8rem', color: 'var(--text-primary)' }}>
+              {it.productName || it.product?.productName || it.description || 'Equipment Item'}: <strong>{it.quantity} {it.unit}</strong>
             </div>
           ))}
         </div>
@@ -254,7 +320,7 @@ export default function QuotationsModule({ quotations, customers, leads, product
       header: 'Total Value',
       accessor: 'grandTotal',
       render: (row) => (
-        <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 800, color: '#34D399' }}>
+        <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 800, color: 'var(--success)' }}>
           ₹{row.grandTotal?.toLocaleString('en-IN')}
         </span>
       )
@@ -266,31 +332,69 @@ export default function QuotationsModule({ quotations, customers, leads, product
     },
     {
       header: 'Actions',
-      render: (row) => (
-        <div className="action-btns" onClick={(e) => e.stopPropagation()}>
-          <button className="icon-btn" title="View Proposal" onClick={() => setSelectedQuote(row)}>
-            <Eye size={15} />
-          </button>
-          <button
-            className="icon-btn"
-            title="Revise to New Version (V+1)"
-            style={{ color: '#F59E0B' }}
-            onClick={() => handleOpenRevise(row)}
-          >
-            <GitBranch size={15} />
-          </button>
-          {row.status !== 'Accepted' && (
+      render: (row) => {
+        const isAccepted = row.status === 'Accepted';
+        return (
+          <div className="action-btns" onClick={(e) => e.stopPropagation()}>
+            <button className="icon-btn" title="View Proposal" onClick={() => setSelectedQuote(row)}>
+              <Eye size={15} />
+            </button>
             <button
               className="icon-btn"
-              title="Customer Accepted (Mark Won)"
-              style={{ color: '#10B981' }}
-              onClick={() => handleStatusUpdate(row._id, 'Accepted')}
+              title="Revise to New Version (V+1)"
+              style={{ color: '#F59E0B' }}
+              onClick={() => handleOpenRevise(row)}
             >
-              <Trophy size={15} />
+              <GitBranch size={15} />
             </button>
-          )}
-        </div>
-      )
+
+            {/* Accept vs Generate PI */}
+            {!isAccepted ? (
+              <button
+                className="icon-btn"
+                title="Customer Accepted (Mark Won)"
+                style={{ color: '#10B981' }}
+                onClick={() => handleStatusUpdate(row._id, 'Accepted')}
+              >
+                <Trophy size={15} />
+              </button>
+            ) : (
+              <button
+                className="btn btn-primary"
+                style={{
+                  padding: '3px 8px',
+                  fontSize: '0.72rem',
+                  gap: 4,
+                  height: 26,
+                  borderRadius: 6
+                }}
+                title="Generate Proforma Invoice (PI)"
+                onClick={() => onNavigateToPI?.(row)}
+              >
+                <Receipt size={12} /> PI ➔
+              </button>
+            )}
+
+            {/* Follow-up logger */}
+            <button
+              className="icon-btn"
+              title="Log Follow-up / Discussion Note"
+              style={{ color: 'var(--primary)' }}
+              onClick={() => {
+                setQuickFollowUpQuote(row);
+                setFollowUpData({
+                  contactType: 'Phone Call',
+                  responseStatus: 'Negotiation',
+                  discussionNotes: '',
+                  nextFollowUpDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+                });
+              }}
+            >
+              <PhoneCall size={14} />
+            </button>
+          </div>
+        );
+      }
     }
   ];
 
@@ -324,8 +428,7 @@ export default function QuotationsModule({ quotations, customers, leads, product
         subtitle="Prepare official commercial proposal with multi-line items, taxes, and validity terms"
       >
         <form onSubmit={handleSubmit}>
-          {/* Section 1: Header */}
-          <div style={{ fontWeight: 700, fontSize: '0.85rem', color: '#818CF8', marginBottom: 12 }}>
+          <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--primary)', marginBottom: 12 }}>
             Section 1: Basic Particulars
           </div>
 
@@ -335,17 +438,47 @@ export default function QuotationsModule({ quotations, customers, leads, product
               <input
                 type="text"
                 className="form-input"
-                placeholder="Auto-generated (e.g. QT-003)"
+                placeholder="Auto-generated (e.g. QT-001)"
                 value={formData.quotationNumber}
                 onChange={(e) => setFormData({ ...formData, quotationNumber: e.target.value })}
               />
             </div>
 
             <div className="form-group">
-              <label className="form-label">Quotation Date <span className="req">*</span></label>
+              <label className="form-label">Customer Company *</label>
+              <select
+                className="form-select"
+                value={formData.customer}
+                onChange={(e) => setFormData({ ...formData, customer: e.target.value })}
+                required
+              >
+                <option value="">Select Customer...</option>
+                {customers.map(c => (
+                  <option key={c._id} value={c._id}>{c.companyName} ({c.customerCode})</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Lead Reference</label>
+              <select
+                className="form-select"
+                value={formData.leadReference}
+                onChange={(e) => setFormData({ ...formData, leadReference: e.target.value })}
+              >
+                <option value="">No Lead / Direct Quote</option>
+                {leads.map(l => (
+                  <option key={l._id} value={l._id}>
+                    {l.leadNumber} - {l.customer?.companyName || 'Lead'} (₹{l.expectedOrderValue?.toLocaleString('en-IN')})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Quotation Date</label>
               <input
                 type="date"
-                required
                 className="form-input"
                 value={formData.quotationDate}
                 onChange={(e) => setFormData({ ...formData, quotationDate: e.target.value })}
@@ -353,26 +486,9 @@ export default function QuotationsModule({ quotations, customers, leads, product
             </div>
 
             <div className="form-group">
-              <label className="form-label">Customer Account <span className="req">*</span></label>
-              <select
-                className="form-select"
-                required
-                value={formData.customer}
-                onChange={(e) => handleCustomerChange(e.target.value)}
-              >
-                {customers.map(c => (
-                  <option key={c._id} value={c._id}>
-                    {c.companyName} ({c.contactPerson})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Valid Until <span className="req">*</span></label>
+              <label className="form-label">Valid Until</label>
               <input
                 type="date"
-                required
                 className="form-input"
                 value={formData.validUntil}
                 onChange={(e) => setFormData({ ...formData, validUntil: e.target.value })}
@@ -380,116 +496,115 @@ export default function QuotationsModule({ quotations, customers, leads, product
             </div>
           </div>
 
-          {/* Section 2: Line Items */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '22px 0 10px' }}>
-            <span style={{ fontWeight: 700, fontSize: '0.85rem', color: '#818CF8' }}>
-              Section 2: Product Line Items (Multi-row)
-            </span>
-            <button type="button" className="btn btn-secondary btn-sm" onClick={handleAddItem}>
-              <Plus size={14} /> Add Row
-            </button>
-          </div>
+          {/* Section 2: Items Table */}
+          <div style={{ marginTop: 24 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <span style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--primary)' }}>
+                Section 2: Commercial Equipment & Line Items
+              </span>
+              <button type="button" className="btn btn-secondary btn-sm" onClick={handleAddItem}>
+                <Plus size={14} /> Add Item
+              </button>
+            </div>
 
-          <div className="subtable-box">
-            <table className="subtable">
-              <thead>
-                <tr>
-                  <th style={{ width: '28%' }}>Product</th>
-                  <th style={{ width: '12%' }}>Qty</th>
-                  <th style={{ width: '15%' }}>Unit Price</th>
-                  <th style={{ width: '12%' }}>Discount (₹)</th>
-                  <th style={{ width: '10%' }}>GST %</th>
-                  <th style={{ width: '18%' }}>Line Total</th>
-                  <th style={{ width: '5%' }}></th>
-                </tr>
-              </thead>
-              <tbody>
-                {formData.items.map((item, idx) => (
-                  <tr key={idx}>
-                    <td>
-                      <select
-                        className="form-select"
-                        style={{ padding: '6px 8px' }}
-                        value={item.product}
-                        onChange={(e) => handleItemChange(idx, 'product', e.target.value)}
-                      >
-                        {products.map(p => (
-                          <option key={p._id} value={p._id}>
-                            {p.productName}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                    <td>
-                      <input
-                        type="number"
-                        min="1"
-                        required
-                        className="form-input"
-                        style={{ padding: '6px 8px' }}
-                        value={item.quantity}
-                        onChange={(e) => handleItemChange(idx, 'quantity', e.target.value)}
-                      />
-                    </td>
-                    <td>
-                      <input
-                        type="number"
-                        min="0"
-                        required
-                        className="form-input"
-                        style={{ padding: '6px 8px' }}
-                        value={item.unitPrice}
-                        onChange={(e) => handleItemChange(idx, 'unitPrice', e.target.value)}
-                      />
-                    </td>
-                    <td>
-                      <input
-                        type="number"
-                        min="0"
-                        className="form-input"
-                        style={{ padding: '6px 8px' }}
-                        value={item.discount}
-                        onChange={(e) => handleItemChange(idx, 'discount', e.target.value)}
-                      />
-                    </td>
-                    <td>
-                      <select
-                        className="form-select"
-                        style={{ padding: '6px 8px' }}
-                        value={item.gstPercent}
-                        onChange={(e) => handleItemChange(idx, 'gstPercent', e.target.value)}
-                      >
-                        <option value="0">0%</option>
-                        <option value="5">5%</option>
-                        <option value="12">12%</option>
-                        <option value="18">18%</option>
-                        <option value="28">28%</option>
-                      </select>
-                    </td>
-                    <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: '#34D399' }}>
-                      ₹{item.amount?.toLocaleString('en-IN')}
-                    </td>
-                    <td>
-                      <button
-                        type="button"
-                        className="icon-btn"
-                        style={{ color: '#EF4444' }}
-                        onClick={() => handleRemoveItem(idx)}
-                      >
-                        <Trash2 size={13} />
-                      </button>
-                    </td>
-                  </tr>
+            <div className="subtable-box">
+              <datalist id="quotation-product-suggestions">
+                {products.map(p => (
+                  <option key={p._id} value={p.productName}>
+                    {p.productCode} - Standard: ₹{p.standardPrice?.toLocaleString('en-IN')}
+                  </option>
                 ))}
-              </tbody>
-            </table>
+              </datalist>
+
+              <table className="subtable">
+                <thead>
+                  <tr>
+                    <th style={{ width: '28%' }}>Product / Specification</th>
+                    <th style={{ width: '12%' }}>Quantity</th>
+                    <th style={{ width: '10%' }}>Unit</th>
+                    <th style={{ width: '18%' }}>Unit Price (₹)</th>
+                    <th style={{ width: '12%' }}>GST %</th>
+                    <th style={{ width: '15%' }}>Total (₹)</th>
+                    <th style={{ width: '5%' }}></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {formData.items.map((item, idx) => (
+                    <tr key={idx}>
+                      <td>
+                        <input
+                          type="text"
+                          list="quotation-product-suggestions"
+                          className="form-input"
+                          style={{ padding: '4px 8px', fontSize: '0.8rem' }}
+                          placeholder="Type or select equipment..."
+                          value={item.productName || ''}
+                          onChange={(e) => handleItemChange(idx, 'productName', e.target.value)}
+                        />
+                      </td>
+                      <td>
+                        <input
+                          type="number"
+                          min="1"
+                          className="form-input"
+                          style={{ padding: '4px 8px' }}
+                          value={item.quantity}
+                          onChange={(e) => handleItemChange(idx, 'quantity', e.target.value)}
+                        />
+                      </td>
+                      <td>
+                        <input
+                          type="text"
+                          className="form-input"
+                          style={{ padding: '4px 8px' }}
+                          value={item.unit}
+                          onChange={(e) => handleItemChange(idx, 'unit', e.target.value)}
+                        />
+                      </td>
+                      <td>
+                        <input
+                          type="number"
+                          min="0"
+                          className="form-input"
+                          style={{ padding: '4px 8px' }}
+                          value={item.unitPrice}
+                          onChange={(e) => handleItemChange(idx, 'unitPrice', e.target.value)}
+                        />
+                      </td>
+                      <td>
+                        <input
+                          type="number"
+                          min="0"
+                          className="form-input"
+                          style={{ padding: '4px 8px' }}
+                          value={item.gstPercent}
+                          onChange={(e) => handleItemChange(idx, 'gstPercent', e.target.value)}
+                        />
+                      </td>
+                      <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--success)' }}>
+                        ₹{item.amount?.toLocaleString('en-IN')}
+                      </td>
+                      <td>
+                        <button
+                          type="button"
+                          className="icon-btn text-danger"
+                          onClick={() => handleRemoveItem(idx)}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
 
-          {/* Section 3: Commercial Terms & Summary */}
-          <div style={{ marginTop: 20 }}>
-            <span style={{ fontWeight: 700, fontSize: '0.85rem', color: '#818CF8', display: 'block', marginBottom: 10 }}>
-              Section 3: Commercial Terms & Totals
-            </span>
+          {/* Section 3: Terms & Summary */}
+          <div style={{ marginTop: 24 }}>
+            <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--primary)', marginBottom: 8 }}>
+              Section 3: Terms & Total
+            </div>
 
             <div className="form-grid">
               <div className="form-group">
@@ -526,7 +641,7 @@ export default function QuotationsModule({ quotations, customers, leads, product
             {/* Calculations Card */}
             <div style={{
               marginTop: 16,
-              background: 'rgba(255, 255, 255, 0.02)',
+              background: 'var(--bg-surface-elevated)',
               borderRadius: 'var(--radius-sm)',
               padding: '12px 16px',
               border: '1px solid var(--border-subtle)',
@@ -540,7 +655,7 @@ export default function QuotationsModule({ quotations, customers, leads, product
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
                 <span style={{ color: 'var(--text-muted)' }}>Discount Total:</span>
-                <span style={{ fontFamily: 'var(--font-mono)', color: '#F87171' }}>-₹{discountTotal.toLocaleString('en-IN')}</span>
+                <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--danger)' }}>-₹{discountTotal.toLocaleString('en-IN')}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
                 <span style={{ color: 'var(--text-muted)' }}>GST Tax:</span>
@@ -556,7 +671,7 @@ export default function QuotationsModule({ quotations, customers, leads, product
                 paddingTop: 8
               }}>
                 <span>Grand Total:</span>
-                <span style={{ color: '#16A36A', fontFamily: 'var(--font-mono)' }}>
+                <span style={{ color: 'var(--success)', fontFamily: 'var(--font-mono)' }}>
                   ₹{grandTotal.toLocaleString('en-IN')}
                 </span>
               </div>
@@ -567,19 +682,8 @@ export default function QuotationsModule({ quotations, customers, leads, product
             <button type="button" className="btn btn-secondary" onClick={() => setIsAddOpen(false)}>
               Cancel
             </button>
-            <button
-              type="submit"
-              className="btn btn-outline"
-              onClick={() => setFormData({ ...formData, status: 'Draft' })}
-            >
-              Save as Draft
-            </button>
-            <button
-              type="submit"
-              className="btn btn-primary"
-              onClick={() => setFormData({ ...formData, status: 'Sent' })}
-            >
-              <Send size={15} /> Send to Customer
+            <button type="submit" className="btn btn-primary">
+              <Send size={15} /> Issue Official Quotation (V1)
             </button>
           </div>
         </form>
@@ -591,28 +695,32 @@ export default function QuotationsModule({ quotations, customers, leads, product
         onClose={() => setIsReviseOpen(false)}
         size="lg"
         title={`Revise Quotation: ${selectedQuote?.quotationNumber}`}
-        subtitle={`Negotiate terms and create Version V+1 (preserving previous versions)`}
+        subtitle={`Branch from ${selectedQuote?.version} to new version`}
       >
         <form onSubmit={handleReviseSubmit}>
-          <div style={{ fontWeight: 600, fontSize: '0.85rem', marginBottom: 12 }}>
-            Adjust Prices, Discounts or Quantities for Revised Version:
-          </div>
-
           <div className="subtable-box">
             <table className="subtable">
               <thead>
                 <tr>
                   <th>Product</th>
                   <th>Quantity</th>
-                  <th>Unit Price</th>
-                  <th>Discount (₹)</th>
-                  <th>Amount</th>
+                  <th>Rate</th>
+                  <th>Discount</th>
+                  <th>Total</th>
                 </tr>
               </thead>
               <tbody>
                 {formData.items.map((item, idx) => (
                   <tr key={idx}>
-                    <td>{item.description || 'Product Item'}</td>
+                    <td>
+                      <input
+                        type="text"
+                        className="form-input"
+                        style={{ padding: '4px 8px', fontSize: '0.8rem' }}
+                        value={item.productName || item.description || ''}
+                        onChange={(e) => handleItemChange(idx, 'productName', e.target.value)}
+                      />
+                    </td>
                     <td>
                       <input
                         type="number"
@@ -643,7 +751,7 @@ export default function QuotationsModule({ quotations, customers, leads, product
                         onChange={(e) => handleItemChange(idx, 'discount', e.target.value)}
                       />
                     </td>
-                    <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: '#34D399' }}>
+                    <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--success)' }}>
                       ₹{item.amount?.toLocaleString('en-IN')}
                     </td>
                   </tr>
@@ -675,20 +783,20 @@ export default function QuotationsModule({ quotations, customers, leads, product
           <div>
             <div className="detail-grid">
               <div className="detail-item">
-                <div className="detail-label">Quote Number</div>
-                <div className="detail-value">{selectedQuote.quotationNumber} ({selectedQuote.version})</div>
-              </div>
-              <div className="detail-item">
                 <div className="detail-label">Status</div>
                 <div className="detail-value"><StatusBadge status={selectedQuote.status} /></div>
               </div>
               <div className="detail-item">
-                <div className="detail-label">Client Account</div>
+                <div className="detail-label">Version</div>
+                <div className="detail-value">{selectedQuote.version}</div>
+              </div>
+              <div className="detail-item">
+                <div className="detail-label">Customer Company</div>
                 <div className="detail-value">{selectedQuote.customer?.companyName}</div>
               </div>
               <div className="detail-item">
-                <div className="detail-label">Valid Until</div>
-                <div className="detail-value">{new Date(selectedQuote.validUntil).toLocaleDateString('en-GB')}</div>
+                <div className="detail-label">Contact Person</div>
+                <div className="detail-value">{selectedQuote.customer?.contactPerson}</div>
               </div>
               <div className="detail-item">
                 <div className="detail-label">Payment Terms</div>
@@ -718,8 +826,10 @@ export default function QuotationsModule({ quotations, customers, leads, product
                     {selectedQuote.items?.map((it, idx) => (
                       <tr key={idx}>
                         <td>
-                          <strong>{it.product?.productName}</strong>
-                          <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{it.description}</div>
+                          <strong>{it.productName || it.product?.productName || it.description || 'Custom Item'}</strong>
+                          {it.description && it.description !== it.productName && (
+                            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{it.description}</div>
+                          )}
                         </td>
                         <td>{it.quantity} {it.unit}</td>
                         <td>₹{it.unitPrice?.toLocaleString('en-IN')}</td>
@@ -736,20 +846,35 @@ export default function QuotationsModule({ quotations, customers, leads, product
             <div style={{
               marginTop: 18,
               padding: '12px 18px',
-              background: 'rgba(255, 255, 255, 0.03)',
+              background: 'var(--bg-surface-elevated)',
               borderRadius: 'var(--radius-sm)',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'space-between'
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: 10
             }}>
               <div>
                 <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Grand Total (All Taxes Included): </span>
-                <span style={{ fontSize: '1.25rem', fontWeight: 800, color: '#34D399', fontFamily: 'var(--font-mono)' }}>
+                <span style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--success)', fontFamily: 'var(--font-mono)' }}>
                   ₹{selectedQuote.grandTotal?.toLocaleString('en-IN')}
                 </span>
               </div>
 
               <div style={{ display: 'flex', gap: 8 }}>
+                {selectedQuote.status === 'Accepted' && onNavigateToPI && (
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-sm"
+                    onClick={() => {
+                      const q = selectedQuote;
+                      setSelectedQuote(null);
+                      onNavigateToPI(q);
+                    }}
+                  >
+                    <Receipt size={14} /> Generate Proforma Invoice (PI) ➔
+                  </button>
+                )}
                 {selectedQuote.status !== 'Accepted' && (
                   <button
                     className="btn btn-primary btn-sm"
@@ -771,7 +896,104 @@ export default function QuotationsModule({ quotations, customers, leads, product
           </div>
         )}
       </Modal>
+
+      {/* Quick Follow-up Modal for Quotation Negotiations */}
+      <Modal
+        isOpen={!!quickFollowUpQuote}
+        onClose={() => setQuickFollowUpQuote(null)}
+        title={`Log Follow-up: ${quickFollowUpQuote?.quotationNumber}`}
+        subtitle={`Negotiation note for ${quickFollowUpQuote?.customer?.companyName || 'Quotation'}`}
+        size="md"
+      >
+        <form onSubmit={async (e) => {
+          e.preventDefault();
+          if (!quickFollowUpQuote) return;
+          try {
+            if (!followUpData.discussionNotes) {
+              showToast('Please enter discussion notes', 'error');
+              return;
+            }
+            if (onSaveFollowUp) {
+              await onSaveFollowUp({
+                customer: quickFollowUpQuote.customer?._id || quickFollowUpQuote.customer,
+                quotationReference: quickFollowUpQuote._id,
+                contactType: followUpData.contactType,
+                responseStatus: followUpData.responseStatus,
+                discussionNotes: followUpData.discussionNotes,
+                nextFollowUpDate: followUpData.nextFollowUpDate,
+                priority: 'High',
+                status: 'Scheduled'
+              });
+              showToast(`Follow-up note logged for ${quickFollowUpQuote.quotationNumber}!`, 'success');
+            }
+            setQuickFollowUpQuote(null);
+          } catch (err) {
+            showToast(err.message, 'error');
+          }
+        }}>
+          <div className="form-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)', gap: 14 }}>
+            <div className="form-group">
+              <label className="form-label">Contact Method</label>
+              <select
+                className="form-select"
+                value={followUpData.contactType}
+                onChange={(e) => setFollowUpData({ ...followUpData, contactType: e.target.value })}
+              >
+                <option value="Phone Call">Phone Call</option>
+                <option value="WhatsApp">WhatsApp</option>
+                <option value="Email">Email</option>
+                <option value="In-Person Meeting">In-Person Meeting</option>
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Client Feedback</label>
+              <select
+                className="form-select"
+                value={followUpData.responseStatus}
+                onChange={(e) => setFollowUpData({ ...followUpData, responseStatus: e.target.value })}
+              >
+                <option value="Negotiation">Commercial Negotiation / Discount</option>
+                <option value="Interested">Approved / Preparing PO</option>
+                <option value="Call Scheduled">Follow-up Call Scheduled</option>
+                <option value="No Response">Awaiting Management Review</option>
+                <option value="Not Interested">Price Too High / Lost</option>
+              </select>
+            </div>
+
+            <div className="form-group" style={{ gridColumn: 'span 2' }}>
+              <label className="form-label">Discussion Notes *</label>
+              <textarea
+                className="form-textarea"
+                rows={3}
+                placeholder="e.g. Client requested 5% discount on bulk purchase or revised delivery terms..."
+                value={followUpData.discussionNotes}
+                onChange={(e) => setFollowUpData({ ...followUpData, discussionNotes: e.target.value })}
+                required
+              />
+            </div>
+
+            <div className="form-group" style={{ gridColumn: 'span 2' }}>
+              <label className="form-label">Next Reminder Date</label>
+              <input
+                type="date"
+                className="form-input"
+                value={followUpData.nextFollowUpDate}
+                onChange={(e) => setFollowUpData({ ...followUpData, nextFollowUpDate: e.target.value })}
+              />
+            </div>
+          </div>
+
+          <div style={{ marginTop: 20, display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+            <button type="button" className="btn btn-secondary" onClick={() => setQuickFollowUpQuote(null)}>
+              Cancel
+            </button>
+            <button type="submit" className="btn btn-primary">
+              Save Negotiation Note
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }
-

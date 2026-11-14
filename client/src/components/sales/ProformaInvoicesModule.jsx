@@ -1,11 +1,18 @@
-import React, { useState } from 'react';
-import { Plus, Eye, Receipt, Send, Download, DollarSign } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Plus, Eye, Receipt, Send, Download, DollarSign, ShoppingBag, ArrowRight } from 'lucide-react';
 import DataTable from '../common/DataTable';
 import StatusBadge from '../common/StatusBadge';
 import Modal from '../common/Modal';
 import KpiCard from '../common/KpiCard';
 
-export default function ProformaInvoicesModule({ proformaInvoices, quotations, onSave, showToast }) {
+export default function ProformaInvoicesModule({
+  proformaInvoices = [],
+  quotations = [],
+  onSave,
+  onNavigateToSO,
+  preSelectedQuote,
+  showToast
+}) {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [selectedPI, setSelectedPI] = useState(null);
 
@@ -25,6 +32,25 @@ export default function ProformaInvoicesModule({ proformaInvoices, quotations, o
     validity: '30 Days from date of issue',
     status: 'Sent'
   });
+
+  // Pre-fill from quotation if navigated from Quotations module
+  useEffect(() => {
+    if (preSelectedQuote) {
+      setFormData({
+        piNumber: '',
+        customer: preSelectedQuote.customer?._id || preSelectedQuote.customer || '',
+        quotation: preSelectedQuote._id || '',
+        piDate: new Date().toISOString().split('T')[0],
+        advancePercentage: 50,
+        bankDetails: 'HDFC Bank, Anna Nagar Branch, A/C: 50200012345678, IFSC: HDFC0000240',
+        paymentTerms: preSelectedQuote.paymentTerms || '50% Advance via Bank/RTGS, Balance Before Dispatch',
+        deliveryTerms: preSelectedQuote.deliveryTerms || '4 Weeks from receipt of Advance & verified PO',
+        validity: '30 Days from date of issue',
+        status: 'Sent'
+      });
+      setIsAddOpen(true);
+    }
+  }, [preSelectedQuote]);
 
   const handleOpenAdd = () => {
     const defaultQuote = eligibleQuotes[0] || quotations[0];
@@ -68,13 +94,16 @@ export default function ProformaInvoicesModule({ proformaInvoices, quotations, o
         showToast('Please select an accepted quotation', 'error');
         return;
       }
+
       await onSave({
         ...formData,
         grandTotal,
         advanceAmount,
-        balanceAmount
+        balanceAmount,
+        advancePercentage: Number(formData.advancePercentage) || 50
       });
-      showToast('Proforma Invoice generated and sent to client!', 'success');
+
+      showToast('Proforma Invoice issued successfully!', 'success');
       setIsAddOpen(false);
     } catch (err) {
       showToast(err.message, 'error');
@@ -92,33 +121,27 @@ export default function ProformaInvoicesModule({ proformaInvoices, quotations, o
       )
     },
     {
+      header: 'Date',
+      accessor: 'piDate',
+      render: (row) => new Date(row.piDate).toLocaleDateString('en-GB')
+    },
+    {
       header: 'Customer',
       accessor: 'customer',
       render: (row) => (
         <div>
           <strong style={{ color: 'var(--text-primary)' }}>{row.customer?.companyName || '—'}</strong>
-          <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{row.customer?.contactPerson}</div>
+          <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+            Quote: {row.quotation?.quotationNumber || 'Ref'}
+          </div>
         </div>
       )
     },
     {
-      header: 'Quotation Ref',
-      render: (row) => (
-        <span className="code-badge">
-          {row.quotation?.quotationNumber} ({row.quotation?.version})
-        </span>
-      )
-    },
-    {
-      header: 'PI Date',
-      accessor: 'piDate',
-      render: (row) => new Date(row.piDate).toLocaleDateString('en-GB')
-    },
-    {
-      header: 'Grand Total',
+      header: 'Invoice Amount',
       accessor: 'grandTotal',
       render: (row) => (
-        <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: '#34D399' }}>
+        <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--success)' }}>
           ₹{row.grandTotal?.toLocaleString('en-IN')}
         </span>
       )
@@ -128,7 +151,7 @@ export default function ProformaInvoicesModule({ proformaInvoices, quotations, o
       accessor: 'advanceAmount',
       render: (row) => (
         <div>
-          <span style={{ color: '#FBBF24', fontWeight: 600, fontFamily: 'var(--font-mono)' }}>
+          <span style={{ color: 'var(--warning)', fontWeight: 600, fontFamily: 'var(--font-mono)' }}>
             ₹{row.advanceAmount?.toLocaleString('en-IN')}
           </span>
           <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginLeft: 4 }}>
@@ -149,6 +172,20 @@ export default function ProformaInvoicesModule({ proformaInvoices, quotations, o
           <button className="icon-btn" title="View PI Document" onClick={() => setSelectedPI(row)}>
             <Eye size={15} />
           </button>
+          <button
+            className="btn btn-primary"
+            style={{
+              padding: '3px 8px',
+              fontSize: '0.72rem',
+              gap: 4,
+              height: 26,
+              borderRadius: 6
+            }}
+            title="Convert to Confirmed Sales Order"
+            onClick={() => onNavigateToSO?.(row)}
+          >
+            <ShoppingBag size={12} /> Convert to SO ➔
+          </button>
         </div>
       )
     }
@@ -159,8 +196,8 @@ export default function ProformaInvoicesModule({ proformaInvoices, quotations, o
       {/* KPI Cards */}
       <div className="kpi-grid">
         <KpiCard title="Total PIs Issued" value={proformaInvoices.length} subtext="Formal Pre-Invoices" icon={Receipt} color="#6366F1" />
-        <KpiCard title="Advance Invoiced" value={`₹${proformaInvoices.reduce((a, b) => a + (b.advanceAmount || 0), 0).toLocaleString('en-IN')}`} subtext="Target Inflows" icon={DollarSign} color="#F59E0B" />
-        <KpiCard title="Fully Paid PIs" value={proformaInvoices.filter(p => p.status === 'Paid').length} subtext="Settled in Full" icon={Receipt} color="#10B981" />
+        <KpiCard title="Advance Invoiced" value={`₹${proformaInvoices.reduce((a, b) => a + (b.advanceAmount || 0), 0).toLocaleString('en-IN')}`} subtext="Target Inflows" icon={DollarSign} color="var(--warning)" />
+        <KpiCard title="Fully Paid PIs" value={proformaInvoices.filter(p => p.status === 'Paid').length} subtext="Settled in Full" icon={Receipt} color="var(--success)" />
       </div>
 
       {/* Main Table */}
@@ -190,34 +227,33 @@ export default function ProformaInvoicesModule({ proformaInvoices, quotations, o
               <input
                 type="text"
                 className="form-input"
-                placeholder="Auto-generated (e.g. PI-003)"
+                placeholder="Auto-generated (e.g. PI-001)"
                 value={formData.piNumber}
                 onChange={(e) => setFormData({ ...formData, piNumber: e.target.value })}
               />
             </div>
 
             <div className="form-group">
-              <label className="form-label">Accepted Quotation Reference <span className="req">*</span></label>
+              <label className="form-label">Quotation Reference *</label>
               <select
                 className="form-select"
-                required
                 value={formData.quotation}
                 onChange={(e) => handleQuoteChange(e.target.value)}
+                required
               >
-                <option value="">Select Accepted Proposal</option>
-                {quotations.map(q => (
+                <option value="">Select Accepted Quotation...</option>
+                {eligibleQuotes.map(q => (
                   <option key={q._id} value={q._id}>
-                    {q.quotationNumber} ({q.version}) — {q.customer?.companyName} (₹{q.grandTotal?.toLocaleString('en-IN')})
+                    {q.quotationNumber} ({q.version}) - {q.customer?.companyName} (₹{q.grandTotal?.toLocaleString('en-IN')})
                   </option>
                 ))}
               </select>
             </div>
 
             <div className="form-group">
-              <label className="form-label">PI Issue Date <span className="req">*</span></label>
+              <label className="form-label">PI Date</label>
               <input
                 type="date"
-                required
                 className="form-input"
                 value={formData.piDate}
                 onChange={(e) => setFormData({ ...formData, piDate: e.target.value })}
@@ -225,59 +261,50 @@ export default function ProformaInvoicesModule({ proformaInvoices, quotations, o
             </div>
 
             <div className="form-group">
-              <label className="form-label">Advance Required (%) <span className="req">*</span></label>
-              <input
-                type="number"
-                min="10"
-                max="100"
-                required
-                className="form-input"
+              <label className="form-label">Advance % Required</label>
+              <select
+                className="form-select"
                 value={formData.advancePercentage}
                 onChange={(e) => setFormData({ ...formData, advancePercentage: Number(e.target.value) })}
-              />
+              >
+                <option value={20}>20% Advance</option>
+                <option value={30}>30% Advance</option>
+                <option value={50}>50% Advance (Standard)</option>
+                <option value={100}>100% Full Payment</option>
+              </select>
             </div>
+          </div>
 
-            {/* Live Financial Breakdown */}
-            <div className="form-group col-span-2" style={{
-              background: 'rgba(255, 255, 255, 0.02)',
-              borderRadius: 'var(--radius-sm)',
-              padding: '12px 16px',
-              border: '1px solid var(--border-subtle)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-around'
-            }}>
-              <div>
-                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block' }}>Grand Total</span>
-                <strong style={{ fontSize: '1.1rem', color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>
-                  ₹{grandTotal.toLocaleString('en-IN')}
-                </strong>
-              </div>
-              <div>
-                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block' }}>Advance Due ({formData.advancePercentage}%)</span>
-                <strong style={{ fontSize: '1.1rem', color: '#D97706', fontFamily: 'var(--font-mono)' }}>
-                  ₹{advanceAmount.toLocaleString('en-IN')}
-                </strong>
-              </div>
-              <div>
-                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block' }}>Remaining Balance</span>
-                <strong style={{ fontSize: '1.1rem', color: '#16A36A', fontFamily: 'var(--font-mono)' }}>
-                  ₹{balanceAmount.toLocaleString('en-IN')}
-                </strong>
-              </div>
+          {/* Amount Calculation Summary Card */}
+          <div style={{
+            marginTop: 18,
+            background: 'var(--bg-surface-elevated)',
+            borderRadius: 'var(--radius-sm)',
+            padding: '16px',
+            border: '1px solid var(--border-subtle)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 8
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+              <span style={{ color: 'var(--text-muted)' }}>Total Commercial Quote Value:</span>
+              <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>₹{grandTotal.toLocaleString('en-IN')}</span>
             </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+              <span style={{ color: 'var(--text-muted)' }}>Advance Billing Required ({formData.advancePercentage}%):</span>
+              <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--warning)' }}>
+                ₹{advanceAmount.toLocaleString('en-IN')}
+              </span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+              <span style={{ color: 'var(--text-muted)' }}>Balance Payable Before Dispatch:</span>
+              <span style={{ fontFamily: 'var(--font-mono)' }}>₹{balanceAmount.toLocaleString('en-IN')}</span>
+            </div>
+          </div>
 
+          {/* Terms & Bank Details */}
+          <div className="form-grid" style={{ marginTop: 18 }}>
             <div className="form-group col-span-2">
-              <label className="form-label">Remittance Bank Details</label>
-              <input
-                type="text"
-                className="form-input"
-                value={formData.bankDetails}
-                onChange={(e) => setFormData({ ...formData, bankDetails: e.target.value })}
-              />
-            </div>
-
-            <div className="form-group">
               <label className="form-label">Payment Terms</label>
               <input
                 type="text"
@@ -287,13 +314,23 @@ export default function ProformaInvoicesModule({ proformaInvoices, quotations, o
               />
             </div>
 
-            <div className="form-group">
+            <div className="form-group col-span-2">
               <label className="form-label">Delivery Terms</label>
               <input
                 type="text"
                 className="form-input"
                 value={formData.deliveryTerms}
                 onChange={(e) => setFormData({ ...formData, deliveryTerms: e.target.value })}
+              />
+            </div>
+
+            <div className="form-group col-span-2">
+              <label className="form-label">Bank Remittance Instructions</label>
+              <textarea
+                className="form-textarea"
+                rows={2}
+                value={formData.bankDetails}
+                onChange={(e) => setFormData({ ...formData, bankDetails: e.target.value })}
               />
             </div>
           </div>
@@ -338,25 +375,25 @@ export default function ProformaInvoicesModule({ proformaInvoices, quotations, o
               </div>
               <div className="detail-item">
                 <div className="detail-label">Total Invoiced Amount</div>
-                <div className="detail-value" style={{ fontFamily: 'var(--font-mono)', color: '#34D399' }}>
+                <div className="detail-value" style={{ fontFamily: 'var(--font-mono)', color: 'var(--success)' }}>
                   ₹{selectedPI.grandTotal?.toLocaleString('en-IN')}
                 </div>
               </div>
               <div className="detail-item">
                 <div className="detail-label">Advance Required</div>
-                <div className="detail-value" style={{ fontFamily: 'var(--font-mono)', color: '#FBBF24' }}>
+                <div className="detail-value" style={{ fontFamily: 'var(--font-mono)', color: 'var(--warning)' }}>
                   ₹{selectedPI.advanceAmount?.toLocaleString('en-IN')} ({selectedPI.advancePercentage}%)
                 </div>
               </div>
               <div className="detail-item">
                 <div className="detail-label">Amount Received So Far</div>
-                <div className="detail-value" style={{ fontFamily: 'var(--font-mono)', color: '#06B6D4' }}>
+                <div className="detail-value" style={{ fontFamily: 'var(--font-mono)', color: 'var(--primary)' }}>
                   ₹{(selectedPI.totalReceived || 0).toLocaleString('en-IN')}
                 </div>
               </div>
               <div className="detail-item">
                 <div className="detail-label">Balance Remaining</div>
-                <div className="detail-value" style={{ fontFamily: 'var(--font-mono)', color: '#F87171' }}>
+                <div className="detail-value" style={{ fontFamily: 'var(--font-mono)', color: 'var(--danger)' }}>
                   ₹{selectedPI.balanceAmount?.toLocaleString('en-IN')}
                 </div>
               </div>
@@ -367,10 +404,25 @@ export default function ProformaInvoicesModule({ proformaInvoices, quotations, o
                 </div>
               </div>
             </div>
+
+            {onNavigateToSO && (
+              <div style={{ marginTop: 20, display: 'flex', justifyContent: 'flex-end' }}>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={() => {
+                    const pi = selectedPI;
+                    setSelectedPI(null);
+                    onNavigateToSO(pi);
+                  }}
+                >
+                  <ShoppingBag size={14} /> Convert to Confirmed Sales Order (SO) ➔
+                </button>
+              </div>
+            )}
           </div>
         )}
       </Modal>
     </div>
   );
 }
-

@@ -5,19 +5,20 @@ import SalesOrdersModule from './SalesOrdersModule';
 import { FileCheck2, CreditCard, ShoppingBag } from 'lucide-react';
 
 export default function OrdersPaymentsPage({
-  customerPOs,
-  payments,
-  salesOrders,
-  customers,
-  proformaInvoices,
-  quotations,
-  products,
+  customerPOs = [],
+  payments = [],
+  salesOrders = [],
+  customers = [],
+  proformaInvoices = [],
+  quotations = [],
+  products = [],
   onSaveCustomerPO,
   onVerifyCustomerPO,
   onSavePayment,
   onVerifyPayment,
   onSaveSalesOrder,
   onSendToProduction,
+  preSelectedPI,
   showToast,
   defaultTab = 'so'
 }) {
@@ -63,6 +64,7 @@ export default function OrdersPaymentsPage({
           products={products}
           onSave={onSaveSalesOrder}
           onSendToProduction={onSendToProduction}
+          preSelectedPI={preSelectedPI}
           showToast={showToast}
         />
       )}
@@ -92,4 +94,3 @@ export default function OrdersPaymentsPage({
     </div>
   );
 }
-

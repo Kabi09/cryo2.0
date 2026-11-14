@@ -46,10 +46,23 @@ const enquirySchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  productName: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  productDescription: {
+    type: String,
+    default: ''
+  },
   product: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Product',
-    required: true
+    required: false
+  },
+  targetPrice: {
+    type: Number,
+    default: 0
   },
   quantity: {
     type: Number,

@@ -10,13 +10,19 @@ import PurchasingPage from './components/modules/PurchasingPage';
 import QualityInventoryPage from './components/modules/QualityInventoryPage';
 import MaterialRequestsPage from './components/modules/MaterialRequestsPage';
 
-// 2. Sales Management (6 Pages)
+// 2. Sales Management (Step-by-Step Funnel Pipeline)
 import DashboardModule from './components/sales/DashboardModule';
-import CustomersEnquiriesPage from './components/sales/CustomersEnquiriesPage';
+import EnquiriesModule from './components/sales/EnquiriesModule';
 import FollowUpsModule from './components/sales/FollowUpsModule';
+import CustomersLeadsModule from './components/sales/CustomersLeadsModule';
+import QuotationsModule from './components/sales/QuotationsModule';
+import ProformaInvoicesModule from './components/sales/ProformaInvoicesModule';
+import SalesOrdersModule from './components/sales/SalesOrdersModule';
+import SalesReportsModule from './components/sales/SalesReportsModule';
+import SalesPipelineStepper from './components/sales/SalesPipelineStepper';
+import CustomersEnquiriesPage from './components/sales/CustomersEnquiriesPage';
 import QuotationsPIPage from './components/sales/QuotationsPIPage';
 import OrdersPaymentsPage from './components/sales/OrdersPaymentsPage';
-import SalesReportsModule from './components/sales/SalesReportsModule';
 
 // 3. Production Management (7 Pages)
 import ProductionDashboardModule from './components/production/ProductionDashboardModule';
@@ -52,6 +58,9 @@ export default function App() {
 
   // Cross-module state
   const [preSelectedGRNForQC, setPreSelectedGRNForQC] = useState(null);
+  const [preSelectedLeadForQuotation, setPreSelectedLeadForQuotation] = useState(null);
+  const [preSelectedQuoteForPI, setPreSelectedQuoteForPI] = useState(null);
+  const [preSelectedPIForSO, setPreSelectedPIForSO] = useState(null);
 
   // 1. SCM State
   const [materials, setMaterials] = useState([]);
@@ -108,7 +117,9 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState(() => {
     try {
       const saved = localStorage.getItem('cryo_current_user');
-      return saved ? JSON.parse(saved) : null;
+      if (!saved) return null;
+      const parsed = JSON.parse(saved);
+      return typeof parsed === 'object' && parsed !== null ? parsed : null;
     } catch {
       return null;
     }
@@ -766,18 +777,33 @@ export default function App() {
           )}
 
           {/* ======================================================== */}
-          {/* 2. SALES MANAGEMENT (6 PAGES)                            */}
+          {/* 2. SALES MANAGEMENT (STEP-BY-STEP FUNNEL WORKFLOW)       */}
           {/* ======================================================== */}
+          {activeDomain === 'sales' && (
+            <SalesPipelineStepper
+              currentModule={activeModule}
+              onNavigate={(mod) => {
+                setActiveModule(mod);
+              }}
+            />
+          )}
+
           {activeModule === 'sales-dashboard' && (
             <DashboardModule
               dashboardData={salesDashboardData}
               onNavigateModule={(mod) => {
-                if (mod === 'enquiries' || mod === 'customers-leads' || mod === 'leads' || mod === 'customers') {
-                  setActiveModule('sales-customers-enquiries');
-                } else if (mod === 'quotations' || mod === 'proforma-invoices') {
-                  setActiveModule('sales-quotations-pi');
-                } else if (mod === 'customer-pos' || mod === 'payments' || mod === 'sales-orders') {
-                  setActiveModule('sales-orders-payments');
+                if (mod === 'enquiries' || mod === 'enquiry') {
+                  setActiveModule('sales-enquiries');
+                } else if (mod === 'leads' || mod === 'customers-leads' || mod === 'customers') {
+                  setActiveModule('sales-leads');
+                } else if (mod === 'follow-ups' || mod === 'followup') {
+                  setActiveModule('sales-follow-ups');
+                } else if (mod === 'quotations' || mod === 'quotation') {
+                  setActiveModule('sales-quotations');
+                } else if (mod === 'proforma-invoices' || mod === 'pi') {
+                  setActiveModule('sales-proforma-invoices');
+                } else if (mod === 'sales-orders' || mod === 'so' || mod === 'customer-pos' || mod === 'payments') {
+                  setActiveModule('sales-orders');
                 } else {
                   setActiveModule(`sales-${mod}`);
                 }
@@ -785,51 +811,102 @@ export default function App() {
             />
           )}
 
-          {(activeModule === 'sales-customers-enquiries' || activeModule === 'sales-enquiries' || activeModule === 'sales-customers-leads') && (
-            <CustomersEnquiriesPage
+          {/* STAGE 1: ENQUIRY */}
+          {(activeModule === 'sales-enquiries' || activeModule === 'sales-enquiry' || activeModule === 'sales-customers-enquiries') && (
+            <EnquiriesModule
               enquiries={enquiries}
               products={products}
               customers={salesCustomers}
-              leads={leads}
-              onSaveEnquiry={handleSaveEnquiry}
-              onConvertToLead={handleConvertToLead}
-              onSaveCustomer={handleSaveSalesCustomer}
-              onSaveLead={handleSaveLead}
-              onUpdateLeadStatus={handleUpdateLeadStatus}
+              followUps={followUps}
+              onSave={handleSaveEnquiry}
+              onConvertToLead={async (enqId) => {
+                await handleConvertToLead(enqId);
+                setActiveModule('sales-leads');
+              }}
+              onSaveFollowUp={handleSaveFollowUp}
+              onNavigateToQuotation={(enq) => {
+                setPreSelectedLeadForQuotation({
+                  customer: enq.customer,
+                  productName: enq.productName,
+                  expectedQuantity: enq.quantity || 1,
+                  expectedOrderValue: enq.targetPrice || 100000
+                });
+                setActiveModule('sales-quotations');
+              }}
               showToast={showToast}
-              defaultTab={activeModule === 'sales-enquiries' ? 'enquiries' : 'customers'}
             />
           )}
 
-          {activeModule === 'sales-follow-ups' && (
+          {/* STAGE 2: FOLLOW-UP */}
+          {(activeModule === 'sales-follow-ups' || activeModule === 'sales-followup') && (
             <FollowUpsModule
               followUps={followUps}
               customers={salesCustomers}
               leads={leads}
               quotations={quotations}
+              enquiries={enquiries}
               onSave={handleSaveFollowUp}
               onUpdateStatus={handleUpdateFollowUpStatus}
               showToast={showToast}
             />
           )}
 
-          {(activeModule === 'sales-quotations-pi' || activeModule === 'sales-quotations' || activeModule === 'sales-proforma-invoices') && (
-            <QuotationsPIPage
-              quotations={quotations}
-              proformaInvoices={proformaInvoices}
+          {/* STAGE 3: QUALIFIED / NOT QUALIFIED LEAD */}
+          {(activeModule === 'sales-leads' || activeModule === 'sales-customers-leads') && (
+            <CustomersLeadsModule
               customers={salesCustomers}
               leads={leads}
               products={products}
-              onSaveQuotation={handleSaveQuotation}
-              onReviseQuotation={handleReviseQuotation}
-              onUpdateQuotationStatus={handleUpdateQuotationStatus}
-              onSavePI={handleSavePI}
+              onSaveCustomer={handleSaveSalesCustomer}
+              onSaveLead={handleSaveLead}
+              onUpdateLeadStatus={handleUpdateLeadStatus}
+              onSaveFollowUp={handleSaveFollowUp}
+              onNavigateToQuotation={(lead) => {
+                setPreSelectedLeadForQuotation(lead);
+                setActiveModule('sales-quotations');
+              }}
               showToast={showToast}
-              defaultTab={activeModule === 'sales-proforma-invoices' ? 'pi' : 'quotations'}
+              defaultTab="qualified"
             />
           )}
 
-          {(activeModule === 'sales-orders-payments' || activeModule === 'sales-customer-pos' || activeModule === 'sales-payments' || activeModule === 'sales-sales-orders') && (
+          {/* STAGE 4: QUOTATION */}
+          {(activeModule === 'sales-quotations' || activeModule === 'sales-quotation' || activeModule === 'sales-quotations-pi') && (
+            <QuotationsModule
+              quotations={quotations}
+              customers={salesCustomers}
+              leads={leads}
+              products={products}
+              onSave={handleSaveQuotation}
+              onRevise={handleReviseQuotation}
+              onUpdateStatus={handleUpdateQuotationStatus}
+              onSaveFollowUp={handleSaveFollowUp}
+              preSelectedLead={preSelectedLeadForQuotation}
+              onNavigateToPI={(quote) => {
+                setPreSelectedQuoteForPI(quote);
+                setActiveModule('sales-proforma-invoices');
+              }}
+              showToast={showToast}
+            />
+          )}
+
+          {/* STAGE 5: PROFORMA INVOICE (PI) */}
+          {(activeModule === 'sales-proforma-invoices' || activeModule === 'sales-pi') && (
+            <ProformaInvoicesModule
+              proformaInvoices={proformaInvoices}
+              quotations={quotations}
+              onSave={handleSavePI}
+              preSelectedQuote={preSelectedQuoteForPI}
+              onNavigateToSO={(pi) => {
+                setPreSelectedPIForSO(pi);
+                setActiveModule('sales-orders');
+              }}
+              showToast={showToast}
+            />
+          )}
+
+          {/* STAGE 6: SALES ORDER (SO) */}
+          {(activeModule === 'sales-orders' || activeModule === 'sales-so' || activeModule === 'sales-orders-payments' || activeModule === 'sales-customer-pos' || activeModule === 'sales-payments' || activeModule === 'sales-sales-orders') && (
             <OrdersPaymentsPage
               salesOrders={salesOrders}
               customerPOs={customerPOs}
@@ -838,6 +915,7 @@ export default function App() {
               quotations={quotations}
               proformaInvoices={proformaInvoices}
               products={products}
+              preSelectedPI={preSelectedPIForSO}
               onSaveCustomerPO={handleSaveCustomerPO}
               onVerifyCustomerPO={handleVerifyCustomerPO}
               onSaveSalesOrder={handleSaveSalesOrder}
@@ -845,7 +923,7 @@ export default function App() {
               onSavePayment={handleSavePayment}
               onVerifyPayment={handleVerifyPayment}
               showToast={showToast}
-              defaultTab={activeModule === 'sales-customer-pos' ? 'customer-pos' : activeModule === 'sales-payments' ? 'payments' : 'orders'}
+              defaultTab={activeModule === 'sales-customer-pos' ? 'cpo' : activeModule === 'sales-payments' ? 'payments' : 'so'}
             />
           )}
 

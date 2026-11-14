@@ -13,6 +13,10 @@ const followUpSchema = new mongoose.Schema({
     ref: 'Customer',
     required: true
   },
+  enquiryReference: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Enquiry'
+  },
   relatedLead: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Lead'

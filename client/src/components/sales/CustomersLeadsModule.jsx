@@ -1,18 +1,52 @@
 import React, { useState } from 'react';
-import { Plus, Eye, Users, Trophy, XCircle, Building2, CheckCircle2 } from 'lucide-react';
+import {
+  Plus,
+  Eye,
+  Users,
+  Trophy,
+  XCircle,
+  Building2,
+  CheckCircle2,
+  FileText,
+  PhoneCall,
+  ArrowRight,
+  Clock,
+  Sparkles,
+  Calendar,
+  Filter
+} from 'lucide-react';
 import DataTable from '../common/DataTable';
 import StatusBadge from '../common/StatusBadge';
 import Modal from '../common/Modal';
 import KpiCard from '../common/KpiCard';
 
-export default function CustomersLeadsModule({ customers, leads, products, onSaveCustomer, onSaveLead, onUpdateLeadStatus, showToast }) {
-  const [activeTab, setActiveTab] = useState('leads'); // 'leads' or 'customers'
+export default function CustomersLeadsModule({
+  customers = [],
+  leads = [],
+  products = [],
+  onSaveCustomer,
+  onSaveLead,
+  onUpdateLeadStatus,
+  onSaveFollowUp,
+  onNavigateToQuotation,
+  showToast,
+  defaultTab = 'qualified'
+}) {
+  const [activeTab, setActiveTab] = useState(defaultTab); // 'qualified', 'not-qualified', 'all-leads', 'customers'
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState(null);
+  const [quickFollowUpLead, setQuickFollowUpLead] = useState(null);
 
-  // Form State
+  // Quick Follow-up Form State
+  const [followUpData, setFollowUpData] = useState({
+    contactType: 'Phone Call',
+    responseStatus: 'Interested',
+    discussionNotes: '',
+    nextFollowUpDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+  });
+
+  // Form State for New Customer + Lead
   const [formData, setFormData] = useState({
-    // Customer Info
     customerCode: '',
     companyName: '',
     contactPerson: '',
@@ -27,14 +61,13 @@ export default function CustomersLeadsModule({ customers, leads, products, onSav
     customerType: 'Company',
     paymentTerms: 'Net 30 Days',
     notes: '',
-    
-    // Lead Info
     createLeadOpportunity: true,
     leadNumber: '',
+    productName: '',
     interestedProduct: '',
     expectedQuantity: 1,
-    expectedOrderValue: 0,
-    expectedClosingDate: '',
+    expectedOrderValue: 100000,
+    expectedClosingDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     leadOwner: 'Senior Sales Lead',
     leadStatus: 'Qualified'
   });
@@ -57,6 +90,7 @@ export default function CustomersLeadsModule({ customers, leads, products, onSav
       notes: '',
       createLeadOpportunity: true,
       leadNumber: '',
+      productName: '',
       interestedProduct: products[0]?._id || '',
       expectedQuantity: 1,
       expectedOrderValue: products[0]?.standardPrice || 100000,
@@ -70,13 +104,12 @@ export default function CustomersLeadsModule({ customers, leads, products, onSav
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      if (!formData.companyName || !formData.contactPerson) {
-        showToast('Please fill out Company Name and Contact Person', 'error');
+      if (!formData.companyName || !formData.contactPerson || !formData.mobileNumber) {
+        showToast('Please fill Company Name, Contact Person, and Mobile Number', 'error');
         return;
       }
 
-      // 1. Create or Find Customer
-      const custData = {
+      const custRes = await onSaveCustomer({
         customerCode: formData.customerCode,
         companyName: formData.companyName,
         contactPerson: formData.contactPerson,
@@ -91,27 +124,26 @@ export default function CustomersLeadsModule({ customers, leads, products, onSav
         customerType: formData.customerType,
         paymentTerms: formData.paymentTerms,
         notes: formData.notes
-      };
+      });
 
-      const savedCust = await onSaveCustomer(custData);
-      const custId = savedCust?.data?._id || savedCust?._id;
+      const custId = custRes?._id || (typeof custRes === 'string' ? custRes : null) || customers[customers.length - 1]?._id;
 
-      // 2. Optionally Create Lead Opportunity
       if (formData.createLeadOpportunity && custId) {
         await onSaveLead({
           leadNumber: formData.leadNumber,
           customer: custId,
-          interestedProduct: formData.interestedProduct,
+          productName: formData.productName || 'Custom Equipment Requirement',
+          interestedProduct: formData.interestedProduct || null,
           expectedQuantity: Number(formData.expectedQuantity) || 1,
           expectedOrderValue: Number(formData.expectedOrderValue) || 0,
           expectedClosingDate: formData.expectedClosingDate,
           leadOwner: formData.leadOwner,
-          leadStatus: formData.leadStatus,
+          leadStatus: formData.leadStatus || 'Qualified',
           notes: formData.notes
         });
       }
 
-      showToast('Customer & Lead opportunity saved successfully without duplication!', 'success');
+      showToast('Customer & Lead opportunity saved successfully!', 'success');
       setIsAddOpen(false);
     } catch (err) {
       showToast(err.message, 'error');
@@ -130,6 +162,55 @@ export default function CustomersLeadsModule({ customers, leads, products, onSav
     }
   };
 
+  const handleOpenFollowUp = (lead) => {
+    setQuickFollowUpLead(lead);
+    setFollowUpData({
+      contactType: 'Phone Call',
+      responseStatus: 'Interested',
+      discussionNotes: '',
+      nextFollowUpDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+    });
+  };
+
+  const handleSaveFollowUpSubmit = async (e) => {
+    e.preventDefault();
+    if (!quickFollowUpLead) return;
+    try {
+      if (!followUpData.discussionNotes) {
+        showToast('Please enter discussion notes', 'error');
+        return;
+      }
+      if (onSaveFollowUp) {
+        await onSaveFollowUp({
+          customer: quickFollowUpLead.customer?._id || quickFollowUpLead.customer,
+          leadReference: quickFollowUpLead._id,
+          contactType: followUpData.contactType,
+          responseStatus: followUpData.responseStatus,
+          discussionNotes: followUpData.discussionNotes,
+          nextFollowUpDate: followUpData.nextFollowUpDate,
+          priority: 'High',
+          status: 'Scheduled'
+        });
+        showToast(`Follow-up note logged for ${quickFollowUpLead.leadNumber}!`, 'success');
+      }
+      setQuickFollowUpLead(null);
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  };
+
+  const handleCreateQuotationClick = (lead) => {
+    if (onNavigateToQuotation) {
+      onNavigateToQuotation(lead);
+    } else {
+      showToast('Quotation module ready for Lead ' + lead.leadNumber, 'info');
+    }
+  };
+
+  // Filtered Leads
+  const qualifiedLeads = leads.filter(l => l.leadStatus === 'Qualified' || l.leadStatus === 'New');
+  const notQualifiedLeads = leads.filter(l => l.leadStatus === 'Lost' || l.leadStatus === 'Not Qualified');
+
   // Leads Columns
   const leadsColumns = [
     {
@@ -142,40 +223,36 @@ export default function CustomersLeadsModule({ customers, leads, products, onSav
       )
     },
     {
-      header: 'Company Name',
+      header: 'Company / Client',
       accessor: 'customer',
       render: (row) => (
         <div>
           <strong style={{ color: 'var(--text-primary)' }}>{row.customer?.companyName || '—'}</strong>
           <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-            {row.customer?.customerCode} • {row.customer?.city}
+            {row.customer?.contactPerson} • {row.customer?.city || 'India'}
           </div>
         </div>
       )
     },
     {
-      header: 'Contact Person',
-      render: (row) => row.customer?.contactPerson
-    },
-    {
-      header: 'Interested Product',
+      header: 'Product Requirement',
       render: (row) => (
         <div>
-          <span style={{ color: 'var(--primary)', fontWeight: 500 }}>
-            {row.interestedProduct?.productName || 'Equipment'}
+          <span style={{ color: 'var(--primary)', fontWeight: 600 }}>
+            {row.productName || row.interestedProduct?.productName || 'Custom Specification'}
           </span>
           <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-            Qty: {row.expectedQuantity}
+            Qty: {row.expectedQuantity || 1}
           </div>
         </div>
       )
     },
     {
-      header: 'Expected Value',
+      header: 'Deal Value',
       accessor: 'expectedOrderValue',
       render: (row) => (
-        <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: '#34D399' }}>
-          ₹{row.expectedOrderValue?.toLocaleString('en-IN')}
+        <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--success)' }}>
+          ₹{row.expectedOrderValue?.toLocaleString('en-IN') || '0'}
         </span>
       )
     },
@@ -185,44 +262,79 @@ export default function CustomersLeadsModule({ customers, leads, products, onSav
       render: (row) => row.expectedClosingDate ? new Date(row.expectedClosingDate).toLocaleDateString('en-GB') : '—'
     },
     {
-      header: 'Lead Status',
+      header: 'Status',
       accessor: 'leadStatus',
       render: (row) => <StatusBadge status={row.leadStatus} />
     },
     {
-      header: 'Lead Owner',
-      accessor: 'leadOwner',
-      render: (row) => row.leadOwner
-    },
-    {
-      header: 'Actions',
-      render: (row) => (
-        <div className="action-btns" onClick={(e) => e.stopPropagation()}>
-          <button className="icon-btn" title="View Lead & Account" onClick={() => setSelectedRecord(row)}>
-            <Eye size={15} />
-          </button>
-          {row.leadStatus !== 'Won' && (
+      header: 'Pipeline Actions',
+      render: (row) => {
+        const isQualified = row.leadStatus === 'Qualified' || row.leadStatus === 'New';
+        return (
+          <div className="action-btns" onClick={(e) => e.stopPropagation()}>
+            <button className="icon-btn" title="View Lead & History" onClick={() => setSelectedRecord(row)}>
+              <Eye size={15} />
+            </button>
+
+            {/* Step 3 -> 4: Move from Qualified Lead to Quotation */}
+            {isQualified && (
+              <button
+                className="btn btn-primary"
+                style={{
+                  padding: '3px 8px',
+                  fontSize: '0.72rem',
+                  gap: 4,
+                  height: 26,
+                  borderRadius: 6
+                }}
+                title="Create Quotation for this Lead"
+                onClick={() => handleCreateQuotationClick(row)}
+              >
+                <FileText size={12} /> Quote ➔
+              </button>
+            )}
+
+            {/* Quick Follow-up Logger */}
             <button
               className="icon-btn"
-              title="Mark Won"
-              style={{ color: '#10B981' }}
-              onClick={() => handleUpdateStatus(row._id, 'Won')}
+              title="Add Follow-up Log"
+              style={{ color: 'var(--primary)' }}
+              onClick={() => handleOpenFollowUp(row)}
             >
-              <Trophy size={14} />
+              <PhoneCall size={14} />
             </button>
-          )}
-          {row.leadStatus !== 'Lost' && (
-            <button
-              className="icon-btn"
-              title="Mark Lost"
-              style={{ color: '#EF4444' }}
-              onClick={() => handleUpdateStatus(row._id, 'Lost')}
-            >
-              <XCircle size={14} />
-            </button>
-          )}
-        </div>
-      )
+
+            {/* Qualification Toggles */}
+            {isQualified ? (
+              <button
+                className="icon-btn"
+                title="Mark as Not Qualified / Lost"
+                style={{ color: 'var(--danger)' }}
+                onClick={() => handleUpdateStatus(row._id, 'Lost')}
+              >
+                <XCircle size={14} />
+              </button>
+            ) : (
+              <button
+                className="btn btn-secondary"
+                style={{
+                  padding: '3px 8px',
+                  fontSize: '0.72rem',
+                  color: 'var(--success)',
+                  borderColor: 'var(--success-border)',
+                  gap: 4,
+                  height: 26,
+                  borderRadius: 6
+                }}
+                title="Requalify Lead (Move to Qualified)"
+                onClick={() => handleUpdateStatus(row._id, 'Qualified')}
+              >
+                <CheckCircle2 size={12} /> Requalify
+              </button>
+            )}
+          </div>
+        );
+      }
     }
   ];
 
@@ -263,11 +375,6 @@ export default function CustomersLeadsModule({ customers, leads, products, onSav
       render: (row) => row.email || '—'
     },
     {
-      header: 'GST Number',
-      accessor: 'gstNumber',
-      render: (row) => <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.78rem' }}>{row.gstNumber || '—'}</span>
-    },
-    {
       header: 'Payment Terms',
       accessor: 'paymentTerms',
       render: (row) => <span className="nav-badge-pill">{row.paymentTerms}</span>
@@ -284,148 +391,248 @@ export default function CustomersLeadsModule({ customers, leads, products, onSav
     }
   ];
 
+  const currentData =
+    activeTab === 'qualified'
+      ? qualifiedLeads
+      : activeTab === 'not-qualified'
+      ? notQualifiedLeads
+      : activeTab === 'customers'
+      ? customers
+      : leads;
+
   return (
     <div>
       {/* KPI Cards */}
       <div className="kpi-grid">
-        <KpiCard title="Total Accounts" value={customers.length} subtext="Customer Directory" icon={Building2} color="#6366F1" />
-        <KpiCard title="Active Pipeline" value={leads.filter(l => l.leadStatus === 'Qualified' || l.leadStatus === 'New').length} subtext="Open Opportunities" icon={Users} color="#06B6D4" />
-        <KpiCard title="Won Deals" value={leads.filter(l => l.leadStatus === 'Won').length} subtext="Converted Clients" icon={Trophy} color="#10B981" />
-        <KpiCard title="Lost Opportunities" value={leads.filter(l => l.leadStatus === 'Lost').length} subtext="Archived" icon={XCircle} color="#EF4444" />
+        <KpiCard
+          title="Qualified Leads"
+          value={qualifiedLeads.length}
+          subtext="Ready for Quotation"
+          icon={CheckCircle2}
+          color="var(--success)"
+        />
+        <KpiCard
+          title="Not Qualified / Lost"
+          value={notQualifiedLeads.length}
+          subtext="Cold or archived"
+          icon={XCircle}
+          color="var(--danger)"
+        />
+        <KpiCard
+          title="Total Pipeline Value"
+          value={`₹${(leads.reduce((sum, l) => sum + (l.expectedOrderValue || 0), 0) / 100000).toFixed(1)}L`}
+          subtext="Active Deal Pipeline"
+          icon={Trophy}
+          color="var(--primary)"
+        />
+        <KpiCard
+          title="Client Accounts"
+          value={customers.length}
+          subtext="Registered Companies"
+          icon={Building2}
+          color="#6366F1"
+        />
       </div>
 
-      {/* Tab Switcher: Leads vs Customers */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+      {/* Sub-Tabs: Explicit Qualified vs Not Qualified */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
         <div className="tab-switcher">
           <button
-            className={`tab-btn ${activeTab === 'leads' ? 'active' : ''}`}
-            onClick={() => setActiveTab('leads')}
+            className={`tab-btn ${activeTab === 'qualified' ? 'active' : ''}`}
+            onClick={() => setActiveTab('qualified')}
+            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
           >
-            Sales Leads ({leads.length})
+            <CheckCircle2 size={14} style={{ color: 'var(--success)' }} />
+            Qualified Leads ({qualifiedLeads.length})
           </button>
+
+          <button
+            className={`tab-btn ${activeTab === 'not-qualified' ? 'active' : ''}`}
+            onClick={() => setActiveTab('not-qualified')}
+            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+          >
+            <XCircle size={14} style={{ color: 'var(--danger)' }} />
+            Not Qualified / Lost ({notQualifiedLeads.length})
+          </button>
+
+          <button
+            className={`tab-btn ${activeTab === 'all-leads' ? 'active' : ''}`}
+            onClick={() => setActiveTab('all-leads')}
+            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+          >
+            <Users size={14} />
+            All Pipeline ({leads.length})
+          </button>
+
           <button
             className={`tab-btn ${activeTab === 'customers' ? 'active' : ''}`}
             onClick={() => setActiveTab('customers')}
+            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
           >
-            Registered Customers ({customers.length})
+            <Building2 size={14} />
+            Client Accounts ({customers.length})
           </button>
         </div>
 
         <button className="btn btn-primary" onClick={handleOpenAdd}>
-          <Plus size={16} /> Add Customer & Opportunity
+          <Plus size={16} /> Add Opportunity
         </button>
       </div>
 
       {/* Main Table */}
-      {activeTab === 'leads' ? (
-        <DataTable
-          columns={leadsColumns}
-          data={leads}
-          searchPlaceholder="Search leads by customer, product, lead no..."
-        />
-      ) : (
+      {activeTab === 'customers' ? (
         <DataTable
           columns={customersColumns}
           data={customers}
-          searchPlaceholder="Search customers by company, phone, city..."
+          searchPlaceholder="Search customer accounts by company, phone, city..."
+        />
+      ) : (
+        <DataTable
+          columns={leadsColumns}
+          data={currentData}
+          searchPlaceholder="Search leads by customer, product, lead no..."
         />
       )}
 
-      {/* Add Customer & Lead Modal */}
+      {/* Modal: Quick Follow-up Logger */}
+      <Modal
+        isOpen={!!quickFollowUpLead}
+        onClose={() => setQuickFollowUpLead(null)}
+        title={`Log Follow-up: ${quickFollowUpLead?.leadNumber}`}
+        subtitle={`Record discussion note for ${quickFollowUpLead?.customer?.companyName || 'Lead'}`}
+        size="md"
+      >
+        <form onSubmit={handleSaveFollowUpSubmit}>
+          <div className="form-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)', gap: 14 }}>
+            <div className="form-group">
+              <label className="form-label">Contact Method</label>
+              <select
+                className="form-select"
+                value={followUpData.contactType}
+                onChange={(e) => setFollowUpData({ ...followUpData, contactType: e.target.value })}
+              >
+                <option value="Phone Call">Phone Call</option>
+                <option value="WhatsApp">WhatsApp</option>
+                <option value="Email">Email</option>
+                <option value="In-Person Meeting">In-Person Meeting</option>
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Client Response</label>
+              <select
+                className="form-select"
+                value={followUpData.responseStatus}
+                onChange={(e) => setFollowUpData({ ...followUpData, responseStatus: e.target.value })}
+              >
+                <option value="Interested">Interested (High Chance)</option>
+                <option value="Negotiation">Negotiation / Reviewing</option>
+                <option value="Call Scheduled">Call Scheduled</option>
+                <option value="No Response">No Response</option>
+                <option value="Not Interested">Not Interested</option>
+              </select>
+            </div>
+
+            <div className="form-group" style={{ gridColumn: 'span 2' }}>
+              <label className="form-label">Discussion Notes & Action Required *</label>
+              <textarea
+                className="form-textarea"
+                rows={3}
+                placeholder="e.g. Client requested technical specs and pricing breakdown for 2 units..."
+                value={followUpData.discussionNotes}
+                onChange={(e) => setFollowUpData({ ...followUpData, discussionNotes: e.target.value })}
+                required
+              />
+            </div>
+
+            <div className="form-group" style={{ gridColumn: 'span 2' }}>
+              <label className="form-label">Next Reminder Date</label>
+              <input
+                type="date"
+                className="form-input"
+                value={followUpData.nextFollowUpDate}
+                onChange={(e) => setFollowUpData({ ...followUpData, nextFollowUpDate: e.target.value })}
+              />
+            </div>
+          </div>
+
+          <div style={{ marginTop: 20, display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+            <button type="button" className="btn btn-secondary" onClick={() => setQuickFollowUpLead(null)}>
+              Cancel
+            </button>
+            <button type="submit" className="btn btn-primary">
+              Save Follow-up Note
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Modal: Add Customer & Lead Opportunity */}
       <Modal
         isOpen={isAddOpen}
         onClose={() => setIsAddOpen(false)}
+        title="Add Customer & Opportunity"
+        subtitle="Register new client particulars and initiate sales opportunity"
         size="lg"
-        title="Register Customer & Lead Opportunity"
-        subtitle="Maintain account records and sales pipeline opportunity simultaneously without duplication"
       >
         <form onSubmit={handleSubmit}>
-          {/* Section 1: Customer Profile */}
-          <div style={{ fontWeight: 700, fontSize: '0.85rem', color: '#818CF8', marginBottom: 12 }}>
-            Section 1: Company & Contact Information
+          <div style={{ marginBottom: 14, paddingBottom: 8, borderBottom: '1px solid var(--border-subtle)', fontWeight: 700, fontSize: '0.85rem', color: 'var(--primary)' }}>
+            1. Client Master Information
           </div>
-
-          <div className="form-grid">
+          <div className="form-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
             <div className="form-group">
-              <label className="form-label">Customer Code</label>
+              <label className="form-label">Company Name *</label>
               <input
                 type="text"
                 className="form-input"
-                placeholder="Auto-generated (e.g. CUS-004)"
-                value={formData.customerCode}
-                onChange={(e) => setFormData({ ...formData, customerCode: e.target.value })}
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Company Name <span className="req">*</span></label>
-              <input
-                type="text"
-                required
-                className="form-input"
-                placeholder="e.g. ABC Industries Pvt Ltd"
+                placeholder="e.g. CryoGas Systems India Pvt Ltd"
                 value={formData.companyName}
                 onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
+                required
               />
             </div>
-
             <div className="form-group">
-              <label className="form-label">Contact Person <span className="req">*</span></label>
+              <label className="form-label">Contact Person *</label>
               <input
                 type="text"
-                required
                 className="form-input"
-                placeholder="e.g. Kumar Mohan"
+                placeholder="e.g. Mr. Rajesh Kumar"
                 value={formData.contactPerson}
                 onChange={(e) => setFormData({ ...formData, contactPerson: e.target.value })}
+                required
               />
             </div>
-
             <div className="form-group">
-              <label className="form-label">Mobile Number <span className="req">*</span></label>
+              <label className="form-label">Mobile Number *</label>
               <input
-                type="tel"
-                required
+                type="text"
                 className="form-input"
-                placeholder="9876543210"
+                placeholder="e.g. 9876543210"
                 value={formData.mobileNumber}
                 onChange={(e) => setFormData({ ...formData, mobileNumber: e.target.value })}
+                required
               />
             </div>
-
             <div className="form-group">
-              <label className="form-label">Email Address</label>
+              <label className="form-label">Email</label>
               <input
                 type="email"
                 className="form-input"
-                placeholder="kumar@abcindustries.com"
+                placeholder="e.g. rajesh@cryogas.in"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               />
             </div>
-
             <div className="form-group">
-              <label className="form-label">GSTIN Number</label>
+              <label className="form-label">GST Number</label>
               <input
                 type="text"
                 className="form-input"
-                placeholder="33AABCA1234F1Z9"
+                placeholder="33AAAAA0000A1Z5"
                 value={formData.gstNumber}
-                onChange={(e) => setFormData({ ...formData, gstNumber: e.target.value.toUpperCase() })}
+                onChange={(e) => setFormData({ ...formData, gstNumber: e.target.value })}
               />
             </div>
-
-            <div className="form-group col-span-2">
-              <label className="form-label">Billing Address</label>
-              <textarea
-                rows="2"
-                className="form-textarea"
-                placeholder="Street address, industrial plot no..."
-                value={formData.billingAddress}
-                onChange={(e) => setFormData({ ...formData, billingAddress: e.target.value })}
-              />
-            </div>
-
             <div className="form-group">
               <label className="form-label">City</label>
               <input
@@ -435,59 +642,44 @@ export default function CustomersLeadsModule({ customers, leads, products, onSav
                 onChange={(e) => setFormData({ ...formData, city: e.target.value })}
               />
             </div>
-
-            <div className="form-group">
-              <label className="form-label">Payment Terms</label>
-              <select
-                className="form-select"
-                value={formData.paymentTerms}
-                onChange={(e) => setFormData({ ...formData, paymentTerms: e.target.value })}
-              >
-                <option value="Net 30 Days">Net 30 Days</option>
-                <option value="50% Advance, Balance Before Dispatch">50% Advance, Balance Before Dispatch</option>
-                <option value="Advance 100%">Advance 100%</option>
-                <option value="Immediate">Immediate / Cash</option>
-              </select>
-            </div>
           </div>
 
-          {/* Section 2: Lead Details */}
-          <div style={{ margin: '22px 0 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontWeight: 700, fontSize: '0.85rem', color: '#818CF8' }}>
-              Section 2: Sales Opportunity / Lead Particulars
-            </span>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.8rem', cursor: 'pointer' }}>
+          <div style={{ marginTop: 20, marginBottom: 14, paddingBottom: 8, borderBottom: '1px solid var(--border-subtle)', fontWeight: 700, fontSize: '0.85rem', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span>2. Lead Opportunity Details</span>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-primary)', cursor: 'pointer' }}>
               <input
                 type="checkbox"
                 checked={formData.createLeadOpportunity}
                 onChange={(e) => setFormData({ ...formData, createLeadOpportunity: e.target.checked })}
               />
-              <span>Create Active Lead</span>
+              Create Active Pipeline Lead
             </label>
           </div>
 
           {formData.createLeadOpportunity && (
-            <div className="form-grid">
+            <div className="form-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
+              <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                <label className="form-label">Product Requirement (Manual Specification) *</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="e.g. Cryogenic Tank 5000L with Vacuum Jacketed Piping"
+                  value={formData.productName}
+                  onChange={(e) => setFormData({ ...formData, productName: e.target.value })}
+                  required={formData.createLeadOpportunity}
+                />
+              </div>
+
               <div className="form-group">
-                <label className="form-label">Interested Product</label>
-                <select
-                  className="form-select"
-                  value={formData.interestedProduct}
-                  onChange={(e) => {
-                    const prd = products.find(p => p._id === e.target.value);
-                    setFormData({
-                      ...formData,
-                      interestedProduct: e.target.value,
-                      expectedOrderValue: prd ? prd.standardPrice * formData.expectedQuantity : formData.expectedOrderValue
-                    });
-                  }}
-                >
-                  {products.map(p => (
-                    <option key={p._id} value={p._id}>
-                      {p.productName} (₹{p.standardPrice?.toLocaleString('en-IN')})
-                    </option>
-                  ))}
-                </select>
+                <label className="form-label">Estimated Deal Value (₹) *</label>
+                <input
+                  type="number"
+                  className="form-input"
+                  placeholder="e.g. 500000"
+                  value={formData.expectedOrderValue}
+                  onChange={(e) => setFormData({ ...formData, expectedOrderValue: e.target.value })}
+                  required={formData.createLeadOpportunity}
+                />
               </div>
 
               <div className="form-group">
@@ -497,31 +689,25 @@ export default function CustomersLeadsModule({ customers, leads, products, onSav
                   min="1"
                   className="form-input"
                   value={formData.expectedQuantity}
-                  onChange={(e) => {
-                    const qty = Number(e.target.value) || 1;
-                    const prd = products.find(p => p._id === formData.interestedProduct);
-                    setFormData({
-                      ...formData,
-                      expectedQuantity: qty,
-                      expectedOrderValue: prd ? prd.standardPrice * qty : formData.expectedOrderValue
-                    });
-                  }}
+                  onChange={(e) => setFormData({ ...formData, expectedQuantity: e.target.value })}
                 />
               </div>
 
               <div className="form-group">
-                <label className="form-label">Expected Order Value (₹)</label>
-                <input
-                  type="number"
-                  min="0"
-                  className="form-input"
-                  value={formData.expectedOrderValue}
-                  onChange={(e) => setFormData({ ...formData, expectedOrderValue: Number(e.target.value) })}
-                />
+                <label className="form-label">Lead Qualification Status</label>
+                <select
+                  className="form-select"
+                  value={formData.leadStatus}
+                  onChange={(e) => setFormData({ ...formData, leadStatus: e.target.value })}
+                >
+                  <option value="Qualified">Qualified (High Probability)</option>
+                  <option value="New">New Lead</option>
+                  <option value="Lost">Not Qualified / Lost</option>
+                </select>
               </div>
 
               <div className="form-group">
-                <label className="form-label">Expected Closing Date</label>
+                <label className="form-label">Target Closing Date</label>
                 <input
                   type="date"
                   className="form-input"
@@ -529,95 +715,71 @@ export default function CustomersLeadsModule({ customers, leads, products, onSav
                   onChange={(e) => setFormData({ ...formData, expectedClosingDate: e.target.value })}
                 />
               </div>
-
-              <div className="form-group">
-                <label className="form-label">Lead Status</label>
-                <select
-                  className="form-select"
-                  value={formData.leadStatus}
-                  onChange={(e) => setFormData({ ...formData, leadStatus: e.target.value })}
-                >
-                  <option value="New">New</option>
-                  <option value="Qualified">Qualified</option>
-                  <option value="Won">Won</option>
-                  <option value="Lost">Lost</option>
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Lead Owner / Sales Staff</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  value={formData.leadOwner}
-                  onChange={(e) => setFormData({ ...formData, leadOwner: e.target.value })}
-                />
-              </div>
             </div>
           )}
 
-          <div className="modal-footer" style={{ marginTop: 24, padding: '16px 0 0 0' }}>
+          <div style={{ marginTop: 24, display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
             <button type="button" className="btn btn-secondary" onClick={() => setIsAddOpen(false)}>
               Cancel
             </button>
             <button type="submit" className="btn btn-primary">
-              Save Account & Opportunity
+              Save Opportunity
             </button>
           </div>
         </form>
       </Modal>
 
-      {/* View Record Details Modal */}
+      {/* Modal: View Details */}
       <Modal
         isOpen={!!selectedRecord}
         onClose={() => setSelectedRecord(null)}
-        size="lg"
-        title={selectedRecord?.leadNumber ? `Lead: ${selectedRecord.leadNumber}` : `Customer: ${selectedRecord?.customerCode}`}
+        title={selectedRecord?.leadNumber ? `Lead: ${selectedRecord.leadNumber}` : `Client: ${selectedRecord?.companyName}`}
         subtitle={selectedRecord?.customer?.companyName || selectedRecord?.companyName}
+        size="lg"
       >
         {selectedRecord && (
           <div>
             <div className="detail-grid">
-              <div className="detail-item">
-                <div className="detail-label">Company Name</div>
-                <div className="detail-value">{selectedRecord.customer?.companyName || selectedRecord.companyName}</div>
-              </div>
               <div className="detail-item">
                 <div className="detail-label">Status</div>
                 <div className="detail-value">
                   <StatusBadge status={selectedRecord.leadStatus || selectedRecord.status || 'Active'} />
                 </div>
               </div>
+
+              <div className="detail-item">
+                <div className="detail-label">Client Name</div>
+                <div className="detail-value">
+                  {selectedRecord.customer?.companyName || selectedRecord.companyName}
+                </div>
+              </div>
+
               <div className="detail-item">
                 <div className="detail-label">Contact Person</div>
-                <div className="detail-value">{selectedRecord.customer?.contactPerson || selectedRecord.contactPerson}</div>
+                <div className="detail-value">
+                  {selectedRecord.customer?.contactPerson || selectedRecord.contactPerson}
+                </div>
               </div>
+
               <div className="detail-item">
-                <div className="detail-label">Phone</div>
+                <div className="detail-label">Mobile Number</div>
                 <div className="detail-value" style={{ fontFamily: 'var(--font-mono)' }}>
                   {selectedRecord.customer?.mobileNumber || selectedRecord.mobileNumber}
                 </div>
-              </div>
-              <div className="detail-item">
-                <div className="detail-label">Email</div>
-                <div className="detail-value">{selectedRecord.customer?.email || selectedRecord.email || '—'}</div>
-              </div>
-              <div className="detail-item">
-                <div className="detail-label">Location</div>
-                <div className="detail-value">{selectedRecord.customer?.city || selectedRecord.city || 'Chennai'}</div>
               </div>
 
               {selectedRecord.leadNumber && (
                 <>
                   <div className="detail-item">
-                    <div className="detail-label">Interested Equipment</div>
-                    <div className="detail-value" style={{ color: '#A5B4FC' }}>
-                      {selectedRecord.interestedProduct?.productName || 'Machine Part'}
+                    <div className="detail-label">Product Requirement</div>
+                    <div className="detail-value" style={{ color: 'var(--primary)' }}>
+                      {selectedRecord.productName || selectedRecord.interestedProduct?.productName || 'Custom Specification'}
                     </div>
                   </div>
+
                   <div className="detail-item">
-                    <div className="detail-label">Expected Deal Value</div>
-                    <div className="detail-value" style={{ color: '#34D399', fontFamily: 'var(--font-mono)' }}>
+                    <div className="detail-label">Estimated Value</div>
+                    <div className="detail-value" style={{ color: 'var(--success)', fontFamily: 'var(--font-mono)' }}>
                       ₹{selectedRecord.expectedOrderValue?.toLocaleString('en-IN')}
                     </div>
                   </div>
@@ -625,20 +787,30 @@ export default function CustomersLeadsModule({ customers, leads, products, onSav
               )}
             </div>
 
-            {selectedRecord.leadNumber && selectedRecord.leadStatus !== 'Won' && (
-              <div style={{ marginTop: 20, display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+            {selectedRecord.leadNumber && (
+              <div style={{ marginTop: 24, display: 'flex', gap: 10, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
                 <button
+                  type="button"
                   className="btn btn-secondary"
-                  onClick={() => handleUpdateStatus(selectedRecord._id, 'Lost')}
+                  onClick={() => {
+                    handleOpenFollowUp(selectedRecord);
+                  }}
                 >
-                  <XCircle size={15} color="#EF4444" /> Mark as Lost
+                  <PhoneCall size={14} /> + Log Follow-up
                 </button>
-                <button
-                  className="btn btn-primary"
-                  onClick={() => handleUpdateStatus(selectedRecord._id, 'Won')}
-                >
-                  <Trophy size={15} color="#FBBF24" /> Mark as Won Deal
-                </button>
+
+                {(selectedRecord.leadStatus === 'Qualified' || selectedRecord.leadStatus === 'New') && (
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={() => {
+                      setSelectedRecord(null);
+                      handleCreateQuotationClick(selectedRecord);
+                    }}
+                  >
+                    <FileText size={14} /> Create Quotation ➔
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -647,4 +819,3 @@ export default function CustomersLeadsModule({ customers, leads, products, onSav
     </div>
   );
 }
-
