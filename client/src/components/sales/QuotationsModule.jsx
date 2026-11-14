@@ -23,6 +23,7 @@ export default function QuotationsModule({
   customers = [],
   leads = [],
   products = [],
+  followUps = [],
   onSave,
   onRevise,
   onUpdateStatus,
@@ -36,6 +37,16 @@ export default function QuotationsModule({
   const [selectedQuote, setSelectedQuote] = useState(null);
   const [quickFollowUpQuote, setQuickFollowUpQuote] = useState(null);
   const [activeTab, setActiveTab] = useState('all'); // 'all' | 'Draft' | 'Sent' | 'Accepted' | 'Rejected'
+
+  const getQuoteFollowUps = (quoteId, quoteNumber) => {
+    return followUps.filter(f =>
+      f.relatedQuotation?._id === quoteId ||
+      f.relatedQuotation === quoteId ||
+      f.quotationReference?._id === quoteId ||
+      f.quotationReference === quoteId ||
+      (quoteNumber && f.discussionNotes && f.discussionNotes.includes(quoteNumber))
+    );
+  };
 
   // Quick Follow-up Form State
   const [followUpData, setFollowUpData] = useState({
@@ -325,6 +336,26 @@ export default function QuotationsModule({
           ₹{row.grandTotal?.toLocaleString('en-IN')}
         </span>
       )
+    },
+    {
+      header: 'Touchpoints',
+      render: (row) => {
+        const count = getQuoteFollowUps(row._id, row.quotationNumber).length;
+        return (
+          <span
+            className="badge"
+            style={{
+              background: count > 0 ? 'var(--primary-light)' : 'var(--bg-surface-elevated)',
+              color: count > 0 ? 'var(--primary)' : 'var(--text-muted)',
+              border: `1px solid ${count > 0 ? 'var(--primary-border)' : 'var(--border-subtle)'}`,
+              fontSize: '0.72rem',
+              fontWeight: 600
+            }}
+          >
+            {count} {count === 1 ? 'Touchpoint' : 'Touchpoints'}
+          </span>
+        );
+      }
     },
     {
       header: 'Status',
@@ -935,6 +966,70 @@ export default function QuotationsModule({
                 )}
               </div>
             </div>
+
+            {/* Quotation Follow-up & Discussion History Timeline */}
+            <div style={{ marginTop: 24, borderTop: '1px solid var(--border-subtle)', paddingTop: 18 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>
+                  Quotation Follow-up & Discussion History ({getQuoteFollowUps(selectedQuote._id, selectedQuote.quotationNumber).length})
+                </span>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  style={{ padding: '4px 10px', fontSize: '0.75rem', gap: 4 }}
+                  onClick={() => {
+                    const q = selectedQuote;
+                    setSelectedQuote(null);
+                    setQuickFollowUpQuote(q);
+                  }}
+                >
+                  <PhoneCall size={12} /> + Add Follow-up Note
+                </button>
+              </div>
+
+              {getQuoteFollowUps(selectedQuote._id, selectedQuote.quotationNumber).length === 0 ? (
+                <div style={{ padding: '16px', background: 'var(--bg-surface-elevated)', borderRadius: 8, fontSize: '0.82rem', color: 'var(--text-muted)', textAlign: 'center' }}>
+                  No follow-up notes logged for this quotation yet. Click <strong>+ Add Follow-up Note</strong> to record customer negotiations and discussions.
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxHeight: 220, overflowY: 'auto' }}>
+                  {getQuoteFollowUps(selectedQuote._id, selectedQuote.quotationNumber).map((fu, idx) => (
+                    <div
+                      key={fu._id || idx}
+                      style={{
+                        padding: '12px 14px',
+                        borderRadius: 8,
+                        background: 'var(--bg-surface-elevated)',
+                        border: '1px solid var(--border-subtle)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 4
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{ fontWeight: 700, fontSize: '0.82rem', color: 'var(--primary)' }}>
+                            {fu.contactMethod || fu.contactType || 'Phone Call'}
+                          </span>
+                          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                            {new Date(fu.contactDate || fu.createdAt).toLocaleDateString('en-GB')}
+                          </span>
+                        </div>
+                        <StatusBadge status={fu.customerResponse || fu.responseStatus || fu.status || 'Negotiation'} />
+                      </div>
+                      <div style={{ fontSize: '0.82rem', color: 'var(--text-primary)', marginTop: 4 }}>
+                        {fu.discussionNotes}
+                      </div>
+                      {fu.nextFollowUpDate && (
+                        <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: 4 }}>
+                          Next Reminder: <strong>{new Date(fu.nextFollowUpDate).toLocaleDateString('en-GB')}</strong>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
       </Modal>
@@ -958,10 +1053,14 @@ export default function QuotationsModule({
             if (onSaveFollowUp) {
               await onSaveFollowUp({
                 customer: quickFollowUpQuote.customer?._id || quickFollowUpQuote.customer,
+                companyName: quickFollowUpQuote.customer?.companyName || '',
+                relatedQuotation: quickFollowUpQuote._id,
                 quotationReference: quickFollowUpQuote._id,
+                contactMethod: followUpData.contactType,
                 contactType: followUpData.contactType,
+                customerResponse: followUpData.responseStatus,
                 responseStatus: followUpData.responseStatus,
-                discussionNotes: followUpData.discussionNotes,
+                discussionNotes: `[${quickFollowUpQuote.quotationNumber}] ${followUpData.discussionNotes}`,
                 nextFollowUpDate: followUpData.nextFollowUpDate,
                 priority: 'High',
                 status: 'Pending'

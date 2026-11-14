@@ -29,6 +29,10 @@ const followUpSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Quotation'
   },
+  quotationReference: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Quotation'
+  },
   contactDate: {
     type: Date,
     required: true,

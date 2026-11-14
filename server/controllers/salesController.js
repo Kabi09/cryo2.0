@@ -453,16 +453,20 @@ exports.updateLeadStatus = async (req, res) => {
 // --------------------------------------------------------------------
 exports.getFollowUps = async (req, res) => {
   try {
-    const { status, enquiryId } = req.query;
+    const { status, enquiryId, quotationId } = req.query;
     let query = {};
     if (status && status !== 'All') query.status = status;
     if (enquiryId) query.enquiryReference = enquiryId;
+    if (quotationId) {
+      query.$or = [{ relatedQuotation: quotationId }, { quotationReference: quotationId }];
+    }
 
     const followUps = await FollowUp.find(query)
       .populate('customer', 'customerCode companyName contactPerson mobileNumber email')
       .populate('enquiryReference', 'enquiryNumber companyName productName contactPerson')
       .populate('relatedLead', 'leadNumber productName interestedProduct')
       .populate('relatedQuotation', 'quotationNumber version grandTotal')
+      .populate('quotationReference', 'quotationNumber version grandTotal')
       .sort({ nextFollowUpDate: 1, contactDate: -1 });
 
     res.json({ success: true, count: followUps.length, data: followUps });
@@ -497,6 +501,11 @@ exports.createFollowUp = async (req, res) => {
     customerResponse = customerResponse || responseStatus || 'Interested';
     status = status || 'Pending';
 
+    // Normalize quotation and lead references
+    relatedQuotation = relatedQuotation || req.body.quotationReference || null;
+    const quotationReference = req.body.quotationReference || relatedQuotation || null;
+    relatedLead = relatedLead || req.body.leadReference || null;
+
     // If customer is an object ({ _id }), extract string ID
     if (customer && typeof customer === 'object' && customer._id) {
       customer = customer._id;
@@ -530,6 +539,14 @@ exports.createFollowUp = async (req, res) => {
       }
     }
 
+    // If customer ID is missing but quotation is present, resolve customer
+    if (!customer && relatedQuotation) {
+      const q = await Quotation.findById(relatedQuotation);
+      if (q && q.customer) {
+        customer = q.customer;
+      }
+    }
+
     if (!followUpNumber) {
       const count = await FollowUp.countDocuments();
       followUpNumber = `FU-${String(count + 1).padStart(3, '0')}`;
@@ -542,6 +559,7 @@ exports.createFollowUp = async (req, res) => {
       enquiryReference: enquiryReference || null,
       relatedLead: relatedLead || null,
       relatedQuotation: relatedQuotation || null,
+      quotationReference: quotationReference || null,
       contactDate: contactDate || Date.now(),
       contactMethod,
       discussionNotes,
@@ -556,7 +574,8 @@ exports.createFollowUp = async (req, res) => {
       .populate('customer', 'customerCode companyName contactPerson mobileNumber')
       .populate('enquiryReference', 'enquiryNumber productName')
       .populate('relatedLead', 'leadNumber productName')
-      .populate('relatedQuotation', 'quotationNumber version');
+      .populate('relatedQuotation', 'quotationNumber version grandTotal')
+      .populate('quotationReference', 'quotationNumber version grandTotal');
 
     res.status(201).json({ success: true, data: populated });
   } catch (error) {

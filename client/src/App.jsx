@@ -902,6 +902,7 @@ export default function App() {
               customers={salesCustomers}
               leads={leads}
               products={products}
+              followUps={followUps}
               onSave={handleSaveQuotation}
               onRevise={handleReviseQuotation}
               onUpdateStatus={handleUpdateQuotationStatus}
