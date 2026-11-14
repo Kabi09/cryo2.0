@@ -472,8 +472,8 @@ export default function App() {
     await loadAllData();
     showToast('Quotation revised successfully with incremented version', 'success');
   };
-  const handleUpdateQuotationStatus = async (id, status) => {
-    await api.updateQuotationStatus(id, status);
+  const handleUpdateQuotationStatus = async (id, statusOrData) => {
+    await api.updateQuotationStatus(id, statusOrData);
     await loadAllData();
   };
   const handleSavePI = async (data) => {

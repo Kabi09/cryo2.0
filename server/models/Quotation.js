@@ -107,9 +107,24 @@ const quotationSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  rejectReason: {
+    type: String,
+    default: ''
+  },
+  previousVersion: {
+    type: String,
+    default: ''
+  },
+  previousGrandTotal: {
+    type: Number,
+    default: 0
+  },
+  revisionReason: {
+    type: String,
+    default: ''
+  },
   status: {
     type: String,
-    enum: ['Draft', 'Sent', 'Under Review', 'Negotiation', 'Accepted', 'Rejected', 'Expired'],
     default: 'Sent'
   }
 }, { timestamps: true });

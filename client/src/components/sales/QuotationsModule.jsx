@@ -11,7 +11,9 @@ import {
   FileText,
   Receipt,
   PhoneCall,
-  ArrowRight
+  ArrowRight,
+  RotateCcw,
+  AlertCircle
 } from 'lucide-react';
 import DataTable from '../common/DataTable';
 import StatusBadge from '../common/StatusBadge';
@@ -62,6 +64,12 @@ export default function QuotationsModule({
     discussionNotes: '',
     nextFollowUpDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
   });
+
+  // Rejection & Revision State
+  const [rejectModalQuote, setRejectModalQuote] = useState(null);
+  const [rejectReason, setRejectReason] = useState('Price too high / Commercial negotiation');
+  const [rejectNotes, setRejectNotes] = useState('');
+  const [revisionReasonText, setRevisionReasonText] = useState('');
 
   // Form State
   const [formData, setFormData] = useState({
@@ -167,6 +175,7 @@ export default function QuotationsModule({
 
   const handleOpenRevise = (quote) => {
     setSelectedQuote(quote);
+    setRevisionReasonText(quote.status === 'Rejected' && quote.rejectReason ? `Counter-offer addressing: ${quote.rejectReason}` : '');
     setFormData({
       ...quote,
       items: quote.items.map(i => ({
@@ -274,32 +283,62 @@ export default function QuotationsModule({
       await onRevise(selectedQuote._id, {
         ...formData,
         version: nextVersion,
-        status: 'Sent'
+        status: 'Sent',
+        previousVersion: selectedQuote.version || 'V1',
+        previousGrandTotal: selectedQuote.grandTotal || 0,
+        revisionReason: revisionReasonText || 'Revised commercial / technical offer'
       });
       showToast(`Quotation revised successfully to version ${nextVersion}!`, 'success');
       setIsReviseOpen(false);
       setSelectedQuote(null);
+      setRevisionReasonText('');
     } catch (err) {
       showToast(err.message, 'error');
     }
   };
 
-  const handleStatusUpdate = async (quoteId, status) => {
+  const handleStatusUpdate = async (quoteId, statusOrData) => {
     try {
-      await onUpdateStatus(quoteId, status);
-      if (status === 'Accepted') {
+      await onUpdateStatus(quoteId, statusOrData);
+      const newStatus = typeof statusOrData === 'object' ? statusOrData.status : statusOrData;
+      if (newStatus === 'Accepted') {
         showToast('Quotation Accepted! Opportunity marked as WON.', 'success');
-      } else if (status === 'Rejected') {
+      } else if (newStatus === 'Rejected') {
         showToast('Quotation Rejected. Opportunity marked as LOST.', 'info');
+      } else if (newStatus === 'Sent') {
+        showToast('Quotation Reopened & Active for Negotiation!', 'success');
       } else {
-        showToast(`Quotation status changed to ${status}`, 'success');
+        showToast(`Quotation status changed to ${newStatus}`, 'success');
       }
       if (selectedQuote) {
-        setSelectedQuote({ ...selectedQuote, status });
+        setSelectedQuote(prev => ({
+          ...prev,
+          status: newStatus,
+          rejectReason: typeof statusOrData === 'object' && statusOrData.rejectReason !== undefined ? statusOrData.rejectReason : (newStatus === 'Sent' ? '' : prev?.rejectReason)
+        }));
       }
     } catch (err) {
       showToast(err.message, 'error');
     }
+  };
+
+  const handleOpenReject = (quote) => {
+    setRejectModalQuote(quote);
+    setRejectReason('Price too high / Commercial negotiation');
+    setRejectNotes('');
+  };
+
+  const handleConfirmReject = async (e) => {
+    if (e) e.preventDefault();
+    if (!rejectModalQuote) return;
+    const finalReason = rejectNotes.trim() ? `${rejectReason} — ${rejectNotes.trim()}` : rejectReason;
+    await handleStatusUpdate(rejectModalQuote._id, { status: 'Rejected', rejectReason: finalReason });
+    setRejectModalQuote(null);
+    setRejectNotes('');
+  };
+
+  const handleReopenQuote = async (quoteId) => {
+    await handleStatusUpdate(quoteId, { status: 'Sent', rejectReason: '' });
   };
 
   const columns = [
@@ -386,6 +425,7 @@ export default function QuotationsModule({
       header: 'Actions',
       render: (row) => {
         const isAccepted = row.status === 'Accepted';
+        const isRejected = row.status === 'Rejected';
         return (
           <div className="action-btns" onClick={(e) => e.stopPropagation()}>
             <button className="icon-btn" title="View Proposal" onClick={() => setSelectedQuote(row)}>
@@ -400,55 +440,76 @@ export default function QuotationsModule({
               <GitBranch size={15} />
             </button>
 
-            {/* Accept vs Generate PI */}
-            {!isAccepted ? (
+            {/* If Rejected: DO NOT show Accept! Show Reopen / Reverse button */}
+            {isRejected ? (
               <button
                 className="icon-btn"
-                title="Customer Accepted (Mark Won)"
-                style={{ color: '#10B981' }}
-                onClick={() => handleStatusUpdate(row._id, 'Accepted')}
+                title="Reverse / Reopen Quotation for Negotiation"
+                style={{ color: '#2563EB' }}
+                onClick={() => handleReopenQuote(row._id)}
               >
-                <Trophy size={15} />
+                <RotateCcw size={15} />
               </button>
-            ) : (() => {
-              const existingPI = getExistingPI(row._id);
-              if (existingPI) {
+            ) : isAccepted ? (
+              (() => {
+                const existingPI = getExistingPI(row._id);
+                if (existingPI) {
+                  return (
+                    <button
+                      className="btn btn-secondary"
+                      style={{
+                        padding: '3px 8px',
+                        fontSize: '0.72rem',
+                        gap: 4,
+                        height: 26,
+                        borderRadius: 6,
+                        borderColor: 'var(--success-border)',
+                        color: 'var(--success)'
+                      }}
+                      title={`View Linked Proforma Invoice (${existingPI.piNumber})`}
+                      onClick={() => onViewPI ? onViewPI(existingPI) : onNavigateToPI?.(row)}
+                    >
+                      <Receipt size={12} /> View PI ({existingPI.piNumber}) ➔
+                    </button>
+                  );
+                }
                 return (
                   <button
-                    className="btn btn-secondary"
+                    className="btn btn-primary"
                     style={{
                       padding: '3px 8px',
                       fontSize: '0.72rem',
                       gap: 4,
                       height: 26,
-                      borderRadius: 6,
-                      borderColor: 'var(--success-border)',
-                      color: 'var(--success)'
+                      borderRadius: 6
                     }}
-                    title={`View Linked Proforma Invoice (${existingPI.piNumber})`}
-                    onClick={() => onViewPI ? onViewPI(existingPI) : onNavigateToPI?.(row)}
+                    title="Generate Proforma Invoice (PI)"
+                    onClick={() => onNavigateToPI?.(row)}
                   >
-                    <Receipt size={12} /> View PI ({existingPI.piNumber}) ➔
+                    <Receipt size={12} /> Generate PI ➔
                   </button>
                 );
-              }
-              return (
+              })()
+            ) : (
+              <>
                 <button
-                  className="btn btn-primary"
-                  style={{
-                    padding: '3px 8px',
-                    fontSize: '0.72rem',
-                    gap: 4,
-                    height: 26,
-                    borderRadius: 6
-                  }}
-                  title="Generate Proforma Invoice (PI)"
-                  onClick={() => onNavigateToPI?.(row)}
+                  className="icon-btn"
+                  title="Customer Accepted (Mark Won)"
+                  style={{ color: '#10B981' }}
+                  onClick={() => handleStatusUpdate(row._id, 'Accepted')}
                 >
-                  <Receipt size={12} /> Generate PI ➔
+                  <Trophy size={15} />
                 </button>
-              );
-            })()}
+                <button
+                  className="icon-btn"
+                  title="Reject Quotation"
+                  style={{ color: '#EF4444' }}
+                  onClick={() => handleOpenReject(row)}
+                >
+                  <XCircle size={15} />
+                </button>
+              </>
+            )}
 
             {/* Follow-up logger */}
             <button
@@ -824,9 +885,42 @@ export default function QuotationsModule({
         onClose={() => setIsReviseOpen(false)}
         size="lg"
         title={`Revise Quotation: ${selectedQuote?.quotationNumber}`}
-        subtitle={`Branch from ${selectedQuote?.version} to new version`}
+        subtitle={`Branching from ${selectedQuote?.version || 'V1'} to new revision`}
       >
         <form onSubmit={handleReviseSubmit}>
+          {/* Previous Version Audit & Context */}
+          <div style={{
+            marginBottom: 16,
+            padding: '12px 16px',
+            background: 'var(--bg-surface-elevated)',
+            border: '1px solid var(--border-subtle)',
+            borderRadius: 8,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: 12
+          }}>
+            <div>
+              <div style={{ fontSize: '0.84rem', color: 'var(--text-secondary)' }}>
+                Base Version: <strong style={{ color: 'var(--primary)' }}>{selectedQuote?.version || 'V1'}</strong>
+                {' • '}
+                Previous Value: <strong style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>₹{selectedQuote?.grandTotal?.toLocaleString('en-IN')}</strong>
+                {' • '}
+                Status: <StatusBadge status={selectedQuote?.status} />
+              </div>
+              {selectedQuote?.status === 'Rejected' && selectedQuote?.rejectReason && (
+                <div style={{ fontSize: '0.78rem', color: '#DC2626', marginTop: 4, display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <AlertCircle size={13} />
+                  <span><strong>Rejection Feedback:</strong> {selectedQuote.rejectReason}</span>
+                </div>
+              )}
+            </div>
+            <div className="badge badge-info" style={{ fontWeight: 700, padding: '5px 10px', fontSize: '0.8rem' }}>
+              Target Version: V{parseInt(selectedQuote?.version?.replace('V', '') || '1', 10) + 1}
+            </div>
+          </div>
+
           <div className="subtable-box">
             <table className="subtable">
               <thead>
@@ -889,13 +983,34 @@ export default function QuotationsModule({
             </table>
           </div>
 
-          <div className="modal-footer" style={{ marginTop: 24, padding: '16px 0 0 0' }}>
-            <button type="button" className="btn btn-secondary" onClick={() => setIsReviseOpen(false)}>
-              Cancel
-            </button>
-            <button type="submit" className="btn btn-primary">
-              <GitBranch size={15} /> Save Revised Version
-            </button>
+          {/* Revision Reason Field */}
+          <div className="form-group" style={{ marginTop: 16 }}>
+            <label className="form-label" style={{ fontWeight: 600 }}>Reason for Revision / Change Summary *</label>
+            <input
+              type="text"
+              className="form-input"
+              required
+              placeholder="e.g. 5% commercial discount applied per client negotiation, updated technical warranty"
+              value={revisionReasonText}
+              onChange={(e) => setRevisionReasonText(e.target.value)}
+            />
+          </div>
+
+          <div className="modal-footer" style={{ marginTop: 20, padding: '16px 0 0 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Revised Grand Total: </span>
+              <span style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--success)', fontFamily: 'var(--font-mono)' }}>
+                ₹{grandTotal.toLocaleString('en-IN')}
+              </span>
+            </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button type="button" className="btn btn-secondary" onClick={() => setIsReviseOpen(false)}>
+                Cancel
+              </button>
+              <button type="submit" className="btn btn-primary">
+                <GitBranch size={15} /> Save Revised Version
+              </button>
+            </div>
           </div>
         </form>
       </Modal>
@@ -936,6 +1051,77 @@ export default function QuotationsModule({
                 <div className="detail-value">{selectedQuote.deliveryTerms}</div>
               </div>
             </div>
+
+            {/* Rejection Banner & Quick Reopen/Revise if Rejected */}
+            {selectedQuote.status === 'Rejected' && (
+              <div style={{
+                marginTop: 16,
+                padding: '12px 16px',
+                background: '#FEF2F2',
+                border: '1px solid #FECACA',
+                borderRadius: 8,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 12,
+                flexWrap: 'wrap'
+              }}>
+                <div>
+                  <div style={{ fontWeight: 700, color: '#DC2626', fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <AlertCircle size={15} /> Quotation Rejected (Lost)
+                  </div>
+                  <div style={{ fontSize: '0.82rem', color: '#991B1B', marginTop: 4 }}>
+                    <strong>Reason:</strong> {selectedQuote.rejectReason || 'No specific rejection reason recorded.'}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm"
+                    style={{ color: '#2563EB', borderColor: '#BFDBFE', background: '#EFF6FF', fontWeight: 600 }}
+                    onClick={() => handleReopenQuote(selectedQuote._id)}
+                  >
+                    <RotateCcw size={13} /> Reopen for Negotiation
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-sm"
+                    style={{ background: '#D97706', borderColor: '#D97706', fontWeight: 600 }}
+                    onClick={() => {
+                      const q = selectedQuote;
+                      setSelectedQuote(null);
+                      handleOpenRevise(q);
+                    }}
+                  >
+                    <GitBranch size={13} /> Revise (V{parseInt(selectedQuote.version?.replace('V', '') || '1', 10) + 1})
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Revision Audit History Banner */}
+            {selectedQuote.previousVersion && (
+              <div style={{
+                marginTop: 14,
+                padding: '10px 14px',
+                background: 'var(--bg-surface-elevated)',
+                border: '1px dashed var(--border-subtle)',
+                borderRadius: 8,
+                fontSize: '0.82rem'
+              }}>
+                <div style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>
+                  Revision Lineage: Revised from <span className="badge badge-info">{selectedQuote.previousVersion}</span>
+                  {selectedQuote.previousGrandTotal > 0 && (
+                    <span> (Previous Value: <strong style={{ fontFamily: 'var(--font-mono)' }}>₹{selectedQuote.previousGrandTotal.toLocaleString('en-IN')}</strong>)</span>
+                  )}
+                </div>
+                {selectedQuote.revisionReason && (
+                  <div style={{ marginTop: 4, color: 'var(--text-primary)' }}>
+                    <strong>Reason for Revision:</strong> {selectedQuote.revisionReason}
+                  </div>
+                )}
+              </div>
+            )}
 
             <div style={{ marginTop: 18 }}>
               <div style={{ fontWeight: 600, fontSize: '0.85rem', marginBottom: 8 }}>Itemized Commercial Schedule:</div>
@@ -1062,22 +1248,45 @@ export default function QuotationsModule({
                     );
                   })()
                 )}
-                {selectedQuote.status !== 'Accepted' && (
-                  <button
-                    className="btn btn-primary btn-sm"
-                    onClick={() => handleStatusUpdate(selectedQuote._id, 'Accepted')}
-                  >
-                    <Trophy size={14} /> Accept & Mark Won
-                  </button>
-                )}
-                {selectedQuote.status !== 'Rejected' && selectedQuote.status !== 'Accepted' && (
-                  <button
-                    className="btn btn-danger btn-sm"
-                    onClick={() => handleStatusUpdate(selectedQuote._id, 'Rejected')}
-                  >
-                    <XCircle size={14} /> Reject & Mark Lost
-                  </button>
-                )}
+                {selectedQuote.status === 'Rejected' ? (
+                  <>
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      style={{ color: '#2563EB', borderColor: '#BFDBFE', background: '#EFF6FF', fontWeight: 600 }}
+                      onClick={() => handleReopenQuote(selectedQuote._id)}
+                    >
+                      <RotateCcw size={14} /> Reverse / Reopen for Negotiation
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-primary btn-sm"
+                      style={{ background: '#D97706', borderColor: '#D97706', fontWeight: 600 }}
+                      onClick={() => {
+                        const q = selectedQuote;
+                        setSelectedQuote(null);
+                        handleOpenRevise(q);
+                      }}
+                    >
+                      <GitBranch size={14} /> Revise to New Version
+                    </button>
+                  </>
+                ) : selectedQuote.status !== 'Accepted' ? (
+                  <>
+                    <button
+                      className="btn btn-primary btn-sm"
+                      onClick={() => handleStatusUpdate(selectedQuote._id, 'Accepted')}
+                    >
+                      <Trophy size={14} /> Accept & Mark Won
+                    </button>
+                    <button
+                      className="btn btn-danger btn-sm"
+                      onClick={() => handleOpenReject(selectedQuote)}
+                    >
+                      <XCircle size={14} /> Reject & Mark Lost
+                    </button>
+                  </>
+                ) : null}
               </div>
             </div>
 
@@ -1245,6 +1454,62 @@ export default function QuotationsModule({
             </button>
             <button type="submit" className="btn btn-primary">
               Save Negotiation Note
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Reject Quotation Reason Modal */}
+      <Modal
+        isOpen={!!rejectModalQuote}
+        onClose={() => setRejectModalQuote(null)}
+        title={`Reject Quotation: ${rejectModalQuote?.quotationNumber}`}
+        subtitle={`Record client feedback and reason for lost proposal`}
+        maxWidth="520px"
+      >
+        <form onSubmit={handleConfirmReject}>
+          <div className="form-group">
+            <label className="form-label">Primary Rejection Reason *</label>
+            <select
+              className="form-control"
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+            >
+              <option value="Price too high / Commercial negotiation">Price too high / Commercial negotiation</option>
+              <option value="Competitor selected (Lower price or brand)">Competitor selected (Lower price or brand)</option>
+              <option value="Technical specification mismatch">Technical specification mismatch</option>
+              <option value="Lead time / Delivery schedule too long">Lead time / Delivery schedule too long</option>
+              <option value="Project cancelled / Budget postponed by client">Project cancelled / Budget postponed by client</option>
+              <option value="Payment terms rejected">Payment terms rejected</option>
+              <option value="Other / Client specific feedback">Other / Client specific feedback</option>
+            </select>
+          </div>
+
+          <div className="form-group" style={{ marginTop: 14 }}>
+            <label className="form-label">Client Notes & Feedback Details</label>
+            <textarea
+              className="form-control"
+              rows={3}
+              placeholder="e.g. Client requested 8% price cut or 60 days credit; opted for local supplier..."
+              value={rejectNotes}
+              onChange={(e) => setRejectNotes(e.target.value)}
+            />
+          </div>
+
+          <div style={{ marginTop: 20, display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => setRejectModalQuote(null)}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="btn btn-danger"
+              style={{ gap: 6 }}
+            >
+              <XCircle size={14} /> Confirm Rejection & Mark Lost
             </button>
           </div>
         </form>

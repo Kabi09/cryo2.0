@@ -269,12 +269,14 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
     }).then(handleResponse),
-  updateQuotationStatus: (id, status) =>
-    fetch(`${API_BASE}/sales/quotations/${id}/status`, {
+  updateQuotationStatus: (id, statusOrData) => {
+    const payload = typeof statusOrData === 'object' ? statusOrData : { status: statusOrData };
+    return fetch(`${API_BASE}/sales/quotations/${id}/status`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status })
-    }).then(handleResponse),
+      body: JSON.stringify(payload)
+    }).then(handleResponse);
+  },
 
   getProformaInvoices: (params = {}) => {
     const query = new URLSearchParams(params).toString();

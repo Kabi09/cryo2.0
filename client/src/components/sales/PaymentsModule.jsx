@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Eye, CreditCard, CheckCircle2, DollarSign, Clock, AlertCircle } from 'lucide-react';
+import { Plus, Eye, CreditCard, CheckCircle2, DollarSign, Clock, AlertCircle, Building, Package, Receipt, ArrowRight } from 'lucide-react';
 import DataTable from '../common/DataTable';
 import StatusBadge from '../common/StatusBadge';
 import Modal from '../common/Modal';
@@ -12,6 +12,18 @@ export default function PaymentsModule({ payments = [], customers = [], proforma
 
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState(null);
+  const [selectedPIDetails, setSelectedPIDetails] = useState(null);
+
+  const handleViewPIDetails = (piRef) => {
+    if (!piRef) return;
+    const piId = typeof piRef === 'object' ? piRef._id : piRef;
+    const fullPI = proformaInvoices.find(p => p._id === piId) || (typeof piRef === 'object' ? piRef : null);
+    if (fullPI) {
+      setSelectedPIDetails(fullPI);
+    } else if (showToast) {
+      showToast('Proforma Invoice details not found', 'info');
+    }
+  };
 
   // Form State
   const [formData, setFormData] = useState({
@@ -164,7 +176,15 @@ export default function PaymentsModule({ payments = [], customers = [], proforma
     {
       header: 'PI Ref',
       render: (row) => row.piReference?.piNumber ? (
-        <span className="code-badge">
+        <span
+          className="code-badge"
+          style={{ cursor: 'pointer', background: 'var(--primary-subtle)', color: 'var(--primary)', fontWeight: 600 }}
+          title="Click to view Customer, Products & Commercial breakdown of this PI"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleViewPIDetails(row.piReference);
+          }}
+        >
           {row.piReference.piNumber}
         </span>
       ) : '—'
@@ -233,7 +253,15 @@ export default function PaymentsModule({ payments = [], customers = [], proforma
       header: 'PI Number',
       accessor: 'piNumber',
       render: (row) => (
-        <span className="code-badge">
+        <span
+          className="code-badge"
+          style={{ cursor: 'pointer', background: 'var(--primary-subtle)', color: 'var(--primary)', fontWeight: 600 }}
+          title="Click to view Customer, Products & Commercial breakdown of this PI"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleViewPIDetails(row);
+          }}
+        >
           {row.piNumber}
         </span>
       )
@@ -590,8 +618,20 @@ export default function PaymentsModule({ payments = [], customers = [], proforma
               </div>
               <div className="detail-item col-span-2">
                 <div className="detail-label">Proforma Invoice Context</div>
-                <div className="detail-value" style={{ fontSize: '0.85rem' }}>
-                  PI Ref: <strong>{selectedPayment.piReference?.piNumber || '—'}</strong> • Total Value: ₹{selectedPayment.piReference?.grandTotal?.toLocaleString('en-IN')} • Current Remaining Balance: ₹{selectedPayment.piReference?.balanceAmount?.toLocaleString('en-IN')}
+                <div className="detail-value" style={{ fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+                  <span>
+                    PI Ref: <strong>{selectedPayment.piReference?.piNumber || '—'}</strong> • Total Value: <strong style={{ fontFamily: 'var(--font-mono)' }}>₹{selectedPayment.piReference?.grandTotal?.toLocaleString('en-IN')}</strong> • Balance: <strong style={{ fontFamily: 'var(--font-mono)' }}>₹{selectedPayment.piReference?.balanceAmount?.toLocaleString('en-IN')}</strong>
+                  </span>
+                  {selectedPayment.piReference && (
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      style={{ padding: '3px 8px', fontSize: '0.75rem', gap: 4 }}
+                      onClick={() => handleViewPIDetails(selectedPayment.piReference)}
+                    >
+                      <Receipt size={12} /> View Full PI Details ➔
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -606,6 +646,176 @@ export default function PaymentsModule({ payments = [], customers = [], proforma
                 </button>
               </div>
             )}
+          </div>
+        )}
+      </Modal>
+
+      {/* Proforma Invoice Detailed Inspection Modal */}
+      <Modal
+        isOpen={!!selectedPIDetails}
+        onClose={() => setSelectedPIDetails(null)}
+        size="lg"
+        title={`Proforma Invoice: ${selectedPIDetails?.piNumber}`}
+        subtitle={`Commercial particulars and line items for ${selectedPIDetails?.customer?.companyName || selectedPIDetails?.companyName || 'Customer'}`}
+      >
+        {selectedPIDetails && (
+          <div>
+            {/* Customer & Order Reference Grid */}
+            <div className="detail-grid">
+              <div className="detail-item">
+                <div className="detail-label">Customer Company</div>
+                <div className="detail-value" style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
+                  {selectedPIDetails.customer?.companyName || selectedPIDetails.companyName || '—'}
+                </div>
+              </div>
+              <div className="detail-item">
+                <div className="detail-label">Contact Person</div>
+                <div className="detail-value">
+                  {selectedPIDetails.customer?.contactPerson || '—'}
+                  {selectedPIDetails.customer?.mobileNumber && (
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>
+                      Mob: {selectedPIDetails.customer.mobileNumber}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="detail-item">
+                <div className="detail-label">PI Status & Payment</div>
+                <div className="detail-value" style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  <StatusBadge status={selectedPIDetails.status} />
+                  <span className={`badge ${selectedPIDetails.paymentStatus === 'Paid' ? 'badge-success' : selectedPIDetails.paymentStatus === 'Partially Paid' ? 'badge-info' : 'badge-warning'}`}>
+                    {selectedPIDetails.paymentStatus || 'Pending'}
+                  </span>
+                </div>
+              </div>
+              <div className="detail-item">
+                <div className="detail-label">Quotation Ref</div>
+                <div className="detail-value">
+                  {selectedPIDetails.quotation?.quotationNumber || selectedPIDetails.quotationNumber || '—'}
+                </div>
+              </div>
+              <div className="detail-item">
+                <div className="detail-label">Payment Terms</div>
+                <div className="detail-value">{selectedPIDetails.paymentTerms || 'Advance with PO'}</div>
+              </div>
+              <div className="detail-item">
+                <div className="detail-label">Delivery Schedule</div>
+                <div className="detail-value">{selectedPIDetails.deliveryTerms || 'Standard dispatch schedule'}</div>
+              </div>
+              {selectedPIDetails.customer?.billingAddress && (
+                <div className="detail-item col-span-2">
+                  <div className="detail-label">Billing / Plant Address</div>
+                  <div className="detail-value" style={{ fontSize: '0.82rem' }}>
+                    {selectedPIDetails.customer.billingAddress}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Product Items Table */}
+            <div style={{ marginTop: 18 }}>
+              <div style={{ fontWeight: 700, fontSize: '0.85rem', marginBottom: 8, color: 'var(--text-primary)' }}>
+                Itemized Product & Commercial Schedule:
+              </div>
+              <div className="subtable-box">
+                <table className="subtable">
+                  <thead>
+                    <tr>
+                      <th>Product / Model</th>
+                      <th>Quantity</th>
+                      <th>Unit Rate</th>
+                      <th>GST</th>
+                      <th>Total Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(selectedPIDetails.items || selectedPIDetails.quotation?.items || []).map((it, idx) => (
+                      <tr key={idx}>
+                        <td>
+                          <strong>{it.productName || it.product?.productName || it.description || 'Cryogenic Unit'}</strong>
+                          {it.description && it.description !== it.productName && (
+                            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{it.description}</div>
+                          )}
+                        </td>
+                        <td>{it.quantity} {it.unit || 'Nos'}</td>
+                        <td style={{ fontFamily: 'var(--font-mono)' }}>₹{(it.unitPrice || 0).toLocaleString('en-IN')}</td>
+                        <td>{it.gstPercent || 18}%</td>
+                        <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--success)' }}>
+                          ₹{(it.amount || ((it.quantity || 1) * (it.unitPrice || 0))).toLocaleString('en-IN')}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Financial Settlement Card */}
+            <div style={{
+              marginTop: 18,
+              padding: '14px 18px',
+              background: 'var(--bg-surface-elevated)',
+              border: '1px solid var(--border-subtle)',
+              borderRadius: 8,
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
+              gap: 12
+            }}>
+              <div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                  Grand Total
+                </div>
+                <div style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>
+                  ₹{(selectedPIDetails.grandTotal || 0).toLocaleString('en-IN')}
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                  Advance Required ({selectedPIDetails.advancePercentage || 50}%)
+                </div>
+                <div style={{ fontSize: '1.15rem', fontWeight: 700, color: '#3B82F6', fontFamily: 'var(--font-mono)' }}>
+                  ₹{(selectedPIDetails.advanceAmount || Math.round((selectedPIDetails.grandTotal || 0) * 0.5)).toLocaleString('en-IN')}
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                  Total Received
+                </div>
+                <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#16A36A', fontFamily: 'var(--font-mono)' }}>
+                  ₹{(selectedPIDetails.totalReceived || selectedPIDetails.advanceReceived || 0).toLocaleString('en-IN')}
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                  Remaining Balance
+                </div>
+                <div style={{
+                  fontSize: '1.15rem',
+                  fontWeight: 800,
+                  color: (selectedPIDetails.balanceAmount || 0) <= 0 ? '#16A36A' : '#DC2626',
+                  fontFamily: 'var(--font-mono)'
+                }}>
+                  ₹{(selectedPIDetails.balanceAmount !== undefined ? selectedPIDetails.balanceAmount : Math.max(0, (selectedPIDetails.grandTotal || 0) - (selectedPIDetails.totalReceived || 0))).toLocaleString('en-IN')}
+                </div>
+              </div>
+            </div>
+
+            {/* Bank Particulars if present */}
+            {selectedPIDetails.bankDetails && (
+              <div style={{ marginTop: 14, fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                <strong>Designated Bank Account:</strong> {selectedPIDetails.bankDetails.bankName || 'State Bank of India'} • A/C: {selectedPIDetails.bankDetails.accountNumber || '39948291039'} • IFSC: {selectedPIDetails.bankDetails.ifscCode || 'SBIN0001824'}
+              </div>
+            )}
+
+            <div style={{ marginTop: 20, textAlign: 'right' }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setSelectedPIDetails(null)}
+              >
+                Close Details
+              </button>
+            </div>
           </div>
         )}
       </Modal>

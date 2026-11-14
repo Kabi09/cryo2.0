@@ -771,6 +771,9 @@ exports.reviseQuotation = async (req, res) => {
       paymentTerms: req.body.paymentTerms || parentQuote.paymentTerms,
       warranty: req.body.warranty || parentQuote.warranty,
       notes: req.body.notes || `Revised negotiation proposal (${newVersionTag})`,
+      previousVersion: parentQuote.version || 'V1',
+      previousGrandTotal: parentQuote.grandTotal || 0,
+      revisionReason: req.body.revisionReason || parentQuote.rejectReason || '',
       status: 'Sent'
     });
 
@@ -786,8 +789,11 @@ exports.reviseQuotation = async (req, res) => {
 
 exports.updateQuotationStatus = async (req, res) => {
   try {
-    const { status } = req.body;
-    const quote = await Quotation.findByIdAndUpdate(req.params.id, { status }, { new: true });
+    const { status, rejectReason } = req.body;
+    const updateData = { status };
+    if (rejectReason !== undefined) updateData.rejectReason = rejectReason;
+
+    const quote = await Quotation.findByIdAndUpdate(req.params.id, updateData, { new: true });
     if (!quote) return res.status(404).json({ success: false, message: 'Quotation not found' });
 
     // CRITICAL BUSINESS RULE:
@@ -797,7 +803,10 @@ exports.updateQuotationStatus = async (req, res) => {
       if (status === 'Accepted') {
         await Lead.findByIdAndUpdate(quote.leadReference, { leadStatus: 'Won' });
       } else if (status === 'Rejected') {
-        await Lead.findByIdAndUpdate(quote.leadReference, { leadStatus: 'Lost' });
+        await Lead.findByIdAndUpdate(quote.leadReference, {
+          leadStatus: 'Lost',
+          lostReason: rejectReason || 'Quotation Rejected by Customer'
+        });
       }
     }
 
@@ -983,8 +992,16 @@ exports.getPayments = async (req, res) => {
     if (status && status !== 'All') query.status = status;
 
     const payments = await Payment.find(query)
-      .populate('customer', 'customerCode companyName contactPerson')
-      .populate('piReference', 'piNumber grandTotal advanceAmount balanceAmount totalReceived')
+      .populate('customer', 'customerCode companyName contactPerson email mobileNumber billingAddress')
+      .populate({
+        path: 'piReference',
+        select: 'piNumber piDate grandTotal advanceAmount balanceAmount totalReceived advancePercentage bankDetails paymentTerms status items quotation customer',
+        populate: [
+          { path: 'items.product', select: 'productName productCode unit standardPrice' },
+          { path: 'quotation', select: 'quotationNumber grandTotal items' },
+          { path: 'customer', select: 'customerCode companyName contactPerson email mobileNumber billingAddress' }
+        ]
+      })
       .populate('salesOrderReference', 'soNumber')
       .sort({ createdAt: -1, paymentDate: -1 });
 

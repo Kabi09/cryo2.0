@@ -121,6 +121,63 @@ export default function SalesOrdersModule({
     setIsAddOpen(true);
   };
 
+  const handlePISelect = (piId) => {
+    const selectedPI = proformaInvoices.find(p => p._id === piId);
+    if (!selectedPI) {
+      setFormData(prev => ({ ...prev, piReference: piId }));
+      return;
+    }
+    const orderAmt = Number(selectedPI.grandTotal) || 0;
+    const paid = Number(selectedPI.totalReceived || selectedPI.advanceReceived || (selectedPI.paymentStatus === 'Paid' ? orderAmt : (selectedPI.advanceAmount || 0))) || 0;
+    const bal = selectedPI.balanceAmount !== undefined ? Number(selectedPI.balanceAmount) : Math.max(0, orderAmt - paid);
+    const custId = selectedPI.customer?._id || selectedPI.customer || '';
+
+    const piItems = (selectedPI.items && selectedPI.items.length > 0)
+      ? selectedPI.items.map(it => ({
+          product: it.product?._id || it.product || null,
+          productName: it.productName || it.product?.productName || 'Cryo Unit',
+          description: it.description || it.productName,
+          quantity: it.quantity || 1,
+          unit: it.unit || 'Nos',
+          unitPrice: it.unitPrice || 0,
+          discount: it.discount || 0,
+          gstPercent: it.gstPercent || 18,
+          totalAmount: it.amount || ((it.quantity || 1) * (it.unitPrice || 0))
+        }))
+      : [];
+
+    setFormData(prev => ({
+      ...prev,
+      piReference: piId,
+      customer: custId || prev.customer,
+      quotationReference: selectedPI.quotation?._id || selectedPI.quotation || prev.quotationReference,
+      orderAmount: orderAmt || prev.orderAmount,
+      advanceReceived: paid,
+      balanceAmount: bal,
+      paymentTerms: selectedPI.paymentTerms || prev.paymentTerms,
+      shippingAddress: selectedPI.billingAddress || selectedPI.customer?.billingAddress || prev.shippingAddress,
+      items: piItems.length > 0 ? piItems : prev.items
+    }));
+  };
+
+  const handleOrderAmountChange = (val) => {
+    const total = Number(val) || 0;
+    setFormData(prev => ({
+      ...prev,
+      orderAmount: total,
+      balanceAmount: Math.max(0, total - (Number(prev.advanceReceived) || 0))
+    }));
+  };
+
+  const handleAdvanceChange = (val) => {
+    const adv = Number(val) || 0;
+    setFormData(prev => ({
+      ...prev,
+      advanceReceived: adv,
+      balanceAmount: Math.max(0, (Number(prev.orderAmount) || 0) - adv)
+    }));
+  };
+
   const handleSendToProductionClick = async (soId) => {
     try {
       await onSendToProduction(soId, {
@@ -450,14 +507,25 @@ export default function SalesOrdersModule({
               <select
                 className="form-select"
                 value={formData.piReference}
-                onChange={(e) => setFormData({ ...formData, piReference: e.target.value })}
+                onChange={(e) => handlePISelect(e.target.value)}
               >
                 <option value="">Select PI Reference...</option>
-                {proformaInvoices.map(pi => (
-                  <option key={pi._id} value={pi._id}>
-                    {pi.piNumber} - {pi.customer?.companyName} (Adv: ₹{pi.advanceAmount?.toLocaleString('en-IN')})
-                  </option>
-                ))}
+                {proformaInvoices.map(pi => {
+                  const total = Number(pi.grandTotal) || 0;
+                  const paid = Number(pi.totalReceived || pi.advanceReceived || (pi.paymentStatus === 'Paid' ? total : 0)) || 0;
+                  const bal = pi.balanceAmount !== undefined ? Number(pi.balanceAmount) : Math.max(0, total - paid);
+                  const isFullyPaid = bal <= 0 || pi.paymentStatus === 'Paid';
+                  const paymentTag = isFullyPaid
+                    ? `[Fully Paid: ₹${total.toLocaleString('en-IN')}]`
+                    : paid > 0
+                      ? `[Paid: ₹${paid.toLocaleString('en-IN')} | Bal: ₹${bal.toLocaleString('en-IN')}]`
+                      : `[Bal: ₹${bal.toLocaleString('en-IN')} | Adv Req: ₹${(pi.advanceAmount || Math.round(total * 0.5)).toLocaleString('en-IN')}]`;
+                  return (
+                    <option key={pi._id} value={pi._id}>
+                      {pi.piNumber} - {pi.customer?.companyName || 'Customer'} {paymentTag}
+                    </option>
+                  );
+                })}
               </select>
             </div>
 
@@ -477,10 +545,62 @@ export default function SalesOrdersModule({
                 type="number"
                 className="form-input"
                 value={formData.orderAmount}
-                onChange={(e) => setFormData({ ...formData, orderAmount: Number(e.target.value) })}
+                onChange={(e) => handleOrderAmountChange(e.target.value)}
+              />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Advance Received (₹)</label>
+              <input
+                type="number"
+                className="form-input"
+                value={formData.advanceReceived}
+                onChange={(e) => handleAdvanceChange(e.target.value)}
+              />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Remaining Balance (₹)</label>
+              <input
+                type="number"
+                className="form-input"
+                readOnly
+                style={{ background: 'var(--bg-surface-elevated)', fontWeight: 700 }}
+                value={formData.balanceAmount}
               />
             </div>
           </div>
+
+          {/* Payment Status Summary Card when PI is selected */}
+          {formData.piReference && (
+            <div style={{
+              marginTop: 14,
+              padding: '10px 14px',
+              background: formData.balanceAmount <= 0 ? 'rgba(52, 211, 153, 0.08)' : 'rgba(59, 130, 246, 0.08)',
+              border: `1px solid ${formData.balanceAmount <= 0 ? 'rgba(52, 211, 153, 0.3)' : 'rgba(59, 130, 246, 0.3)'}`,
+              borderRadius: 8,
+              fontSize: '0.82rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: 8
+            }}>
+              <div>
+                <strong>Payment Settlement Status:</strong>{' '}
+                {formData.balanceAmount <= 0 ? (
+                  <span style={{ color: '#16A36A', fontWeight: 700 }}>✓ Fully Paid & Cleared (₹{Number(formData.advanceReceived).toLocaleString('en-IN')})</span>
+                ) : formData.advanceReceived > 0 ? (
+                  <span style={{ color: '#2563EB', fontWeight: 600 }}>Partial Advance Paid: ₹{Number(formData.advanceReceived).toLocaleString('en-IN')} • Balance Due: ₹{Number(formData.balanceAmount).toLocaleString('en-IN')}</span>
+                ) : (
+                  <span style={{ color: '#D97706', fontWeight: 600 }}>⚠️ Advance Not Yet Received • Balance Due: ₹{Number(formData.balanceAmount).toLocaleString('en-IN')}</span>
+                )}
+              </div>
+              <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                Order Total: <strong style={{ fontFamily: 'var(--font-mono)' }}>₹{Number(formData.orderAmount).toLocaleString('en-IN')}</strong>
+              </div>
+            </div>
+          )}
 
           {/* Section 2: Shipping & Delivery Instructions */}
           <div style={{ marginTop: 24 }}>
@@ -559,6 +679,28 @@ export default function SalesOrdersModule({
                 <div className="detail-label">Advance Received</div>
                 <div className="detail-value" style={{ fontFamily: 'var(--font-mono)', color: 'var(--primary)' }}>
                   ₹{selectedSO.advanceReceived?.toLocaleString('en-IN')}
+                </div>
+              </div>
+              <div className="detail-item">
+                <div className="detail-label">Remaining Balance</div>
+                <div className="detail-value" style={{
+                  fontFamily: 'var(--font-mono)',
+                  color: (selectedSO.balanceAmount || 0) <= 0 ? 'var(--success)' : '#DC2626',
+                  fontWeight: 700
+                }}>
+                  ₹{(selectedSO.balanceAmount !== undefined ? selectedSO.balanceAmount : Math.max(0, (selectedSO.orderAmount || 0) - (selectedSO.advanceReceived || 0))).toLocaleString('en-IN')}
+                </div>
+              </div>
+              <div className="detail-item">
+                <div className="detail-label">Commercial Settlement</div>
+                <div className="detail-value">
+                  {(selectedSO.balanceAmount || 0) <= 0 ? (
+                    <span className="badge badge-success">✓ Fully Paid</span>
+                  ) : (selectedSO.advanceReceived || 0) > 0 ? (
+                    <span className="badge badge-info">Partial Advance Paid</span>
+                  ) : (
+                    <span className="badge badge-warning">Advance Pending</span>
+                  )}
                 </div>
               </div>
               <div className="detail-item col-span-2">

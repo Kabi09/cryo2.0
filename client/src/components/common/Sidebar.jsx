@@ -27,8 +27,8 @@ export const SALES_MODULES = [
   { id: 'sales-enquiries', num: '03', title: 'Enquiries' },
   { id: 'sales-quotations', num: '04', title: 'Quotations' },
   { id: 'sales-proforma-invoices', num: '05', title: 'Proforma Invoices' },
-  { id: 'sales-orders', num: '06', title: 'Sales Orders' },
-  { id: 'sales-payments', num: '07', title: 'Payments' },
+  { id: 'sales-payments', num: '06', title: 'Payments' },
+  { id: 'sales-orders', num: '07', title: 'Sales Orders' },
   { id: 'sales-reports', num: '08', title: 'Reports' }
 ];
 
