@@ -370,6 +370,30 @@
 - **Reason**: User requested simplification of the Production Management module for non-technical manufacturing staff with clean 7-page navigation and minimal clicks.
 - **Impact**: Streamlined shopfloor workflow, zero build errors (`npm run build` in 786ms), 100% backward compatibility for all legacy routes and APIs.
 
+- **Date**: 2026-11-15
+- **Decision**: SCM, Logistics, and Employee Management Overhaul & Master Integration Verification
+  1. **Supply Chain Management (SCM) Overhaul (7 Main Pages)**:
+     - Consolidated SCM navigation into 7 clean pages: `Dashboard`, `Materials`, `Suppliers`, `Purchasing` (Sub-tabs: Purchase Orders | Goods Receipts), `Quality & Inventory` (Sub-tabs: QC Pending | QC History | Stock | Supplier Returns), `Material Issues` (Sub-tabs: Factory Requisitions | Issue History), `Reports`.
+     - Enforced strict inventory conservation: Stock increases ONLY upon passing QC tests (`QC Pending` quarantine gate prevents premature inventory usage).
+     - Connected Production Work Orders with SCM Material Issues (`preSelectedRequest` auto-fill).
+  2. **Logistics & Delivery Management Overhaul (6 Main Pages)**:
+     - Consolidated Logistics navigation into 6 clean pages: `Dashboard`, `Deliveries` (Sub-tabs: Delivery Planning | Dispatch | Vehicles & Couriers), `Tracking` (Sub-tabs: In Transit | Delivered | Exceptions & Delays), `Delivery Confirmation` (Sub-tabs: Pending POD | Confirmed Receipts), `Installation & Service` (Sub-tabs: Scheduled | In Progress | Completed | Failed / Retest | All Deployments), `Reports`.
+     - Integrated the mandatory **7-Point Commissioning Quality Gate** (Physical, Electrical, Vacuum Integrity, Cooling Performance, Safety Sensors, Calibration, Operator Training) before marking installation complete.
+     - Automated handoff: Confirming POD automatically schedules the installation job.
+  3. **Employee Management & RBAC Overhaul (5 Main Pages)**:
+     - Consolidated Employee navigation into 5 clean pages: `Dashboard`, `Employees` (Sub-tabs: All | Active | Inactive), `Departments`, `Roles & Permissions` (Sub-tabs: Configured Roles | Permission Matrix), `Audit Logs` (Sub-tabs: Activity History | Personnel Reports).
+     - Enforced cascading RBAC rules: when `access = false`, all child action flags (`create`, `read`, `edit`, `delete`, `approve`, `export`) are disabled.
+     - Enforced Super Admin Inviolability (cannot delete or demote root administrator).
+  4. **Master Integration & Bug Fixes**:
+     - Fixed Follow-Up status validation failure (`status: 'Scheduled'`) by removing restrictive enum constraint from `server/models/FollowUp.js` and adding safe fallbacks.
+     - Fixed collision handling in code generators for `followUpNumber`, `piNumber`, `customerPONumber`, `soNumber`, and `workOrderNumber`.
+     - Added automatic customer resolution in Quotations and Follow-ups if `companyName` is provided without a pre-existing customer ID.
+     - Fixed Proforma Invoice `bankDetails` object serialization to string.
+     - Mounted SCM routes on both `/api` and `/api/scm` in `server/server.js` for seamless frontend compatibility.
+     - Fixed item quantity mapping in GRN and Material Issue (`quantity` / `orderedQuantity` / `issueQuantity` / `issuedQuantity`).
+     - Executed full 14-point master integration test suite spanning Sales -> Production -> SCM -> Logistics -> Employee Management with **14 / 14 tests passing (100%)**.
+     - Frontend production build verified with Vite (`npm run build`) passing cleanly in 797ms with zero errors.
+
 - **Date**: 2026-11-14
 - **Decision**: Consolidate 47 separate tabs into 28 structured main pages with internal sub-tabs.
   - **Reason**: Having 47 flat sidebar tabs caused excessive cognitive load, cluttered navigation, and poor mobile UX. Grouping tightly-coupled steps (e.g. PO + GRN + Returns, Quotes + PI, Work Orders + Schedules) into unified tabbed pages improves ergonomics while maintaining 100% of existing workflows and data models.

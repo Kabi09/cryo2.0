@@ -196,6 +196,16 @@ exports.createEnquiry = async (req, res) => {
 
     const resolvedProductName = (productName && productName.trim()) ? productName.trim() : 'Custom Cryo Equipment';
 
+    const validSources = ['Website', 'Phone', 'Email', 'Referral', 'Direct'];
+    let safeSource = 'Website';
+    if (enquirySource) {
+      if (validSources.includes(enquirySource)) safeSource = enquirySource;
+      else if (/phone|call/i.test(enquirySource)) safeSource = 'Phone';
+      else if (/mail/i.test(enquirySource)) safeSource = 'Email';
+      else if (/direct/i.test(enquirySource)) safeSource = 'Direct';
+      else safeSource = 'Website';
+    }
+
     const enquiry = await Enquiry.create({
       enquiryNumber: enquiryNumber.toUpperCase(),
       customerType: customerType || 'New',
@@ -213,7 +223,7 @@ exports.createEnquiry = async (req, res) => {
       unit: unit || 'Nos',
       requiredDeliveryDate: requiredDeliveryDate || new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
       additionalRequirements,
-      enquirySource: enquirySource || 'Website',
+      enquirySource: safeSource,
       assignedSalesPerson: assignedSalesPerson || 'Sales Executive',
       remarks,
       status: convertToLead ? 'Converted to Lead' : 'New'
@@ -548,8 +558,13 @@ exports.createFollowUp = async (req, res) => {
     }
 
     if (!followUpNumber) {
-      const count = await FollowUp.countDocuments();
-      followUpNumber = `FU-${String(count + 1).padStart(3, '0')}`;
+      let count = await FollowUp.countDocuments();
+      let candidate = `FU-${String(count + 1).padStart(3, '0')}`;
+      while (await FollowUp.findOne({ followUpNumber: candidate })) {
+        count++;
+        candidate = `FU-${String(count + 1).padStart(3, '0')}`;
+      }
+      followUpNumber = candidate;
     }
 
     const followUp = await FollowUp.create({
@@ -631,6 +646,27 @@ exports.createQuotation = async (req, res) => {
       notes,
       status
     } = req.body;
+
+    if (!customer && req.body.companyName) {
+      let existingCust = await Customer.findOne({ companyName: req.body.companyName });
+      if (!existingCust) {
+        let count = await Customer.countDocuments();
+        let code = `CUS-${String(count + 1).padStart(3, '0')}`;
+        while (await Customer.findOne({ customerCode: code })) {
+          count++;
+          code = `CUS-${String(count + 1).padStart(3, '0')}`;
+        }
+        existingCust = await Customer.create({
+          customerCode: code,
+          companyName: req.body.companyName,
+          contactPerson: req.body.contactPerson || 'Procurement Officer',
+          mobileNumber: req.body.mobileNumber || '9999999999',
+          email: req.body.email || '',
+          billingAddress: req.body.address || 'Chennai'
+        });
+      }
+      customer = existingCust._id;
+    }
 
     if (!quotationNumber) {
       const count = await Quotation.distinct('quotationNumber');
@@ -852,9 +888,23 @@ exports.createProformaInvoice = async (req, res) => {
       status
     } = req.body;
 
+    if (bankDetails && typeof bankDetails === 'object') {
+      const parts = [];
+      if (bankDetails.bankName) parts.push(`Bank: ${bankDetails.bankName}`);
+      if (bankDetails.accountNumber) parts.push(`A/C: ${bankDetails.accountNumber}`);
+      if (bankDetails.ifscCode) parts.push(`IFSC: ${bankDetails.ifscCode}`);
+      if (bankDetails.branch) parts.push(`Branch: ${bankDetails.branch}`);
+      bankDetails = parts.length > 0 ? parts.join(', ') : JSON.stringify(bankDetails);
+    }
+
     if (!piNumber) {
-      const count = await ProformaInvoice.countDocuments();
-      piNumber = `PI-${String(count + 1).padStart(3, '0')}`;
+      let count = await ProformaInvoice.countDocuments();
+      let candidate = `PI-${String(count + 1).padStart(3, '0')}`;
+      while (await ProformaInvoice.findOne({ piNumber: candidate })) {
+        count++;
+        candidate = `PI-${String(count + 1).padStart(3, '0')}`;
+      }
+      piNumber = candidate;
     }
 
     const quote = await Quotation.findById(quotation);
@@ -933,8 +983,13 @@ exports.createCustomerPO = async (req, res) => {
     } = req.body;
 
     if (!internalPOId) {
-      const count = await CustomerPO.countDocuments();
-      internalPOId = `CPO-${String(count + 1).padStart(3, '0')}`;
+      let count = await CustomerPO.countDocuments();
+      let candidate = `CPO-${String(count + 1).padStart(3, '0')}`;
+      while (await CustomerPO.findOne({ internalPOId: candidate })) {
+        count++;
+        candidate = `CPO-${String(count + 1).padStart(3, '0')}`;
+      }
+      internalPOId = candidate;
     }
 
     const cpo = await CustomerPO.create({
@@ -1135,9 +1190,33 @@ exports.createSalesOrder = async (req, res) => {
     } = req.body;
 
     if (!soNumber) {
-      const count = await SalesOrder.countDocuments();
-      soNumber = `SO-${String(count + 1).padStart(3, '0')}`;
+      let count = await SalesOrder.countDocuments();
+      let candidate = `SO-${String(count + 1).padStart(3, '0')}`;
+      while (await SalesOrder.findOne({ soNumber: candidate })) {
+        count++;
+        candidate = `SO-${String(count + 1).padStart(3, '0')}`;
+      }
+      soNumber = candidate;
     }
+
+    const processedItems = (items || []).map(item => {
+      const qty = Number(item.quantity) || 1;
+      const price = Number(item.unitPrice) || 0;
+      const disc = Number(item.discount) || 0;
+      const gst = Number(item.gstPercent) || 18;
+      const total = Number(item.totalAmount || item.totalPrice || ((qty * price - disc) * (1 + gst / 100)));
+      return {
+        product: item.product || null,
+        productName: item.productName || item.description || 'Cryo Unit',
+        description: item.description || '',
+        quantity: qty,
+        unit: item.unit || 'Nos',
+        unitPrice: price,
+        discount: disc,
+        gstPercent: gst,
+        totalAmount: Math.round(total * 100) / 100
+      };
+    });
 
     const order = await SalesOrder.create({
       soNumber: soNumber.toUpperCase(),
@@ -1146,13 +1225,13 @@ exports.createSalesOrder = async (req, res) => {
       customerPOReference: customerPOReference || null,
       quotationReference: quotationReference || null,
       piReference: piReference || null,
-      expectedDeliveryDate,
-      items: items || [],
+      expectedDeliveryDate: expectedDeliveryDate || new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+      items: processedItems,
       orderAmount: Number(orderAmount),
       advanceReceived: Number(advanceReceived) || 0,
       balanceAmount: Number(balanceAmount) || 0,
-      paymentTerms,
-      shippingAddress,
+      paymentTerms: paymentTerms || '50% Advance, Balance on Delivery',
+      shippingAddress: shippingAddress || 'Client Site, India',
       deliveryInstructions,
       productionRemarks,
       productionStatus: 'Not Started',

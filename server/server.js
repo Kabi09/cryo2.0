@@ -61,6 +61,7 @@ app.get('/api/health', (req, res) => {
 
 // API Routes
 app.use('/api', scmRoutes);
+app.use('/api/scm', scmRoutes);
 app.use('/api/sales', salesRoutes);
 app.use('/api/production', productionRoutes);
 app.use('/api/logistics', logisticsRoutes);

@@ -50,8 +50,10 @@ export default function RolesPermissionsModule({
   departments = [],
   onSaveRole,
   onUpdateRolePermissions,
-  showToast
+  showToast,
+  defaultTab = 'roles'
 }) {
+  const [activeTab, setActiveTab] = useState(defaultTab);
   const [selectedRoleId, setSelectedRoleId] = useState(roles[0]?._id || '');
   const [currentPermissions, setCurrentPermissions] = useState({});
   const [isModified, setIsModified] = useState(false);
@@ -270,14 +272,107 @@ export default function RolesPermissionsModule({
 
   return (
     <div className="module-container">
-      {/* Top Controls Header */}
-      <div style={{
-        background: 'var(--bg-surface)',
-        border: '1px solid var(--border-subtle)',
-        borderRadius: 12,
-        padding: '20px 24px',
-        marginBottom: 20
-      }}>
+      {/* Sub-Tabs Switcher */}
+      <div style={{ marginBottom: 18, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+        <div className="tab-switcher">
+          <button
+            className={`tab-btn ${activeTab === 'roles' ? 'active' : ''}`}
+            onClick={() => setActiveTab('roles')}
+          >
+            <Shield size={14} style={{ marginRight: 6 }} />
+            Configured Roles ({roles.length})
+          </button>
+          <button
+            className={`tab-btn ${activeTab === 'permissions' ? 'active' : ''}`}
+            onClick={() => setActiveTab('permissions')}
+          >
+            <Lock size={14} style={{ marginRight: 6 }} />
+            Permission Matrix ({selectedRole?.name})
+          </button>
+        </div>
+
+        <button
+          className="btn btn-primary btn-sm"
+          onClick={() => setIsAddRoleOpen(true)}
+        >
+          <Plus size={14} /> Create Custom Role
+        </button>
+      </div>
+
+      {/* Tab 1: Roles Directory */}
+      {activeTab === 'roles' && (
+        <div className="table-card">
+          <div style={{
+            padding: '16px 20px',
+            borderBottom: '1px solid var(--border-subtle)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 10
+          }}>
+            <div>
+              <h3 style={{ fontSize: '0.96rem', fontWeight: 700, color: 'var(--text-primary)' }}>Enterprise RBAC Roles</h3>
+              <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>Corporate designations governing access across SCM, Sales, Production, Logistics, and HR</p>
+            </div>
+          </div>
+
+          <div className="table-responsive">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Role Name</th>
+                  <th>Department</th>
+                  <th>Description</th>
+                  <th>Assigned Staff</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {roles.map(r => (
+                  <tr key={r._id}>
+                    <td>
+                      <strong style={{ color: r.isSuperAdmin ? 'var(--primary)' : 'var(--text-primary)' }}>
+                        {r.isSuperAdmin ? '👑 ' : ''}{r.name}
+                      </strong>
+                    </td>
+                    <td><span className="badge badge-info">{r.department || 'General'}</span></td>
+                    <td style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>{r.description}</td>
+                    <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>{r.assignedEmployeesCount || '—'}</td>
+                    <td><StatusBadge status={r.status || 'Active'} /></td>
+                    <td>
+                      <button
+                        type="button"
+                        className="btn btn-primary btn-sm"
+                        style={{ padding: '3px 10px', fontSize: '0.74rem', gap: 4 }}
+                        onClick={() => {
+                          setSelectedRoleId(r._id);
+                          setActiveTab('permissions');
+                        }}
+                      >
+                        <ShieldCheck size={13} /> Configure Permissions ➔
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Tab 2: Permission Matrix */}
+      {activeTab === 'permissions' && (
+        <>
+          {/* Top Controls Header */}
+          <div style={{
+            background: 'var(--bg-surface)',
+            border: '1px solid var(--border-subtle)',
+            borderRadius: 12,
+            padding: '20px 24px',
+            marginBottom: 20
+          }}>
         <div style={{
           display: 'flex',
           alignItems: 'center',
@@ -612,6 +707,8 @@ export default function RolesPermissionsModule({
           </table>
         </div>
       </div>
+      </>
+    )}
 
       {/* Create Custom Role Modal */}
       {isAddRoleOpen && (

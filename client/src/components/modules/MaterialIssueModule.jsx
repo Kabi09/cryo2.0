@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Eye, Factory, AlertOctagon } from 'lucide-react';
 import DataTable from '../common/DataTable';
 import StatusBadge from '../common/StatusBadge';
 import Modal from '../common/Modal';
 import KpiCard from '../common/KpiCard';
 
-export default function MaterialIssueModule({ materialIssues, materials, inventory, onSave, showToast }) {
+export default function MaterialIssueModule({ materialIssues, materials, inventory, onSave, showToast, preSelectedRequest }) {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [selectedIssue, setSelectedIssue] = useState(null);
 
@@ -25,6 +25,39 @@ export default function MaterialIssueModule({ materialIssues, materials, invento
     remarks: '',
     items: []
   });
+
+  useEffect(() => {
+    if (preSelectedRequest) {
+      const reqItems = (preSelectedRequest.items || []).map(item => {
+        const matId = item.material?._id || item.material;
+        const mat = materials.find(m => m._id === matId);
+        const avail = getMaterialAvailableStock(matId);
+        const needed = item.requestedQty || item.requiredQty || 1;
+        return {
+          material: matId,
+          materialName: item.materialName || mat?.materialName || 'Material',
+          unit: item.unit || mat?.unit || 'Kg',
+          availableStock: avail,
+          requiredQuantity: needed,
+          issueQuantity: Math.min(avail, needed),
+          batchNumber: `BAT-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`
+        };
+      });
+
+      setFormData({
+        issueNumber: '',
+        workOrder: preSelectedRequest.workOrderNumber || 'WO-001',
+        materialRequestId: preSelectedRequest._id,
+        department: preSelectedRequest.department || 'Production Line 1',
+        issueDate: new Date().toISOString().split('T')[0],
+        requestedBy: preSelectedRequest.requestedBy || 'Production Supervisor',
+        issuedBy: 'Selvam (Store Officer)',
+        remarks: `Issued against Material Requisition ${preSelectedRequest.requestNumber}`,
+        items: reqItems
+      });
+      setIsAddOpen(true);
+    }
+  }, [preSelectedRequest]);
 
   const handleOpenAdd = () => {
     // Select first material with stock

@@ -300,8 +300,13 @@ exports.createPurchaseOrder = async (req, res) => {
     
     if (!poNumber) {
       const year = new Date().getFullYear();
-      const count = await PurchaseOrder.countDocuments();
-      poNumber = `PO-${year}-${String(count + 1).padStart(3, '0')}`;
+      let count = await PurchaseOrder.countDocuments();
+      let candidate = `PO-${year}-${String(count + 1).padStart(3, '0')}`;
+      while (await PurchaseOrder.findOne({ poNumber: candidate })) {
+        count++;
+        candidate = `PO-${year}-${String(count + 1).padStart(3, '0')}`;
+      }
+      poNumber = candidate;
     }
 
     if (!items || items.length === 0) {
@@ -312,8 +317,8 @@ exports.createPurchaseOrder = async (req, res) => {
     let subtotal = 0;
     let gstTotal = 0;
     const computedItems = items.map(item => {
-      const qty = Number(item.quantity);
-      const price = Number(item.unitPrice);
+      const qty = Number(item.quantity !== undefined ? item.quantity : (item.orderedQuantity !== undefined ? item.orderedQuantity : 1));
+      const price = Number(item.unitPrice || 0);
       const taxRate = Number(item.taxPercent) || 18;
       const baseAmount = qty * price;
       const taxAmount = (baseAmount * taxRate) / 100;
@@ -325,7 +330,7 @@ exports.createPurchaseOrder = async (req, res) => {
       return {
         material: item.material,
         quantity: qty,
-        unit: item.unit,
+        unit: item.unit || 'Kg',
         unitPrice: price,
         taxPercent: taxRate,
         lineTotal: Math.round(lineTotal * 100) / 100
@@ -339,8 +344,8 @@ exports.createPurchaseOrder = async (req, res) => {
       poNumber: poNumber.toUpperCase(),
       poDate: poDate || Date.now(),
       supplier,
-      expectedDeliveryDate,
-      deliveryAddress,
+      expectedDeliveryDate: expectedDeliveryDate || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      deliveryAddress: deliveryAddress || 'Cryo Main Warehouse, Chennai',
       items: computedItems,
       subtotal: Math.round(subtotal * 100) / 100,
       gstTotal: Math.round(gstTotal * 100) / 100,
@@ -406,10 +411,15 @@ exports.createGRN = async (req, res) => {
     const po = await PurchaseOrder.findById(purchaseOrder);
     if (!po) return res.status(404).json({ success: false, message: 'Purchase Order not found' });
 
+    if (!invoiceNumber) {
+      invoiceNumber = deliveryChallanNo || `INV-${Date.now().toString().slice(-6)}`;
+    }
+
     // Validate items
     const processedItems = items.map(item => {
-      const currentReceived = Number(item.currentReceivedQty);
-      const ordered = Number(item.orderedQty);
+      const matchingPOItem = po.items.find(pi => pi.material && pi.material.toString() === (item.material ? item.material.toString() : ''));
+      const ordered = Number(item.orderedQty !== undefined ? item.orderedQty : (matchingPOItem ? matchingPOItem.quantity : (item.currentReceivedQty || item.receivedQuantity || 1)));
+      const currentReceived = Number(item.currentReceivedQty !== undefined ? item.currentReceivedQty : (item.receivedQuantity !== undefined ? item.receivedQuantity : 1));
       const prev = Number(item.previouslyReceivedQty) || 0;
       const balance = Math.max(0, ordered - (prev + currentReceived));
 
@@ -419,7 +429,7 @@ exports.createGRN = async (req, res) => {
         previouslyReceivedQty: prev,
         currentReceivedQty: currentReceived,
         balanceQty: balance,
-        unit: item.unit,
+        unit: item.unit || matchingPOItem?.unit || 'Kg',
         batchNumber: item.batchNumber || `BAT-${Date.now().toString().slice(-6)}`,
         expiryDate: item.expiryDate || null
       };
@@ -531,6 +541,8 @@ exports.createQCTest = async (req, res) => {
       else result = 'Partial Pass';
     }
 
+    const recQty = Number(receivedQuantity !== undefined ? receivedQuantity : (tested || (accepted + rejected) || 1));
+
     // 1. Create QC Test Record
     const qcTest = await QCTest.create({
       qcNumber: qcNumber.toUpperCase(),
@@ -538,7 +550,7 @@ exports.createQCTest = async (req, res) => {
       material,
       supplier,
       batchNumber: batchNumber || 'BAT-DEFAULT',
-      receivedQuantity: Number(receivedQuantity),
+      receivedQuantity: recQty,
       testedQuantity: tested,
       acceptedQuantity: accepted,
       rejectedQuantity: rejected,
@@ -700,7 +712,7 @@ exports.createMaterialIssue = async (req, res) => {
     // 1. Validate Stock availability for every single line item
     for (const item of items) {
       const inv = await Inventory.findOne({ material: item.material }).populate('material', 'materialName materialCode');
-      const issueQty = Number(item.issueQuantity);
+      const issueQty = Number(item.issueQuantity !== undefined ? item.issueQuantity : (item.issuedQuantity !== undefined ? item.issuedQuantity : 1));
       if (!inv || inv.availableStock < issueQty) {
         const available = inv ? inv.availableStock : 0;
         const name = inv?.material?.materialName || 'Selected Material';
@@ -715,7 +727,7 @@ exports.createMaterialIssue = async (req, res) => {
     const processedItems = [];
     for (const item of items) {
       const inv = await Inventory.findOne({ material: item.material });
-      const issueQty = Number(item.issueQuantity);
+      const issueQty = Number(item.issueQuantity !== undefined ? item.issueQuantity : (item.issuedQuantity !== undefined ? item.issuedQuantity : 1));
       const stockBefore = inv.availableStock;
 
       inv.availableStock = stockBefore - issueQty;
@@ -747,11 +759,23 @@ exports.createMaterialIssue = async (req, res) => {
       });
     }
 
+    const validDepts = ['Fabrication', 'Machining', 'Assembly', 'Finishing', 'Packaging', 'R&D'];
+    let safeDept = 'Assembly';
+    if (department) {
+      if (validDepts.includes(department)) safeDept = department;
+      else if (/fab/i.test(department)) safeDept = 'Fabrication';
+      else if (/mach/i.test(department)) safeDept = 'Machining';
+      else if (/finish/i.test(department)) safeDept = 'Finishing';
+      else if (/pack/i.test(department)) safeDept = 'Packaging';
+      else if (/r&d|research/i.test(department)) safeDept = 'R&D';
+      else safeDept = 'Assembly';
+    }
+
     // 3. Create Issue Record
     const materialIssue = await MaterialIssue.create({
       issueNumber: issueNumber.toUpperCase(),
-      workOrder: workOrder.toUpperCase(),
-      department,
+      workOrder: String(workOrder || 'WO-001').toUpperCase(),
+      department: safeDept,
       issueDate: issueDate || Date.now(),
       requestedBy: requestedBy || 'Production Supervisor',
       issuedBy: issuedBy || 'Store Officer',

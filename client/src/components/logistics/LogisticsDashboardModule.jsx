@@ -1,6 +1,5 @@
 import React from 'react';
 import KpiCard from '../common/KpiCard';
-import DataTable from '../common/DataTable';
 import StatusBadge from '../common/StatusBadge';
 import {
   Truck,
@@ -11,146 +10,224 @@ import {
   ArrowRight,
   PackageCheck,
   FileCheck2,
-  Calendar
+  Calendar,
+  AlertTriangle,
+  Eye,
+  Plus
 } from 'lucide-react';
 
-export default function LogisticsDashboardModule({ dashboardData, onNavigateModule }) {
-  const kpis = dashboardData || {
-    pendingDeliveries: 12,
-    inTransit: 8,
-    delivered: 15,
-    installationPending: 3,
-    recentDeliveries: []
-  };
+export default function LogisticsDashboardModule({
+  dashboardData = {},
+  deliveryPlans = [],
+  dispatches = [],
+  confirmations = [],
+  installations = [],
+  installationCompletions = [],
+  finishedGoods = [],
+  onNavigateModule
+}) {
+  const readyForDelivery = finishedGoods.filter(f => f.stockStatus === 'Available' || f.stockStatus === 'Reserved for Dispatch').length || 4;
+  const plannedDeliveries = deliveryPlans.filter(p => p.status === 'Planned' || p.status === 'Draft').length;
+  const dispatchedCount = dispatches.length;
+  const inTransitCount = deliveryPlans.filter(p => p.status === 'Dispatched' || p.status === 'In Transit').length;
+  const pendingPODCount = dispatches.filter(d => !confirmations.some(c => c.dispatch?._id === d._id || c.dispatchNumber === d.dispatchNumber)).length;
+  const pendingInstallations = installations.filter(i => i.status === 'Scheduled' || i.status === 'In Progress').length;
+  const failedInstallations = installationCompletions.filter(c => c.status === 'Failed' || c.overallResult === 'Fail').length;
 
-  const recentDeliveries = kpis.recentDeliveries || [];
-
-  const columns = [
-    {
-      header: 'Delivery No',
-      accessor: 'deliveryNumber',
-      render: (row) => <span className="font-mono text-cyan" style={{ fontWeight: 700 }}>{row.deliveryNumber}</span>
-    },
-    {
-      header: 'SO Reference',
-      accessor: 'soNumber',
-      render: (row) => <span className="font-mono" style={{ color: '#818CF8' }}>{row.soNumber || 'SO-001'}</span>
-    },
-    {
-      header: 'Customer',
-      accessor: 'customerName',
-      render: (row) => row.customerName
-    },
-    {
-      header: 'Product',
-      accessor: 'productName',
-      render: (row) => row.productName
-    },
-    {
-      header: 'Delivery Date',
-      accessor: 'deliveryDate',
-      render: (row) => (row.deliveryDate ? new Date(row.deliveryDate).toLocaleDateString() : '-')
-    },
-    {
-      header: 'Method',
-      accessor: 'deliveryMethod',
-      render: (row) => (
-        <span className="badge badge-info" style={{ fontSize: '0.72rem' }}>
-          {row.deliveryMethod}
-        </span>
-      )
-    },
-    {
-      header: 'Status',
-      accessor: 'status',
-      render: (row) => <StatusBadge status={row.status || 'Planned'} />
-    }
-  ];
+  const recentList = deliveryPlans.slice(0, 6);
 
   return (
     <div className="module-container">
-      {/* 4 Summary Cards */}
-      <div className="kpi-grid">
+      {/* 6 Essential Summary Cards */}
+      <div className="kpi-grid" style={{ marginBottom: 20 }}>
         <KpiCard
-          label="Pending Deliveries"
-          value={kpis.pendingDeliveries || 12}
-          subtext="Confirmed SOs ready for dispatch"
-          icon={Clock}
+          label="Ready for Delivery"
+          value={readyForDelivery}
+          subtext="QA Passed Finished Goods"
+          icon={PackageCheck}
+          accent="primary"
+        />
+        <KpiCard
+          label="Planned Deliveries"
+          value={plannedDeliveries}
+          subtext="Transport plans in queue"
+          icon={Calendar}
+          accent="cyan"
+        />
+        <KpiCard
+          label="Dispatched"
+          value={dispatchedCount}
+          subtext="Warehouse gate exits"
+          icon={Truck}
           accent="warning"
         />
         <KpiCard
           label="In Transit"
-          value={kpis.inTransit || 8}
-          subtext="En route via vehicle or courier"
-          icon={Truck}
+          value={inTransitCount}
+          subtext="En route via fleet or courier"
+          icon={Navigation}
           accent="primary"
         />
         <KpiCard
-          label="Delivered (POD)"
-          value={kpis.delivered || 15}
-          subtext="Customer received & verified"
-          icon={CheckCircle2}
-          accent="success"
+          label="Pending Confirmation"
+          value={pendingPODCount}
+          subtext="Awaiting POD receipt"
+          icon={FileCheck2}
+          accent="warning"
         />
         <KpiCard
-          label="Installation Pending"
-          value={kpis.installationPending || 3}
-          subtext="Goods reached, awaiting site team"
+          label="Pending Installations"
+          value={pendingInstallations}
+          subtext="On-site commissioning"
           icon={Wrench}
-          accent="cyan"
+          accent="purple"
         />
       </div>
 
-      {/* Visual Workflow Stepper */}
-      <div className="card" style={{ padding: '20px 24px', marginBottom: 24, background: 'var(--bg-surface)' }}>
-        <div style={{ fontSize: '0.84rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: 14 }}>
-          Logistics & On-Site Installation Delivery Flow
+      {/* Pending Actions */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14, marginBottom: 20 }}>
+        <div className="card" style={{ padding: 14, borderLeft: '4px solid var(--primary)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)' }}>Awaiting Delivery Plan</span>
+            <span className="badge badge-primary" style={{ fontSize: '0.7rem' }}>{readyForDelivery} Units</span>
+          </div>
+          <p style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', margin: '6px 0 10px' }}>
+            Finished goods ready for transport allocation.
+          </p>
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            style={{ width: '100%', fontSize: '0.74rem', padding: '4px 8px', justifyContent: 'center' }}
+            onClick={() => onNavigateModule && onNavigateModule('deliveries')}
+          >
+            Create Delivery Plan ➔
+          </button>
         </div>
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-          gap: 12,
-          alignItems: 'center'
-        }}>
-          <div style={{ padding: '12px 14px', background: 'var(--bg-surface-elevated)', borderRadius: 8, border: '1px solid var(--border-subtle)', textAlign: 'center' }}>
-            <div style={{ fontSize: '0.7rem', color: 'var(--cyan)', fontWeight: 700 }}>01. DEMAND</div>
-            <div style={{ fontSize: '0.8rem', fontWeight: 600, marginTop: 4 }}>Sales Order Confirmed</div>
+
+        <div className="card" style={{ padding: 14, borderLeft: '4px solid var(--warning)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)' }}>Dispatches Awaiting Pickup</span>
+            <span className="badge badge-warning" style={{ fontSize: '0.7rem' }}>{plannedDeliveries} Planned</span>
           </div>
-          <div style={{ padding: '12px 14px', background: 'var(--bg-surface-elevated)', borderRadius: 8, border: '1px solid var(--border-subtle)', textAlign: 'center' }}>
-            <div style={{ fontSize: '0.7rem', color: 'var(--success)', fontWeight: 700 }}>02. STOCK</div>
-            <div style={{ fontSize: '0.8rem', fontWeight: 600, marginTop: 4 }}>QA-Approved FG</div>
+          <p style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', margin: '6px 0 10px' }}>
+            Plans ready for gate slip & warehouse dispatch.
+          </p>
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            style={{ width: '100%', fontSize: '0.74rem', padding: '4px 8px', justifyContent: 'center' }}
+            onClick={() => onNavigateModule && onNavigateModule('deliveries')}
+          >
+            Prepare Dispatch ➔
+          </button>
+        </div>
+
+        <div className="card" style={{ padding: 14, borderLeft: '4px solid #10B981' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)' }}>Pending POD Confirmation</span>
+            <span className="badge badge-success" style={{ fontSize: '0.7rem' }}>{pendingPODCount} Delivered</span>
           </div>
-          <div style={{ padding: '12px 14px', background: 'var(--bg-surface-elevated)', borderRadius: 8, border: '1px solid var(--border-subtle)', textAlign: 'center' }}>
-            <div style={{ fontSize: '0.7rem', color: '#818CF8', fontWeight: 700 }}>03. METHOD</div>
-            <div style={{ fontSize: '0.8rem', fontWeight: 600, marginTop: 4 }}>Vehicle or Courier</div>
+          <p style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', margin: '6px 0 10px' }}>
+            Verify recipient signature & product condition.
+          </p>
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            style={{ width: '100%', fontSize: '0.74rem', padding: '4px 8px', justifyContent: 'center' }}
+            onClick={() => onNavigateModule && onNavigateModule('confirmation')}
+          >
+            Confirm Deliveries ➔
+          </button>
+        </div>
+
+        <div className="card" style={{ padding: 14, borderLeft: '4px solid var(--purple)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)' }}>Installations & Service</span>
+            <span className="badge badge-purple" style={{ fontSize: '0.7rem' }}>{pendingInstallations} Pending</span>
           </div>
-          <div style={{ padding: '12px 14px', background: 'var(--bg-surface-elevated)', borderRadius: 8, border: '1px solid var(--border-subtle)', textAlign: 'center' }}>
-            <div style={{ fontSize: '0.7rem', color: 'var(--primary)', fontWeight: 700 }}>04. DISPATCH</div>
-            <div style={{ fontSize: '0.8rem', fontWeight: 600, marginTop: 4 }}>Challan & Gate Exit</div>
-          </div>
-          <div style={{ padding: '12px 14px', background: 'var(--bg-surface-elevated)', borderRadius: 8, border: '1px solid var(--border-subtle)', textAlign: 'center' }}>
-            <div style={{ fontSize: '0.7rem', color: 'var(--warning)', fontWeight: 700 }}>05. TRACKING</div>
-            <div style={{ fontSize: '0.8rem', fontWeight: 600, marginTop: 4 }}>Live In-Transit</div>
-          </div>
-          <div style={{ padding: '12px 14px', background: 'var(--bg-surface-elevated)', borderRadius: 8, border: '1px solid var(--border-subtle)', textAlign: 'center' }}>
-            <div style={{ fontSize: '0.7rem', color: 'var(--success)', fontWeight: 700 }}>06. RECEIPT</div>
-            <div style={{ fontSize: '0.8rem', fontWeight: 600, marginTop: 4 }}>Proof of Delivery</div>
-          </div>
-          <div style={{ padding: '12px 14px', background: 'var(--primary-light)', borderRadius: 8, border: '1px solid var(--primary)', textAlign: 'center' }}>
-            <div style={{ fontSize: '0.7rem', color: 'var(--primary)', fontWeight: 700 }}>07. INSTALL</div>
-            <div style={{ fontSize: '0.8rem', fontWeight: 700, marginTop: 4, color: 'var(--text-primary)' }}>7-Point QA Checklist</div>
-          </div>
+          <p style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', margin: '6px 0 10px' }}>
+            7-point commissioning checklist & sign-offs.
+          </p>
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            style={{ width: '100%', fontSize: '0.74rem', padding: '4px 8px', justifyContent: 'center' }}
+            onClick={() => onNavigateModule && onNavigateModule('installation')}
+          >
+            Perform Commissioning ➔
+          </button>
         </div>
       </div>
 
       {/* Recent Deliveries Table */}
-      <DataTable
-        title="Recent Deliveries & Shipments"
-        subtitle="Live movement of finished goods from factory warehouse to customer facilities"
-        columns={columns}
-        data={recentDeliveries}
-      />
+      <div className="table-card">
+        <div style={{
+          padding: '16px 20px',
+          borderBottom: '1px solid var(--border-subtle)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: 10
+        }}>
+          <div>
+            <h3 style={{ fontSize: '0.96rem', fontWeight: 700, color: 'var(--text-primary)' }}>Recent Shipments & Deliveries</h3>
+            <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>Latest outbound consignments scheduled for field deployment</p>
+          </div>
+          <button
+            className="btn btn-primary btn-sm"
+            onClick={() => onNavigateModule && onNavigateModule('deliveries')}
+          >
+            <Plus size={14} /> New Delivery Plan
+          </button>
+        </div>
+
+        <div className="table-responsive">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Delivery No</th>
+                <th>Customer</th>
+                <th>Product</th>
+                <th>Delivery Date</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {recentList.map(plan => (
+                <tr key={plan._id}>
+                  <td><span className="code-badge">{plan.deliveryNumber}</span></td>
+                  <td><strong style={{ color: 'var(--text-primary)' }}>{plan.customerName || 'Customer'}</strong></td>
+                  <td>
+                    <span style={{ color: 'var(--primary)', fontWeight: 600 }}>{plan.productName || 'Cryo Equipment'}</span>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Qty: {plan.plannedDeliveryQuantity || 1} Units</div>
+                  </td>
+                  <td style={{ fontSize: '0.78rem' }}>{plan.deliveryDate ? new Date(plan.deliveryDate).toLocaleDateString('en-GB') : '—'}</td>
+                  <td><StatusBadge status={plan.status || 'Planned'} /></td>
+                  <td>
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      style={{ padding: '2px 8px', fontSize: '0.72rem', height: 26, gap: 4 }}
+                      onClick={() => onNavigateModule && onNavigateModule('deliveries')}
+                    >
+                      <Eye size={12} /> View
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {recentList.length === 0 && (
+                <tr>
+                  <td colSpan={6} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 24 }}>
+                    No outbound deliveries scheduled yet.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 }
-

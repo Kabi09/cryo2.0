@@ -2,15 +2,17 @@ import React, { useState } from 'react';
 import DataTable from '../common/DataTable';
 import Modal from '../common/Modal';
 import StatusBadge from '../common/StatusBadge';
-import { CheckCircle2, AlertTriangle, FileCheck, User, Phone, ShieldCheck } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, FileCheck, User, Phone, ShieldCheck, Clock, ArrowRight } from 'lucide-react';
 
 export default function DeliveryConfirmationModule({
   confirmations = [],
   deliveryPlans = [],
   dispatches = [],
   onSave,
-  showToast
+  showToast,
+  defaultTab = 'pending'
 }) {
+  const [activeTab, setActiveTab] = useState(defaultTab);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({
     deliveryPlan: '',
@@ -25,9 +27,9 @@ export default function DeliveryConfirmationModule({
     receivedQuantity: 1,
     pendingQuantity: 0,
     deliveryDateTime: new Date().toISOString().slice(0, 16),
-    receivedBy: 'Ramesh (Site Manager)',
+    receivedBy: 'Site Receiving Officer',
     customerMobile: '9876543210',
-    customerSignature: 'Signed on delivery challan tablet',
+    customerSignature: 'Signed on delivery challan copy',
     productCondition: 'Good',
     damageRemarks: '',
     podDocument: 'POD-CHALLAN-SIGNED.pdf',
@@ -35,14 +37,41 @@ export default function DeliveryConfirmationModule({
     remarks: 'Goods received in intact condition, verified serial number on nameplate.'
   });
 
-  const handleOpenModal = () => {
-    const inTransitPlans = deliveryPlans.filter(p => p.status === 'In Transit' || p.status === 'Dispatched');
-    if (inTransitPlans.length > 0 && !formData.deliveryPlan) {
-      handleSelectPlan(inTransitPlans[0]._id);
-    } else if (deliveryPlans.length > 0 && !formData.deliveryPlan) {
+  // Dispatches awaiting customer confirmation
+  const pendingDispatches = dispatches.filter(d => {
+    return !confirmations.some(c => String(c.dispatch?._id || c.dispatch) === String(d._id) || c.dispatchNumber === d.dispatchNumber);
+  });
+
+  const handleOpenModal = (targetDispatch = null) => {
+    if (targetDispatch) {
+      handleSelectDispatch(targetDispatch);
+    } else if (pendingDispatches.length > 0) {
+      handleSelectDispatch(pendingDispatches[0]);
+    } else if (deliveryPlans.length > 0) {
       handleSelectPlan(deliveryPlans[0]._id);
     }
     setIsModalOpen(true);
+  };
+
+  const handleSelectDispatch = (disp) => {
+    const linkedPlan = deliveryPlans.find(p => String(p._id) === String(disp.deliveryPlan?._id || disp.deliveryPlan));
+    setFormData(prev => ({
+      ...prev,
+      deliveryPlan: linkedPlan?._id || disp.deliveryPlan || '',
+      deliveryNumber: disp.deliveryNumber || linkedPlan?.deliveryNumber || '',
+      dispatch: disp._id,
+      dispatchNumber: disp.dispatchNumber,
+      customer: disp.customer?._id || disp.customer || linkedPlan?.customer || '',
+      customerName: disp.customerName || linkedPlan?.customerName || '',
+      product: disp.product?._id || disp.product || linkedPlan?.product || '',
+      productName: disp.productName || linkedPlan?.productName || '',
+      dispatchedQuantity: disp.actualDispatchQuantity || 1,
+      receivedQuantity: disp.actualDispatchQuantity || 1,
+      pendingQuantity: 0,
+      receivedBy: linkedPlan?.contactPerson || 'Site Receiving Officer',
+      customerMobile: linkedPlan?.mobileNumber || '9876543210',
+      installationRequired: linkedPlan ? linkedPlan.installationRequired !== false : true
+    }));
   };
 
   const handleSelectPlan = (planId) => {
@@ -102,35 +131,27 @@ export default function DeliveryConfirmationModule({
     {
       header: 'POD No',
       accessor: 'confirmationNumber',
-      render: (row) => <span className="font-mono text-cyan" style={{ fontWeight: 700 }}>{row.confirmationNumber}</span>
+      render: (row) => <span className="code-badge">{row.confirmationNumber}</span>
     },
     {
       header: 'Delivery No',
       accessor: 'deliveryNumber',
-      render: (row) => <span className="font-mono" style={{ color: '#818CF8' }}>{row.deliveryNumber}</span>
+      render: (row) => <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--primary)' }}>{row.deliveryNumber}</span>
     },
     {
       header: 'Customer',
       accessor: 'customerName',
-      render: (row) => row.customerName
+      render: (row) => <strong style={{ color: 'var(--text-primary)' }}>{row.customerName}</strong>
     },
     {
       header: 'Product',
       accessor: 'productName',
-      render: (row) => row.productName
-    },
-    {
-      header: 'Quantities',
       render: (row) => (
         <div>
-          <span style={{ fontWeight: 700, fontFamily: 'var(--font-mono)' }}>
-            {row.receivedQuantity} / {row.dispatchedQuantity} Received
-          </span>
-          {row.pendingQuantity > 0 && (
-            <div style={{ fontSize: '0.72rem', color: 'var(--warning)', fontWeight: 600 }}>
-              Balance: {row.pendingQuantity} Pending
-            </div>
-          )}
+          <span style={{ color: 'var(--primary)', fontWeight: 600 }}>{row.productName}</span>
+          <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+            Qty: {row.receivedQuantity} / {row.dispatchedQuantity}
+          </div>
         </div>
       )
     },
@@ -153,6 +174,14 @@ export default function DeliveryConfirmationModule({
       )
     },
     {
+      header: 'Delivered Date',
+      render: (row) => (
+        <span style={{ fontSize: '0.78rem' }}>
+          {row.deliveryDateTime ? new Date(row.deliveryDateTime).toLocaleDateString('en-GB') : '—'}
+        </span>
+      )
+    },
+    {
       header: 'Status',
       accessor: 'status',
       render: (row) => <StatusBadge status={row.status || 'Delivered'} />
@@ -161,23 +190,118 @@ export default function DeliveryConfirmationModule({
 
   return (
     <div className="module-container">
-      {/* Partial Delivery Rule Banner */}
-      <div className="card" style={{ marginBottom: 16, padding: '12px 18px', display: 'flex', alignItems: 'center', gap: 12, background: 'rgba(6, 182, 212, 0.05)' }}>
-        <CheckCircle2 size={18} style={{ color: 'var(--cyan)' }} />
-        <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-          <strong>Proof of Delivery (POD) Rule:</strong> If only part of the shipment is received, record the received quantity and keep the balance pending. The system will automatically spawn an on-site Installation job when installation is required.
-        </span>
+      {/* Sub-Tabs Switcher */}
+      <div style={{ marginBottom: 18, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+        <div className="tab-switcher">
+          <button
+            className={`tab-btn ${activeTab === 'pending' ? 'active' : ''}`}
+            onClick={() => setActiveTab('pending')}
+          >
+            <Clock size={14} style={{ marginRight: 6 }} />
+            Pending POD ({pendingDispatches.length})
+          </button>
+          <button
+            className={`tab-btn ${activeTab === 'confirmed' ? 'active' : ''}`}
+            onClick={() => setActiveTab('confirmed')}
+          >
+            <CheckCircle2 size={14} style={{ marginRight: 6 }} />
+            Confirmed Receipts ({confirmations.length})
+          </button>
+        </div>
+
+        <button className="btn btn-primary btn-sm" onClick={() => handleOpenModal()}>
+          <FileCheck size={14} /> Record Delivery Confirmation
+        </button>
       </div>
 
-      <DataTable
-        title="Delivery Confirmation & Proof of Delivery (POD)"
-        subtitle="Confirm customer physical receipt, capture electronic signature / stamp, and inspect cargo condition"
-        columns={columns}
-        data={confirmations}
-        onAdd={handleOpenModal}
-        addLabel="Confirm POD"
-      />
+      {/* Tab 1: Pending POD */}
+      {activeTab === 'pending' && (
+        <div className="table-card">
+          <div style={{
+            padding: '16px 20px',
+            borderBottom: '1px solid var(--border-subtle)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 10
+          }}>
+            <div>
+              <h3 style={{ fontSize: '0.96rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                Consignments Awaiting Proof of Delivery (POD)
+              </h3>
+              <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                Warehouse dispatches en route or arrived at client site requiring signed receipt & condition check
+              </p>
+            </div>
+          </div>
 
+          <div className="table-responsive">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Dispatch No</th>
+                  <th>Delivery Ref</th>
+                  <th>Customer</th>
+                  <th>Product</th>
+                  <th>Dispatched Qty</th>
+                  <th>Dispatch Date</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pendingDispatches.map(disp => (
+                  <tr key={disp._id}>
+                    <td><span className="code-badge">{disp.dispatchNumber}</span></td>
+                    <td><span style={{ fontFamily: 'var(--font-mono)', color: 'var(--primary)' }}>{disp.deliveryNumber}</span></td>
+                    <td><strong style={{ color: 'var(--text-primary)' }}>{disp.customerName}</strong></td>
+                    <td>
+                      <span style={{ color: 'var(--primary)', fontWeight: 600 }}>{disp.productName}</span>
+                    </td>
+                    <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
+                      {disp.actualDispatchQuantity || 1} Units
+                    </td>
+                    <td style={{ fontSize: '0.78rem' }}>
+                      {disp.dispatchDateTime ? new Date(disp.dispatchDateTime).toLocaleDateString('en-GB') : '—'}
+                    </td>
+                    <td>
+                      <button
+                        type="button"
+                        className="btn btn-primary btn-sm"
+                        style={{ padding: '3px 10px', fontSize: '0.74rem', gap: 4 }}
+                        onClick={() => handleOpenModal(disp)}
+                      >
+                        <CheckCircle2 size={13} /> Confirm POD ➔
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                {pendingDispatches.length === 0 && (
+                  <tr>
+                    <td colSpan={7} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 32 }}>
+                      <CheckCircle2 size={24} style={{ color: 'var(--success)', display: 'block', margin: '0 auto 6px' }} />
+                      All dispatched deliveries have confirmed proof-of-delivery (POD) records!
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Tab 2: Confirmed Receipts */}
+      {activeTab === 'confirmed' && (
+        <DataTable
+          title="Verified Delivery Confirmations"
+          subtitle="Signed delivery receipts, partial delivery records, and inspected cargo condition"
+          columns={columns}
+          data={confirmations}
+          searchPlaceholder="Search customer, delivery ref, POD..."
+        />
+      )}
+
+      {/* Modal: Confirm Delivery */}
       {isModalOpen && (
         <Modal
           title="Customer Proof of Delivery (POD) Confirmation"
@@ -190,7 +314,7 @@ export default function DeliveryConfirmationModule({
             <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
               {/* Delivery Reference */}
               <div style={{ background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-subtle)', borderRadius: 10, padding: 18 }}>
-                <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--cyan)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
                   <FileCheck size={16} /> 1. Consignment Order Verification
                 </div>
 
@@ -198,58 +322,52 @@ export default function DeliveryConfirmationModule({
                   <div className="form-group col-span-2">
                     <label className="form-label">Select Delivery Consignment <span className="req">*</span></label>
                     <select
-                      className="form-select"
+                      className="form-input"
                       value={formData.deliveryPlan}
                       onChange={(e) => handleSelectPlan(e.target.value)}
                       required
                     >
-                      <option value="">Select Delivery Consignment</option>
-                      {deliveryPlans.map(dp => (
-                        <option key={dp._id} value={dp._id}>
-                          {dp.deliveryNumber} — {dp.customerName} ({dp.productName}) — Qty: {dp.plannedDeliveryQuantity} — [{dp.status}]
+                      <option value="">-- Choose Dispatched Delivery Plan --</option>
+                      {deliveryPlans.map(plan => (
+                        <option key={plan._id} value={plan._id}>
+                          {plan.deliveryNumber} — {plan.customerName} ({plan.productName} • Qty: {plan.plannedDeliveryQuantity})
                         </option>
                       ))}
                     </select>
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Customer Company Name</label>
-                    <input
-                      type="text"
-                      className="form-input"
-                      value={formData.customerName}
-                      readOnly
-                    />
+                    <label className="form-label">Customer Name</label>
+                    <input type="text" className="form-input" value={formData.customerName} readOnly />
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Delivered Product</label>
-                    <input
-                      type="text"
-                      className="form-input"
-                      value={formData.productName}
-                      readOnly
-                    />
+                    <label className="form-label">Product Name</label>
+                    <input type="text" className="form-input" value={formData.productName} readOnly />
                   </div>
+                </div>
+              </div>
 
+              {/* Quantity Reconciliation */}
+              <div style={{ background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-subtle)', borderRadius: 10, padding: 18 }}>
+                <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 14 }}>
+                  2. Quantity Received & Acceptance
+                </div>
+
+                <div className="form-grid">
                   <div className="form-group">
                     <label className="form-label">Dispatched Quantity</label>
-                    <input
-                      type="number"
-                      className="form-input"
-                      value={formData.dispatchedQuantity}
-                      readOnly
-                    />
+                    <input type="number" className="form-input font-mono" value={formData.dispatchedQuantity} readOnly />
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Actual Received Quantity <span className="req">*</span></label>
+                    <label className="form-label">Received Quantity <span className="req">*</span></label>
                     <input
                       type="number"
-                      className="form-input"
-                      min="0"
-                      max={formData.dispatchedQuantity}
+                      className="form-input font-mono"
                       value={formData.receivedQuantity}
+                      min="1"
+                      max={formData.dispatchedQuantity}
                       onChange={(e) => handleReceivedQtyChange(e.target.value)}
                       required
                     />
@@ -257,26 +375,53 @@ export default function DeliveryConfirmationModule({
 
                   {formData.pendingQuantity > 0 && (
                     <div className="form-group col-span-2">
-                      <div className="card" style={{ padding: '8px 12px', background: 'rgba(245, 158, 11, 0.1)', border: '1px solid var(--warning)', fontSize: '0.8rem', color: 'var(--warning)' }}>
-                        <strong>Partial Receipt Detected:</strong> {formData.pendingQuantity} units remaining pending on this sales order. Delivery will be logged as Partial Delivery.
+                      <div className="card" style={{ padding: '10px 14px', borderLeft: '3px solid var(--warning)', background: 'rgba(245, 158, 11, 0.05)' }}>
+                        <span style={{ fontSize: '0.78rem', color: 'var(--warning)', fontWeight: 600 }}>
+                          Partial Delivery Detected: Remaining {formData.pendingQuantity} units will stay open on the delivery plan.
+                        </span>
                       </div>
                     </div>
                   )}
+
+                  <div className="form-group">
+                    <label className="form-label">Cargo Condition <span className="req">*</span></label>
+                    <select
+                      className="form-input"
+                      value={formData.productCondition}
+                      onChange={(e) => setFormData({ ...formData, productCondition: e.target.value })}
+                    >
+                      <option value="Good">Intact / Good Condition</option>
+                      <option value="Minor Scratch / Dent">Minor Packaging Scratch / Dent</option>
+                      <option value="Damaged">Damaged - Rejection / Claim</option>
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Delivery Date & Time <span className="req">*</span></label>
+                    <input
+                      type="datetime-local"
+                      className="form-input"
+                      value={formData.deliveryDateTime}
+                      onChange={(e) => setFormData({ ...formData, deliveryDateTime: e.target.value })}
+                      required
+                    />
+                  </div>
                 </div>
               </div>
 
-              {/* Customer Acceptance & Sign-Off */}
+              {/* Consignee Signature Details */}
               <div style={{ background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-subtle)', borderRadius: 10, padding: 18 }}>
-                <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <User size={16} /> 2. Customer Acceptance & Physical Condition
+                <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 14 }}>
+                  3. Consignee Verification
                 </div>
 
                 <div className="form-grid">
                   <div className="form-group">
-                    <label className="form-label">Received By (Customer Representative) <span className="req">*</span></label>
+                    <label className="form-label">Received By (Person) <span className="req">*</span></label>
                     <input
                       type="text"
                       className="form-input"
+                      placeholder="e.g. Ramesh Kumar (Site Supervisor)"
                       value={formData.receivedBy}
                       onChange={(e) => setFormData({ ...formData, receivedBy: e.target.value })}
                       required
@@ -288,95 +433,32 @@ export default function DeliveryConfirmationModule({
                     <input
                       type="text"
                       className="form-input"
+                      placeholder="e.g. 9876543210"
                       value={formData.customerMobile}
                       onChange={(e) => setFormData({ ...formData, customerMobile: e.target.value })}
                       required
                     />
                   </div>
 
-                  <div className="form-group">
-                    <label className="form-label">Arrival & Handover Timestamp <span className="req">*</span></label>
-                    <input
-                      type="datetime-local"
-                      className="form-input"
-                      value={formData.deliveryDateTime}
-                      onChange={(e) => setFormData({ ...formData, deliveryDateTime: e.target.value })}
-                      required
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label className="form-label">Delivered Cargo Condition <span className="req">*</span></label>
-                    <select
-                      className="form-select"
-                      value={formData.productCondition}
-                      onChange={(e) => setFormData({ ...formData, productCondition: e.target.value })}
-                    >
-                      <option value="Good">Good (Sealed, No Damage)</option>
-                      <option value="Partially Damaged">Partially Damaged (Crate Scratched)</option>
-                      <option value="Damaged">Damaged (Rejected / Heavy Impact)</option>
-                    </select>
-                  </div>
-
                   <div className="form-group col-span-2">
-                    <label className="form-label">Customer Signature / E-Challan Acknowledgment <span className="req">*</span></label>
-                    <input
-                      type="text"
-                      className="form-input"
-                      value={formData.customerSignature}
-                      onChange={(e) => setFormData({ ...formData, customerSignature: e.target.value })}
-                      placeholder="e.g. Signed electronically on driver tablet by Site Manager"
-                      required
-                    />
-                  </div>
-
-                  {formData.productCondition !== 'Good' && (
-                    <div className="form-group col-span-2">
-                      <label className="form-label" style={{ color: 'var(--danger)' }}>
-                        Damage Details & Transit Claim Notes <span className="req">*</span>
-                      </label>
-                      <textarea
-                        rows="2"
-                        className="form-textarea"
-                        value={formData.damageRemarks}
-                        onChange={(e) => setFormData({ ...formData, damageRemarks: e.target.value })}
-                        placeholder="Detail impact, dent on side panel, broken glass, photos taken..."
-                        required
-                      />
-                    </div>
-                  )}
-
-                  <div className="form-group col-span-2">
-                    <label className="form-label">Proof of Delivery (POD) Document File Reference</label>
-                    <input
-                      type="text"
-                      className="form-input"
-                      value={formData.podDocument}
-                      onChange={(e) => setFormData({ ...formData, podDocument: e.target.value })}
-                      placeholder="e.g. POD-CHALLAN-ABC-SIGNED.pdf"
-                    />
-                  </div>
-
-                  <div className="form-group col-span-2">
-                    <label className="form-label">Receiving Remarks & Handover Notes</label>
+                    <label className="form-label">Proof of Delivery (POD) Notes / Remarks</label>
                     <textarea
+                      className="form-input"
                       rows="2"
-                      className="form-textarea"
                       value={formData.remarks}
                       onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
-                      placeholder="Customer verified packing seal, power connection ready for installation technician..."
                     />
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="modal-footer" style={{ marginTop: 24, padding: '16px 0 0 0', background: 'transparent' }}>
+            <div className="modal-footer" style={{ marginTop: 20 }}>
               <button type="button" className="btn btn-secondary" onClick={() => setIsModalOpen(false)}>
                 Cancel
               </button>
               <button type="submit" className="btn btn-primary">
-                <CheckCircle2 size={14} /> Confirm Delivery Receipt & Auto-Schedule Installation
+                Confirm Proof of Delivery (POD)
               </button>
             </div>
           </form>
@@ -385,4 +467,3 @@ export default function DeliveryConfirmationModule({
     </div>
   );
 }
-

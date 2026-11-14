@@ -70,8 +70,12 @@ exports.getWorkOrders = async (req, res) => {
 
 exports.createWorkOrder = async (req, res) => {
   try {
-    const count = await WorkOrder.countDocuments();
-    const workOrderNumber = `WO-${String(count + 1).padStart(3, '0')}`;
+    let count = await WorkOrder.countDocuments();
+    let workOrderNumber = `WO-${String(count + 1).padStart(3, '0')}`;
+    while (await WorkOrder.findOne({ workOrderNumber })) {
+      count++;
+      workOrderNumber = `WO-${String(count + 1).padStart(3, '0')}`;
+    }
 
     let customerName = req.body.customerName;
     if (!customerName && req.body.customer) {
@@ -91,8 +95,19 @@ exports.createWorkOrder = async (req, res) => {
       if (so) salesOrderNumber = so.soNumber;
     }
 
+    const qty = Number(req.body.productionQuantity || req.body.quantity || req.body.orderQuantity || 1);
+    const validStatuses = ['Planned', 'Waiting for Materials', 'Ready to Start', 'Running', 'On Hold', 'Completed', 'Cancelled'];
+    let status = req.body.status;
+    if (!validStatuses.includes(status)) status = 'Planned';
+
     const newOrder = new WorkOrder({
+      orderQuantity: Number(req.body.orderQuantity || qty),
+      productionQuantity: qty,
+      productionManager: req.body.productionManager || 'Senior Production Engineer',
+      plannedStartDate: req.body.plannedStartDate || req.body.startDate || new Date(),
+      expectedCompletionDate: req.body.expectedCompletionDate || req.body.targetDate || new Date(Date.now() + 10 * 86400000),
       ...req.body,
+      status,
       workOrderNumber,
       customerName: customerName || 'Direct Factory Order',
       productName: productName || 'Finished Unit',

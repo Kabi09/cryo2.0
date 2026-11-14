@@ -51,6 +51,8 @@ router.put('/payments/:id/verify', salesController.verifyPayment);
 // 09. Sales Orders (SO)
 router.get('/sales-orders', salesController.getSalesOrders);
 router.post('/sales-orders', salesController.createSalesOrder);
+router.get('/orders', salesController.getSalesOrders);
+router.post('/orders', salesController.createSalesOrder);
 router.post('/sales-orders/:id/send-to-production', salesController.sendSOToProduction);
 
 // 10. Sales Reports

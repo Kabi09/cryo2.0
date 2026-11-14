@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import DataTable from '../common/DataTable';
 import Modal from '../common/Modal';
 import StatusBadge from '../common/StatusBadge';
@@ -20,10 +20,18 @@ export default function InstallationCompletionModule({
   completions = [],
   installations = [],
   onSave,
-  showToast
+  showToast,
+  preSelectedInstallation
 }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
+
+  useEffect(() => {
+    if (preSelectedInstallation) {
+      handleSelectInstallation(preSelectedInstallation._id || preSelectedInstallation);
+      setIsModalOpen(true);
+    }
+  }, [preSelectedInstallation]);
 
   const [formData, setFormData] = useState({
     installation: '',

@@ -18,7 +18,8 @@ export const SCM_MODULES = [
   { id: 'scm-suppliers', num: '03', title: 'Suppliers' },
   { id: 'scm-purchasing', num: '04', title: 'Purchasing' },
   { id: 'scm-quality-inventory', num: '05', title: 'Quality & Inventory' },
-  { id: 'scm-material-requests', num: '06', title: 'Material Requests' }
+  { id: 'scm-material-issues', num: '06', title: 'Material Issues' },
+  { id: 'scm-reports', num: '07', title: 'Reports' }
 ];
 
 export const SALES_MODULES = [
@@ -44,17 +45,19 @@ export const PRODUCTION_MODULES = [
 
 export const LOGISTICS_MODULES = [
   { id: 'logistics-dashboard', num: '01', title: 'Dashboard' },
-  { id: 'logistics-planning', num: '02', title: 'Delivery Planning' },
-  { id: 'logistics-dispatch-tracking', num: '03', title: 'Dispatch & Tracking' },
-  { id: 'logistics-delivery-installation', num: '04', title: 'Delivery & Installation' },
-  { id: 'logistics-reports', num: '05', title: 'Logistics Reports' }
+  { id: 'logistics-deliveries', num: '02', title: 'Deliveries' },
+  { id: 'logistics-tracking', num: '03', title: 'Tracking' },
+  { id: 'logistics-confirmation', num: '04', title: 'Delivery Confirmation' },
+  { id: 'logistics-installation', num: '05', title: 'Installation & Service' },
+  { id: 'logistics-reports', num: '06', title: 'Reports' }
 ];
 
 export const EMPLOYEE_MODULES = [
   { id: 'employee-dashboard', num: '01', title: 'Dashboard' },
   { id: 'employee-directory', num: '02', title: 'Employees' },
-  { id: 'employee-roles-permissions', num: '03', title: 'Roles & Permissions' },
-  { id: 'employee-departments-reports', num: '04', title: 'Departments & Reports' }
+  { id: 'employee-departments', num: '03', title: 'Departments' },
+  { id: 'employee-roles-permissions', num: '04', title: 'Roles & Permissions' },
+  { id: 'employee-audit-logs', num: '05', title: 'Audit Logs' }
 ];
 
 /**
@@ -186,11 +189,11 @@ export default function Sidebar({
                 </div>
                 <div className="tree-parent-text">
                   <span className="tree-parent-title">Supply Chain</span>
-                  <span className="tree-parent-subtitle">6 Modules</span>
+                  <span className="tree-parent-subtitle">7 Modules</span>
                 </div>
               </div>
               <div className="tree-parent-right">
-                <span className="tree-badge">6</span>
+                <span className="tree-badge">7</span>
                 {openDropdowns.scm ? (
                   <ChevronUp size={16} className="tree-chevron open" />
                 ) : (
@@ -336,11 +339,11 @@ export default function Sidebar({
                 </div>
                 <div className="tree-parent-text">
                   <span className="tree-parent-title">Logistics & Delivery</span>
-                  <span className="tree-parent-subtitle">5 Modules</span>
+                  <span className="tree-parent-subtitle">6 Modules</span>
                 </div>
               </div>
               <div className="tree-parent-right">
-                <span className="tree-badge">5</span>
+                <span className="tree-badge">6</span>
                 {openDropdowns.logistics ? (
                   <ChevronUp size={16} className="tree-chevron open" />
                 ) : (
@@ -386,11 +389,11 @@ export default function Sidebar({
                 </div>
                 <div className="tree-parent-text">
                   <span className="tree-parent-title">Employee Management</span>
-                  <span className="tree-parent-subtitle">4 Modules • RBAC</span>
+                  <span className="tree-parent-subtitle">5 Modules • RBAC</span>
                 </div>
               </div>
               <div className="tree-parent-right">
-                <span className="tree-badge">4</span>
+                <span className="tree-badge">5</span>
                 {openDropdowns.employee ? (
                   <ChevronUp size={16} className="tree-chevron open" />
                 ) : (

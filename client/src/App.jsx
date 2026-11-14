@@ -2,13 +2,14 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Sidebar from './components/common/Sidebar';
 import Header from './components/common/Header';
 
-// 1. Supply Chain Management (6 Pages)
+// 1. Supply Chain Management (7 Pages)
 import ScmDashboardModule from './components/modules/ScmDashboardModule';
 import MaterialsPage from './components/modules/MaterialsPage';
 import SuppliersModule from './components/modules/SuppliersModule';
 import PurchasingPage from './components/modules/PurchasingPage';
 import QualityInventoryPage from './components/modules/QualityInventoryPage';
 import MaterialRequestsPage from './components/modules/MaterialRequestsPage';
+import ScmReportsPage from './components/modules/ScmReportsPage';
 
 // 2. Sales Management (Step-by-Step Funnel Pipeline)
 import DashboardModule from './components/sales/DashboardModule';
@@ -35,17 +36,21 @@ import QualityReworkPage from './components/production/QualityReworkPage';
 import FinishedGoodsModule from './components/production/FinishedGoodsModule';
 import ProductionReportsModule from './components/production/ProductionReportsModule';
 
-// 4. Logistics & Delivery Management (5 Pages)
+// 4. Logistics & Delivery Management (6 Pages)
 import LogisticsDashboardModule from './components/logistics/LogisticsDashboardModule';
 import DeliveryPlanningPage from './components/logistics/DeliveryPlanningPage';
 import DispatchTrackingPage from './components/logistics/DispatchTrackingPage';
+import DeliveryConfirmationModule from './components/logistics/DeliveryConfirmationModule';
+import InstallationServicePage from './components/logistics/InstallationServicePage';
 import DeliveryInstallationPage from './components/logistics/DeliveryInstallationPage';
 import LogisticsReportsModule from './components/logistics/LogisticsReportsModule';
 
-// 5. Employee Management & RBAC (4 Pages)
+// 5. Employee Management & RBAC (5 Pages)
 import EmployeeDashboardModule from './components/employee/EmployeeDashboardModule';
 import EmployeesPage from './components/employee/EmployeesPage';
+import DepartmentsModule from './components/employee/DepartmentsModule';
 import RolesPermissionsModule from './components/employee/RolesPermissionsModule';
+import AuditLogsPage from './components/employee/AuditLogsPage';
 import DepartmentsReportsPage from './components/employee/DepartmentsReportsPage';
 
 import { api } from './services/api';
@@ -714,16 +719,29 @@ export default function App() {
 
         <main className="content-body">
           {/* ======================================================== */}
-          {/* 1. SUPPLY CHAIN MANAGEMENT (6 PAGES)                     */}
+          {/* 1. SUPPLY CHAIN MANAGEMENT (7 PAGES)                     */}
           {/* ======================================================== */}
           {activeModule === 'scm-dashboard' && (
             <ScmDashboardModule
               materials={materials}
-              scmPurchaseOrders={scmPurchaseOrders}
+              suppliers={scmSuppliers}
+              purchaseOrders={scmPurchaseOrders}
               grns={grns}
-              inventory={inventory}
               qcTests={qcTests}
-              onNavigateModule={(mod) => setActiveModule(mod)}
+              inventory={inventory}
+              materialIssues={materialIssues}
+              materialRequests={materialRequests}
+              onNavigateTab={(tab, sub) => {
+                if (tab === 'purchasing') {
+                  setActiveModule('scm-purchasing');
+                } else if (tab === 'quality-inventory') {
+                  setActiveModule('scm-quality-inventory');
+                } else if (tab === 'material-issues') {
+                  setActiveModule('scm-material-issues');
+                } else {
+                  setActiveModule(`scm-${tab}`);
+                }
+              }}
             />
           )}
 
@@ -750,45 +768,56 @@ export default function App() {
             />
           )}
 
-          {(activeModule === 'scm-purchasing' || activeModule === 'scm-purchase-orders' || activeModule === 'scm-grn' || activeModule === 'scm-supplier-returns') && (
+          {(activeModule === 'scm-purchasing' || activeModule === 'scm-purchase-orders' || activeModule === 'scm-grn') && (
             <PurchasingPage
               purchaseOrders={scmPurchaseOrders}
               suppliers={scmSuppliers}
               materials={materials}
               supplierLinks={supplierLinks}
               grns={grns}
-              qcTests={qcTests}
-              supplierReturns={supplierReturns}
               onSavePO={handleSaveScmPO}
               onUpdatePOStatus={handleUpdateScmPOStatus}
               onSaveGRN={handleSaveGRN}
               onNavigateToQC={handleNavigateToQC}
-              onSaveSupplierReturn={handleSaveSupplierReturn}
               showToast={showToast}
-              defaultTab={activeModule === 'scm-grn' ? 'grn' : activeModule === 'scm-supplier-returns' ? 'returns' : 'po'}
+              defaultTab={activeModule === 'scm-grn' ? 'grn' : 'po'}
             />
           )}
 
-          {(activeModule === 'scm-quality-inventory' || activeModule === 'scm-qc-tests' || activeModule === 'scm-inventory' || activeModule === 'scm-reports') && (
+          {(activeModule === 'scm-quality-inventory' || activeModule === 'scm-qc-tests' || activeModule === 'scm-inventory' || activeModule === 'scm-supplier-returns') && (
             <QualityInventoryPage
               qcTests={qcTests}
               grns={grns}
               inventory={inventory}
-              reportsData={scmReportsData}
+              supplierReturns={supplierReturns}
               onSaveQCTest={handleSaveQCTest}
               onAdjustStock={handleAdjustStock}
+              onSaveSupplierReturn={handleSaveSupplierReturn}
               preSelectedGRN={preSelectedGRNForQC}
               showToast={showToast}
-              defaultTab={activeModule === 'scm-inventory' ? 'inventory' : activeModule === 'scm-reports' ? 'reports' : 'qc'}
+              defaultTab={activeModule === 'scm-inventory' ? 'stock' : activeModule === 'scm-supplier-returns' ? 'returns' : activeModule === 'scm-qc-tests' ? 'qc-history' : 'qc-pending'}
             />
           )}
 
-          {(activeModule === 'scm-material-requests' || activeModule === 'scm-material-issues') && (
+          {(activeModule === 'scm-material-issues' || activeModule === 'scm-material-requests') && (
             <MaterialRequestsPage
               materialIssues={materialIssues}
               materials={materials}
               inventory={inventory}
+              materialRequests={materialRequests}
               onSaveMaterialIssue={handleSaveMaterialIssue}
+              showToast={showToast}
+              defaultTab={activeModule === 'scm-material-issues' ? 'issues' : 'requests'}
+            />
+          )}
+
+          {(activeModule === 'scm-reports' || activeModule === 'scm-inventory-reports') && (
+            <ScmReportsPage
+              reportsData={scmReportsData}
+              materials={materials}
+              suppliers={scmSuppliers}
+              purchaseOrders={scmPurchaseOrders}
+              inventory={inventory}
               showToast={showToast}
             />
           )}
@@ -1119,19 +1148,28 @@ export default function App() {
           )}
 
           {/* ======================================================== */}
-          {/* 4. LOGISTICS & DELIVERY MANAGEMENT (5 PAGES)             */}
+          {/* 4. LOGISTICS & DELIVERY MANAGEMENT (6 PAGES)             */}
           {/* ======================================================== */}
           {activeModule === 'logistics-dashboard' && (
             <LogisticsDashboardModule
               dashboardData={logisticsDashboardData}
               deliveryPlans={deliveryPlans}
+              dispatches={dispatches}
+              confirmations={confirmations}
+              installations={installations}
+              installationCompletions={installationCompletions}
+              finishedGoods={finishedGoods}
               onNavigateModule={(mod) => {
-                if (mod === 'planning' || mod === 'vehicles-couriers' || mod === 'fleet') {
-                  setActiveModule('logistics-planning');
-                } else if (mod === 'dispatch' || mod === 'tracking') {
-                  setActiveModule('logistics-dispatch-tracking');
-                } else if (mod === 'confirmation' || mod === 'installation' || mod === 'installation-completion') {
-                  setActiveModule('logistics-delivery-installation');
+                if (mod === 'deliveries' || mod === 'planning' || mod === 'vehicles' || mod === 'dispatch') {
+                  setActiveModule('logistics-deliveries');
+                } else if (mod === 'tracking') {
+                  setActiveModule('logistics-tracking');
+                } else if (mod === 'confirmation' || mod === 'pod') {
+                  setActiveModule('logistics-confirmation');
+                } else if (mod === 'installation') {
+                  setActiveModule('logistics-installation');
+                } else if (mod === 'reports') {
+                  setActiveModule('logistics-reports');
                 } else {
                   setActiveModule(`logistics-${mod}`);
                 }
@@ -1139,46 +1177,51 @@ export default function App() {
             />
           )}
 
-          {(activeModule === 'logistics-planning' || activeModule === 'logistics-vehicles-couriers') && (
+          {(activeModule === 'logistics-deliveries' || activeModule === 'logistics-planning' || activeModule === 'logistics-dispatch' || activeModule === 'logistics-vehicles-couriers') && (
             <DeliveryPlanningPage
               deliveryPlans={deliveryPlans}
+              dispatches={dispatches}
               salesOrders={salesOrders}
               finishedGoods={finishedGoods}
               vehiclesCouriers={vehiclesCouriers}
               onSaveDeliveryPlan={handleSaveDeliveryPlan}
+              onSaveDispatch={handleSaveDispatch}
               onSaveVehicleCourier={handleSaveVehicleCourier}
               onUpdateVehicleCourier={handleUpdateVehicleCourier}
               showToast={showToast}
-              defaultTab={activeModule === 'logistics-vehicles-couriers' ? 'fleet' : 'planning'}
+              defaultTab={activeModule === 'logistics-dispatch' ? 'dispatch' : activeModule === 'logistics-vehicles-couriers' ? 'vehicles' : 'planning'}
             />
           )}
 
-          {(activeModule === 'logistics-dispatch-tracking' || activeModule === 'logistics-dispatch' || activeModule === 'logistics-tracking') && (
+          {(activeModule === 'logistics-tracking' || activeModule === 'logistics-dispatch-tracking') && (
             <DispatchTrackingPage
-              dispatches={dispatches}
-              deliveryPlans={deliveryPlans}
-              vehiclesCouriers={vehiclesCouriers}
-              finishedGoods={finishedGoods}
               trackingRecords={trackingRecords}
-              onSaveDispatch={handleSaveDispatch}
+              deliveryPlans={deliveryPlans}
               onSaveTrackingMilestone={handleSaveTrackingMilestone}
               showToast={showToast}
-              defaultTab={activeModule === 'logistics-tracking' ? 'tracking' : 'dispatch'}
             />
           )}
 
-          {(activeModule === 'logistics-delivery-installation' || activeModule === 'logistics-confirmation' || activeModule === 'logistics-installation' || activeModule === 'logistics-installation-completion') && (
-            <DeliveryInstallationPage
+          {(activeModule === 'logistics-confirmation' || activeModule === 'logistics-pod') && (
+            <DeliveryConfirmationModule
               confirmations={confirmations}
+              deliveryPlans={deliveryPlans}
+              dispatches={dispatches}
+              onSave={handleSaveDeliveryConfirmation}
+              showToast={showToast}
+            />
+          )}
+
+          {(activeModule === 'logistics-installation' || activeModule === 'logistics-delivery-installation' || activeModule === 'logistics-installation-completion') && (
+            <InstallationServicePage
               installations={installations}
               installationCompletions={installationCompletions}
               deliveryPlans={deliveryPlans}
-              onSaveDeliveryConfirmation={handleSaveDeliveryConfirmation}
               onSaveInstallation={handleSaveInstallation}
               onUpdateInstallationStatus={handleUpdateInstallationStatus}
               onSaveInstallationCompletion={handleSaveInstallationCompletion}
               showToast={showToast}
-              defaultTab={activeModule === 'logistics-installation' ? 'installation' : activeModule === 'logistics-installation-completion' ? 'completion' : 'confirmation'}
+              defaultTab={activeModule === 'logistics-installation-completion' ? 'completion-checklist' : 'scheduled'}
             />
           )}
 
@@ -1196,7 +1239,7 @@ export default function App() {
           )}
 
           {/* ======================================================== */}
-          {/* 5. EMPLOYEE MANAGEMENT & RBAC (4 PAGES)                  */}
+          {/* 5. EMPLOYEE MANAGEMENT & RBAC (5 PAGES)                  */}
           {/* ======================================================== */}
           {activeModule === 'employee-dashboard' && (
             <EmployeeDashboardModule
@@ -1205,20 +1248,22 @@ export default function App() {
               roles={roles}
               employees={employees}
               onNavigateModule={(mod) => {
-                if (mod === 'employees' || mod === 'employee-login') {
+                if (mod === 'employees' || mod === 'employee-directory') {
                   setActiveModule('employee-directory');
-                } else if (mod === 'departments' || mod === 'reports') {
-                  setActiveModule('employee-departments-reports');
-                } else if (mod === 'roles-permissions' || mod === 'roles') {
+                } else if (mod === 'departments') {
+                  setActiveModule('employee-departments');
+                } else if (mod === 'roles' || mod === 'roles-permissions') {
                   setActiveModule('employee-roles-permissions');
+                } else if (mod === 'audit-logs' || mod === 'reports') {
+                  setActiveModule('employee-audit-logs');
                 } else {
-                  setActiveModule(mod);
+                  setActiveModule(`employee-${mod}`);
                 }
               }}
             />
           )}
 
-          {(activeModule === 'employee-directory' || activeModule === 'employee-login') && (
+          {(activeModule === 'employee-directory' || activeModule === 'employee-login' || activeModule === 'employees') && (
             <EmployeesPage
               employees={employees}
               roles={roles}
@@ -1228,14 +1273,19 @@ export default function App() {
               onUpdateEmployee={handleUpdateEmployee}
               onResetPassword={handleResetPassword}
               onToggleStatus={handleToggleEmployeeStatus}
-              onLogin={handleLogin}
-              onLogout={handleLogout}
               showToast={showToast}
-              defaultTab={activeModule === 'employee-login' ? 'login' : 'directory'}
             />
           )}
 
-          {activeModule === 'employee-roles-permissions' && (
+          {activeModule === 'employee-departments' && (
+            <DepartmentsModule
+              departments={departments}
+              onSaveDepartment={handleSaveDepartment}
+              showToast={showToast}
+            />
+          )}
+
+          {(activeModule === 'employee-roles-permissions' || activeModule === 'employee-roles') && (
             <RolesPermissionsModule
               roles={roles}
               departments={departments}
@@ -1245,16 +1295,13 @@ export default function App() {
             />
           )}
 
-          {(activeModule === 'employee-departments-reports' || activeModule === 'employee-departments' || activeModule === 'employee-reports') && (
-            <DepartmentsReportsPage
-              departments={departments}
+          {(activeModule === 'employee-audit-logs' || activeModule === 'employee-departments-reports' || activeModule === 'employee-reports') && (
+            <AuditLogsPage
               reportsData={employeeReportsData}
               employees={employees}
+              departments={departments}
               roles={roles}
-              auditLogs={auditLogs}
-              onSaveDepartment={handleSaveDepartment}
               showToast={showToast}
-              defaultTab={activeModule === 'employee-reports' ? 'reports' : 'departments'}
             />
           )}
         </main>

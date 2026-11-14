@@ -1,18 +1,21 @@
 import React, { useState } from 'react';
 import DeliveryPlanningModule from './DeliveryPlanningModule';
+import DispatchModule from './DispatchModule';
 import VehicleCourierModule from './VehicleCourierModule';
-import { Calendar, Truck } from 'lucide-react';
+import { Calendar, Send, Truck } from 'lucide-react';
 
 export default function DeliveryPlanningPage({
-  deliveryPlans,
-  salesOrders,
-  finishedGoods,
-  vehiclesCouriers,
+  deliveryPlans = [],
+  dispatches = [],
+  salesOrders = [],
+  finishedGoods = [],
+  vehiclesCouriers = [],
   onSaveDeliveryPlan,
+  onSaveDispatch,
   onSaveVehicleCourier,
   onUpdateVehicleCourier,
   showToast,
-  defaultTab = 'plans'
+  defaultTab = 'planning'
 }) {
   const [activeTab, setActiveTab] = useState(defaultTab);
 
@@ -22,24 +25,31 @@ export default function DeliveryPlanningPage({
       <div style={{ marginBottom: 18, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
         <div className="tab-switcher">
           <button
-            className={`tab-btn ${activeTab === 'plans' ? 'active' : ''}`}
-            onClick={() => setActiveTab('plans')}
+            className={`tab-btn ${activeTab === 'planning' ? 'active' : ''}`}
+            onClick={() => setActiveTab('planning')}
           >
             <Calendar size={14} style={{ marginRight: 6 }} />
-            Delivery Plans ({deliveryPlans.length})
+            Delivery Planning ({deliveryPlans.length})
           </button>
           <button
-            className={`tab-btn ${activeTab === 'fleet' ? 'active' : ''}`}
-            onClick={() => setActiveTab('fleet')}
+            className={`tab-btn ${activeTab === 'dispatch' ? 'active' : ''}`}
+            onClick={() => setActiveTab('dispatch')}
+          >
+            <Send size={14} style={{ marginRight: 6 }} />
+            Dispatch ({dispatches.length})
+          </button>
+          <button
+            className={`tab-btn ${activeTab === 'vehicles' ? 'active' : ''}`}
+            onClick={() => setActiveTab('vehicles')}
           >
             <Truck size={14} style={{ marginRight: 6 }} />
-            Vehicle & Courier Fleet ({vehiclesCouriers.length})
+            Vehicles & Couriers ({vehiclesCouriers.length})
           </button>
         </div>
       </div>
 
-      {/* Tab Content */}
-      {activeTab === 'plans' && (
+      {/* Tab 1: Delivery Planning */}
+      {activeTab === 'planning' && (
         <DeliveryPlanningModule
           deliveryPlans={deliveryPlans}
           salesOrders={salesOrders}
@@ -49,7 +59,20 @@ export default function DeliveryPlanningPage({
         />
       )}
 
-      {activeTab === 'fleet' && (
+      {/* Tab 2: Dispatch */}
+      {activeTab === 'dispatch' && (
+        <DispatchModule
+          dispatches={dispatches}
+          deliveryPlans={deliveryPlans}
+          vehiclesCouriers={vehiclesCouriers}
+          finishedGoods={finishedGoods}
+          onSave={onSaveDispatch}
+          showToast={showToast}
+        />
+      )}
+
+      {/* Tab 3: Vehicles & Couriers */}
+      {activeTab === 'vehicles' && (
         <VehicleCourierModule
           items={vehiclesCouriers}
           onSave={onSaveVehicleCourier}
@@ -60,4 +83,3 @@ export default function DeliveryPlanningPage({
     </div>
   );
 }
-

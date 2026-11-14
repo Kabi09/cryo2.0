@@ -1,22 +1,18 @@
 import React, { useState } from 'react';
 import PurchaseOrdersModule from './PurchaseOrdersModule';
 import GRNModule from './GRNModule';
-import SupplierReturnsModule from './SupplierReturnsModule';
-import { ShoppingCart, FileCheck, RotateCcw } from 'lucide-react';
+import { ShoppingCart, FileCheck } from 'lucide-react';
 
 export default function PurchasingPage({
-  purchaseOrders,
-  suppliers,
-  materials,
-  supplierLinks,
-  grns,
-  supplierReturns,
-  qcTests,
+  purchaseOrders = [],
+  suppliers = [],
+  materials = [],
+  supplierLinks = [],
+  grns = [],
   onSavePO,
   onUpdatePOStatus,
   onSaveGRN,
   onNavigateToQC,
-  onSaveSupplierReturn,
   showToast,
   defaultTab = 'po'
 }) {
@@ -39,14 +35,7 @@ export default function PurchasingPage({
             onClick={() => setActiveTab('grn')}
           >
             <FileCheck size={14} style={{ marginRight: 6 }} />
-            Goods Receipt (GRN) ({grns.length})
-          </button>
-          <button
-            className={`tab-btn ${activeTab === 'returns' ? 'active' : ''}`}
-            onClick={() => setActiveTab('returns')}
-          >
-            <RotateCcw size={14} style={{ marginRight: 6 }} />
-            Supplier Returns ({supplierReturns.length})
+            Goods Receipts (GRN) ({grns.length})
           </button>
         </div>
       </div>
@@ -73,16 +62,6 @@ export default function PurchasingPage({
           onNavigateToQC={onNavigateToQC}
         />
       )}
-
-      {activeTab === 'returns' && (
-        <SupplierReturnsModule
-          supplierReturns={supplierReturns}
-          qcTests={qcTests}
-          onSave={onSaveSupplierReturn}
-          showToast={showToast}
-        />
-      )}
     </div>
   );
 }
-

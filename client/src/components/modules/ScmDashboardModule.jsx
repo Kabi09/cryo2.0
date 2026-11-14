@@ -9,7 +9,12 @@ import {
   Boxes,
   ArrowUpRight,
   Plus,
-  ArrowRight
+  ArrowRight,
+  Eye,
+  CheckCircle2,
+  AlertTriangle,
+  FileText,
+  Truck
 } from 'lucide-react';
 
 export default function ScmDashboardModule({
@@ -20,29 +25,69 @@ export default function ScmDashboardModule({
   qcTests = [],
   inventory = [],
   materialIssues = [],
+  materialRequests = [],
   onNavigateTab
 }) {
   const pendingPOs = purchaseOrders.filter(p => p.status === 'Draft' || p.status === 'Issued');
+  const pendingGRNs = grns.filter(g => g.status === 'Draft' || g.status === 'Pending');
   const quarantineGRNs = grns.filter(g => g.status === 'QC Pending');
-  const lowStockCount = inventory.filter(i => i.availableStock <= (i.material?.minimumStockLevel || 10)).length;
+  const lowStockMaterials = inventory.filter(i => i.availableStock <= (i.material?.minimumStockLevel || 10));
+  const pendingIssues = materialRequests.filter(r => r.status === 'Pending' || r.status === 'Approved');
+
+  // Combined recent transactions
+  const transactions = [
+    ...purchaseOrders.slice(0, 4).map(po => ({
+      id: po._id,
+      ref: po.poNumber,
+      type: 'Purchase Order',
+      party: po.supplier?.supplierName || 'Supplier',
+      date: po.poDate || po.createdAt,
+      status: po.status,
+      targetTab: 'purchasing',
+      subTab: 'po'
+    })),
+    ...grns.slice(0, 4).map(grn => ({
+      id: grn._id,
+      ref: grn.grnNumber,
+      type: 'Goods Receipt',
+      party: grn.supplier?.supplierName || 'Inward Vendor',
+      date: grn.receivedDate || grn.createdAt,
+      status: grn.status,
+      targetTab: 'purchasing',
+      subTab: 'grn'
+    })),
+    ...qcTests.slice(0, 4).map(qc => ({
+      id: qc._id,
+      ref: qc.qcNumber,
+      type: 'QC Inspection',
+      party: qc.material?.materialName || 'Inspection Lot',
+      date: qc.testDate || qc.createdAt,
+      status: qc.overallResult || qc.status,
+      targetTab: 'quality-inventory',
+      subTab: 'qc'
+    })),
+    ...materialIssues.slice(0, 4).map(mi => ({
+      id: mi._id,
+      ref: mi.issueNumber,
+      type: 'Material Issue',
+      party: mi.department || 'Production Line',
+      date: mi.issueDate || mi.createdAt,
+      status: mi.status || 'Issued',
+      targetTab: 'material-issues',
+      subTab: 'issues'
+    }))
+  ].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0)).slice(0, 8);
 
   return (
     <div className="module-container">
-      {/* KPI Cards Row */}
-      <div className="kpi-grid">
+      {/* 6 Useful KPI Summary Cards */}
+      <div className="kpi-grid" style={{ marginBottom: 20 }}>
         <KpiCard
-          label="Registered Materials"
+          label="Total Raw Materials"
           value={materials.length}
           subtext="Active SKUs in Catalog"
           icon={Package}
           accent="primary"
-        />
-        <KpiCard
-          label="Active Suppliers"
-          value={suppliers.filter(s => s.status === 'Active').length}
-          subtext="Approved Vendor Base"
-          icon={Building2}
-          accent="cyan"
         />
         <KpiCard
           label="Pending Purchase Orders"
@@ -52,38 +97,128 @@ export default function ScmDashboardModule({
           accent="warning"
         />
         <KpiCard
-          label="Quarantine QC Pending"
+          label="Pending GRNs"
+          value={pendingGRNs.length}
+          subtext="Awaiting Gate Entry"
+          icon={Truck}
+          accent="cyan"
+        />
+        <KpiCard
+          label="Pending QC"
           value={quarantineGRNs.length}
-          subtext="Inward Lots Awaiting Test"
+          subtext="Quarantined Lots"
           icon={ShieldAlert}
           accent="danger"
         />
         <KpiCard
-          label="Low Stock Warnings"
-          value={lowStockCount}
+          label="Low Stock Materials"
+          value={lowStockMaterials.length}
           subtext="At or Below Reorder Level"
           icon={Boxes}
-          accent={lowStockCount > 0 ? "danger" : "success"}
+          accent={lowStockMaterials.length > 0 ? "danger" : "success"}
         />
         <KpiCard
-          label="Material Issues"
-          value={materialIssues.length}
-          subtext="Dispatched to Production"
+          label="Pending Material Issues"
+          value={pendingIssues.length || materialIssues.length}
+          subtext="Requisitions from Factory"
           icon={ArrowUpRight}
           accent="purple"
         />
       </div>
 
-      {/* SCM Quick Actions & Workflow Banner */}
-      <div className="card" style={{ marginBottom: 20, padding: '16px 20px', background: 'linear-gradient(90deg, rgba(36, 81, 197, 0.06), rgba(2, 132, 199, 0.05))' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+      {/* Pending Actions Alert Grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 14, marginBottom: 20 }}>
+        {/* POs awaiting action */}
+        <div className="card" style={{ padding: 14, borderLeft: '4px solid var(--warning)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)' }}>POs Awaiting Action</span>
+            <span className="badge badge-warning" style={{ fontSize: '0.7rem' }}>{pendingPOs.length} Pending</span>
+          </div>
+          <p style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', margin: '6px 0 10px' }}>
+            {pendingPOs.length > 0 ? `${pendingPOs.length} orders need approval or supplier transmission.` : 'All purchase orders have been processed.'}
+          </p>
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            style={{ width: '100%', fontSize: '0.74rem', padding: '4px 8px', justifyContent: 'center' }}
+            onClick={() => onNavigateTab && onNavigateTab('purchasing', 'po')}
+          >
+            Review Purchase Orders ➔
+          </button>
+        </div>
+
+        {/* Materials Awaiting QC */}
+        <div className="card" style={{ padding: 14, borderLeft: '4px solid var(--danger)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)' }}>Materials Awaiting QC</span>
+            <span className="badge badge-danger" style={{ fontSize: '0.7rem' }}>{quarantineGRNs.length} Quarantine</span>
+          </div>
+          <p style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', margin: '6px 0 10px' }}>
+            {quarantineGRNs.length > 0 ? `${quarantineGRNs.length} received lots in quarantine pending test.` : 'No lots waiting in incoming quarantine.'}
+          </p>
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            style={{ width: '100%', fontSize: '0.74rem', padding: '4px 8px', justifyContent: 'center' }}
+            onClick={() => onNavigateTab && onNavigateTab('quality-inventory', 'qc-pending')}
+          >
+            Inspect Quarantine Lots ➔
+          </button>
+        </div>
+
+        {/* Low Stock Alerts */}
+        <div className="card" style={{ padding: 14, borderLeft: '4px solid #EF4444' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)' }}>Low-Stock Alerts</span>
+            <span className="badge badge-danger" style={{ fontSize: '0.7rem' }}>{lowStockMaterials.length} Shortage</span>
+          </div>
+          <p style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', margin: '6px 0 10px' }}>
+            {lowStockMaterials.length > 0 ? `${lowStockMaterials.length} items at or below reorder threshold.` : 'All stock balances healthy.'}
+          </p>
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            style={{ width: '100%', fontSize: '0.74rem', padding: '4px 8px', justifyContent: 'center' }}
+            onClick={() => onNavigateTab && onNavigateTab('quality-inventory', 'stock')}
+          >
+            Check Stock Balances ➔
+          </button>
+        </div>
+
+        {/* Production Requisitions */}
+        <div className="card" style={{ padding: 14, borderLeft: '4px solid var(--primary)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-primary)' }}>Factory Material Requests</span>
+            <span className="badge badge-primary" style={{ fontSize: '0.7rem' }}>{pendingIssues.length} Requests</span>
+          </div>
+          <p style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', margin: '6px 0 10px' }}>
+            {pendingIssues.length > 0 ? `${pendingIssues.length} shop floor requisitions awaiting issue.` : 'No pending factory requisitions.'}
+          </p>
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            style={{ width: '100%', fontSize: '0.74rem', padding: '4px 8px', justifyContent: 'center' }}
+            onClick={() => onNavigateTab && onNavigateTab('material-issues', 'requests')}
+          >
+            Issue to Production ➔
+          </button>
+        </div>
+      </div>
+
+      {/* Recent Transactions Table */}
+      <div className="table-card">
+        <div style={{
+          padding: '16px 20px',
+          borderBottom: '1px solid var(--border-subtle)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: 10
+        }}>
           <div>
-            <h3 style={{ fontSize: '0.98rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>
-              Supply Chain Execution Pipeline
-            </h3>
-            <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-              Raw Materials → Verified Suppliers → Purchase Orders → GRN Inward → Quarantine QC → Warehouse Stock → Store Issue
-            </p>
+            <h3 style={{ fontSize: '0.96rem', fontWeight: 700, color: 'var(--text-primary)' }}>Recent Supply Chain Transactions</h3>
+            <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>Chronological ledger of purchasing, receipts, QC, and store issues</p>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
             <button
@@ -94,127 +229,56 @@ export default function ScmDashboardModule({
             </button>
             <button
               className="btn btn-secondary btn-sm"
-              onClick={() => onNavigateTab && onNavigateTab('quality', 'qc')}
+              onClick={() => onNavigateTab && onNavigateTab('quality-inventory', 'qc-pending')}
             >
-              <ShieldAlert size={14} /> QC Inspection
+              <ShieldAlert size={14} /> Incoming QC
             </button>
           </div>
         </div>
-      </div>
 
-      {/* Tables Row: Recent POs and Quarantine GRNs */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: 20 }}>
-        {/* Recent Purchase Orders */}
-        <div className="table-card">
-          <div style={{
-            padding: '16px 20px',
-            borderBottom: '1px solid var(--border-subtle)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between'
-          }}>
-            <div>
-              <h3 style={{ fontSize: '0.96rem', fontWeight: 700, color: 'var(--text-primary)' }}>Recent Purchase Orders</h3>
-              <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>Latest supplier orders issued</p>
-            </div>
-            <button
-              className="btn btn-outline btn-sm"
-              onClick={() => onNavigateTab && onNavigateTab('purchasing', 'po')}
-            >
-              All POs <ArrowRight size={13} />
-            </button>
-          </div>
-
-          <div className="table-responsive">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>PO Number</th>
-                  <th>Supplier</th>
-                  <th>Total Amount</th>
-                  <th>Status</th>
+        <div className="table-responsive">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Reference</th>
+                <th>Type</th>
+                <th>Supplier / Department</th>
+                <th>Date</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {transactions.map((tx, idx) => (
+                <tr key={tx.id || idx}>
+                  <td><span className="code-badge">{tx.ref}</span></td>
+                  <td><span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--primary)' }}>{tx.type}</span></td>
+                  <td><strong style={{ color: 'var(--text-primary)' }}>{tx.party}</strong></td>
+                  <td style={{ fontSize: '0.78rem' }}>{tx.date ? new Date(tx.date).toLocaleDateString('en-GB') : '—'}</td>
+                  <td><StatusBadge status={tx.status} /></td>
+                  <td>
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      style={{ padding: '2px 8px', fontSize: '0.72rem', height: 26, gap: 4 }}
+                      onClick={() => onNavigateTab && onNavigateTab(tx.targetTab, tx.subTab)}
+                    >
+                      <Eye size={12} /> View
+                    </button>
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {purchaseOrders.slice(0, 5).map(po => (
-                  <tr key={po._id}>
-                    <td><span className="code-badge">{po.poNumber}</span></td>
-                    <td>
-                      <strong style={{ color: 'var(--text-primary)' }}>{po.supplier?.supplierName || '—'}</strong>
-                    </td>
-                    <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
-                      ₹{po.totalAmount?.toLocaleString('en-IN') || 0}
-                    </td>
-                    <td><StatusBadge status={po.status} /></td>
-                  </tr>
-                ))}
-                {purchaseOrders.length === 0 && (
-                  <tr>
-                    <td colSpan={4} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 20 }}>
-                      No purchase orders recorded yet.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Quarantine Inward GRN Lots */}
-        <div className="table-card">
-          <div style={{
-            padding: '16px 20px',
-            borderBottom: '1px solid var(--border-subtle)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between'
-          }}>
-            <div>
-              <h3 style={{ fontSize: '0.96rem', fontWeight: 700, color: 'var(--text-primary)' }}>Inward Goods Receipts (GRN)</h3>
-              <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>Materials received at factory warehouse</p>
-            </div>
-            <button
-              className="btn btn-outline btn-sm"
-              onClick={() => onNavigateTab && onNavigateTab('purchasing', 'grn')}
-            >
-              All GRNs <ArrowRight size={13} />
-            </button>
-          </div>
-
-          <div className="table-responsive">
-            <table className="data-table">
-              <thead>
+              ))}
+              {transactions.length === 0 && (
                 <tr>
-                  <th>GRN Number</th>
-                  <th>PO Reference</th>
-                  <th>Supplier</th>
-                  <th>Status</th>
+                  <td colSpan={6} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 24 }}>
+                    No transactions recorded yet in supply chain.
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {grns.slice(0, 5).map(grn => (
-                  <tr key={grn._id}>
-                    <td><span className="code-badge">{grn.grnNumber}</span></td>
-                    <td><span style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>{grn.purchaseOrder?.poNumber || 'PO-Direct'}</span></td>
-                    <td>
-                      <strong style={{ color: 'var(--text-primary)' }}>{grn.supplier?.supplierName || '—'}</strong>
-                    </td>
-                    <td><StatusBadge status={grn.status} /></td>
-                  </tr>
-                ))}
-                {grns.length === 0 && (
-                  <tr>
-                    <td colSpan={4} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 20 }}>
-                      No goods receipts inwarded yet.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
   );
 }
-

@@ -212,6 +212,13 @@ exports.createDispatch = async (req, res) => {
 
     const dispatchNumber = await generateCode(Dispatch, 'DISP', 'dispatchNumber');
 
+    let finalSerial = serialNumber;
+    if (!finalSerial && deliveryPlan) {
+      const planDoc = await DeliveryPlan.findById(deliveryPlan);
+      if (planDoc && planDoc.serialNumber) finalSerial = planDoc.serialNumber;
+    }
+    if (!finalSerial) finalSerial = 'SN-' + Date.now().toString().slice(-6);
+
     const newDispatch = new Dispatch({
       dispatchNumber,
       deliveryPlan,
@@ -223,13 +230,13 @@ exports.createDispatch = async (req, res) => {
       product,
       productName,
       finishedGood,
-      serialNumber,
+      serialNumber: finalSerial,
       plannedQuantity: Number(plannedQuantity) || 1,
       actualDispatchQuantity: Number(actualDispatchQuantity) || 1,
       warehouseLocation: warehouseLocation || 'FG Central Warehouse - Bay 1',
       packingDetails,
       dispatchDateTime: dispatchDateTime || new Date(),
-      deliveryMethod,
+      deliveryMethod: deliveryMethod || 'Company Vehicle',
       vehicleCourier,
       vehicleNumber,
       driverName,
@@ -490,6 +497,10 @@ exports.createInstallation = async (req, res) => {
   try {
     const installationNumber = await generateCode(Installation, 'INS', 'installationNumber');
     const newIns = new Installation({
+      deliveryNumber: req.body.deliveryNumber || 'DEL-DIRECT',
+      installationAddress: req.body.installationAddress || 'Customer Plant Site',
+      assignedTechnician: req.body.assignedTechnician || req.body.technician || 'Senior Field Service Engineer',
+      plannedInstallationDate: req.body.plannedInstallationDate || req.body.scheduledDate || new Date(),
       ...req.body,
       installationNumber
     });
@@ -555,6 +566,15 @@ exports.createInstallationCompletion = async (req, res) => {
 
     const finalStatus = hasFail ? 'Failed - Retest Required' : 'Completed';
 
+    let finalSerialNumber = serialNumber;
+    if (!finalSerialNumber && installation) {
+      const instRec = await Installation.findById(installation);
+      if (instRec && instRec.serialNumber) finalSerialNumber = instRec.serialNumber;
+    }
+    if (!finalSerialNumber) {
+      finalSerialNumber = 'SN-' + Date.now().toString().slice(-6);
+    }
+
     const newComp = new InstallationCompletion({
       completionNumber,
       installation,
@@ -563,7 +583,7 @@ exports.createInstallationCompletion = async (req, res) => {
       customerName,
       product,
       productName,
-      serialNumber,
+      serialNumber: finalSerialNumber,
       technician,
       installationDate: installationDate || new Date(),
       completionDate: completionDate || new Date(),

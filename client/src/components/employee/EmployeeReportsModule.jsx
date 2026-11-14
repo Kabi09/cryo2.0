@@ -22,9 +22,10 @@ export default function EmployeeReportsModule({
   employees = [],
   departments = [],
   roles = [],
-  showToast
+  showToast,
+  initialTab = 'roster'
 }) {
-  const [activeReportTab, setActiveReportTab] = useState('roster');
+  const [activeReportTab, setActiveReportTab] = useState(initialTab);
 
   const totalStaff = employees.length || 6;
   const activeStaff = employees.filter(e => e.status === 'Active').length || 6;
