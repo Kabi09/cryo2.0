@@ -5,7 +5,7 @@ import Header from './components/common/Header';
 // 1. Supply Chain Management (7 Pages)
 import ScmDashboardModule from './components/modules/ScmDashboardModule';
 import MaterialsPage from './components/modules/MaterialsPage';
-import SuppliersModule from './components/modules/SuppliersModule';
+import SuppliersPage from './components/modules/SuppliersPage';
 import PurchasingPage from './components/modules/PurchasingPage';
 import QualityInventoryPage from './components/modules/QualityInventoryPage';
 import MaterialRequestsPage from './components/modules/MaterialRequestsPage';
@@ -745,26 +745,26 @@ export default function App() {
             />
           )}
 
-          {(activeModule === 'scm-materials' || activeModule === 'scm-material-master' || activeModule === 'scm-supplier-links') && (
+          {(activeModule === 'scm-materials' || activeModule === 'scm-material-master') && (
             <MaterialsPage
               materials={materials}
-              suppliers={scmSuppliers}
-              supplierLinks={supplierLinks}
               onSaveMaterial={handleSaveMaterial}
               onUpdateMaterial={handleUpdateMaterial}
-              onSaveSupplierLink={handleSaveSupplierLink}
-              onUpdateSupplierLink={handleUpdateSupplierLink}
               showToast={showToast}
-              defaultTab={activeModule === 'scm-supplier-links' ? 'links' : 'materials'}
             />
           )}
 
-          {activeModule === 'scm-suppliers' && (
-            <SuppliersModule
+          {(activeModule === 'scm-suppliers' || activeModule === 'scm-supplier-links') && (
+            <SuppliersPage
               suppliers={scmSuppliers}
-              onSave={handleSaveScmSupplier}
-              onUpdate={handleUpdateScmSupplier}
+              materials={materials}
+              supplierLinks={supplierLinks}
+              onSaveSupplier={handleSaveScmSupplier}
+              onUpdateSupplier={handleUpdateScmSupplier}
+              onSaveSupplierLink={handleSaveSupplierLink}
+              onUpdateSupplierLink={handleUpdateSupplierLink}
               showToast={showToast}
+              defaultTab={activeModule === 'scm-supplier-links' ? 'links' : 'suppliers'}
             />
           )}
 

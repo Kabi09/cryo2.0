@@ -102,7 +102,7 @@ export default function SupplierMaterialLinkModule({ links, suppliers, materials
       header: 'Contract Rate',
       accessor: 'unitPrice',
       render: (row) => (
-        <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: '#FBBF24' }}>
+        <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--text-primary)' }}>
           ₹{row.unitPrice} / {row.material?.unit || 'Unit'}
         </span>
       )

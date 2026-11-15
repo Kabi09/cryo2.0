@@ -371,6 +371,18 @@
 - **Impact**: Streamlined shopfloor workflow, zero build errors (`npm run build` in 786ms), 100% backward compatibility for all legacy routes and APIs.
 
 - **Date**: 2026-11-15
+- **Decision**: SCM Navigation Polish - Move Supplier Material Links to Suppliers Module
+  1. **User Request**: User requested moving `Supplier Material Links` from the `Materials` page into the `Suppliers` page so both `Suppliers` and `Supplier Material Links` are together under the Suppliers tab.
+  2. **Components Created / Modified**:
+     - Created `client/src/components/modules/SuppliersPage.jsx`: Houses 2 internal sub-tabs:
+       - Sub-tab 1: `Suppliers ({count})` (Vendor Directory with registration, GST, contact info, payment terms)
+       - Sub-tab 2: `Supplier Material Links ({count})` (Vendor-to-Material contracts, negotiated rates, MOQ, lead time, preferred vendor toggle)
+     - Streamlined `client/src/components/modules/MaterialsPage.jsx`: Dedicated purely to `MaterialMasterModule` (Raw Material Catalog) without redundant link sub-tabs.
+     - Updated `client/src/App.jsx`: Directed `scm-suppliers` and alias `scm-supplier-links` to `SuppliersPage`, defaulting to appropriate sub-tab.
+     - High-contrast styling fix in `SupplierMaterialLinkModule.jsx` for contract rates on enterprise light theme.
+  3. **Verification**: Frontend build verified clean with Vite in 1.19s with 0 errors.
+
+- **Date**: 2026-11-15
 - **Decision**: SCM, Logistics, and Employee Management Overhaul & Master Integration Verification
   1. **Supply Chain Management (SCM) Overhaul (7 Main Pages)**:
      - Consolidated SCM navigation into 7 clean pages: `Dashboard`, `Materials`, `Suppliers`, `Purchasing` (Sub-tabs: Purchase Orders | Goods Receipts), `Quality & Inventory` (Sub-tabs: QC Pending | QC History | Stock | Supplier Returns), `Material Issues` (Sub-tabs: Factory Requisitions | Issue History), `Reports`.
