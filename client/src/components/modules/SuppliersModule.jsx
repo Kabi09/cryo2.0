@@ -1,11 +1,20 @@
 import React, { useState } from 'react';
-import { Plus, Eye, Edit3, Building2 } from 'lucide-react';
+import { Plus, Eye, Edit3, Building2, ShoppingCart, Package, Star, Clock } from 'lucide-react';
 import DataTable from '../common/DataTable';
 import StatusBadge from '../common/StatusBadge';
 import Modal from '../common/Modal';
 import KpiCard from '../common/KpiCard';
 
-export default function SuppliersModule({ suppliers, onSave, onUpdate, showToast }) {
+export default function SuppliersModule({
+  suppliers = [],
+  materials = [],
+  supplierLinks = [],
+  purchaseOrders = [],
+  onSave,
+  onUpdate,
+  onNavigateToPO,
+  showToast
+}) {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState(null);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -130,6 +139,28 @@ export default function SuppliersModule({ suppliers, onSave, onUpdate, showToast
       header: 'Payment Terms',
       accessor: 'paymentTerms',
       render: (row) => <span className="nav-badge-pill">{row.paymentTerms}</span>
+    },
+    {
+      header: 'Supplied Materials',
+      render: (row) => {
+        const matchingLinks = (supplierLinks || []).filter(l => (l.supplier?._id || l.supplier) === row._id);
+        if (matchingLinks.length === 0) {
+          return <span style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>None linked</span>;
+        }
+        return (
+          <span
+            className="badge badge-info"
+            style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+            onClick={(e) => {
+              e.stopPropagation();
+              setSelectedSupplier(row);
+            }}
+            title="Click to view supplied materials & contracts"
+          >
+            <Package size={11} /> {matchingLinks.length} {matchingLinks.length === 1 ? 'Material' : 'Materials'}
+          </span>
+        );
+      }
     },
     {
       header: 'Status',
@@ -348,45 +379,206 @@ export default function SuppliersModule({ suppliers, onSave, onUpdate, showToast
         subtitle={selectedSupplier?.supplierName}
       >
         {selectedSupplier && (
-          <div className="detail-grid">
-            <div className="detail-item">
-              <div className="detail-label">Supplier Code</div>
-              <div className="detail-value">{selectedSupplier.supplierCode}</div>
-            </div>
-            <div className="detail-item">
-              <div className="detail-label">Status</div>
-              <div className="detail-value"><StatusBadge status={selectedSupplier.status} /></div>
-            </div>
-            <div className="detail-item">
-              <div className="detail-label">Contact Person</div>
-              <div className="detail-value">{selectedSupplier.contactPerson}</div>
-            </div>
-            <div className="detail-item">
-              <div className="detail-label">Phone Number</div>
-              <div className="detail-value" style={{ fontFamily: 'var(--font-mono)' }}>{selectedSupplier.mobileNumber}</div>
-            </div>
-            <div className="detail-item">
-              <div className="detail-label">Email</div>
-              <div className="detail-value">{selectedSupplier.email || '—'}</div>
-            </div>
-            <div className="detail-item">
-              <div className="detail-label">GSTIN</div>
-              <div className="detail-value" style={{ fontFamily: 'var(--font-mono)' }}>{selectedSupplier.gstNumber || 'Not provided'}</div>
-            </div>
-            <div className="detail-item">
-              <div className="detail-label">Payment Terms</div>
-              <div className="detail-value">{selectedSupplier.paymentTerms}</div>
-            </div>
-            <div className="detail-item">
-              <div className="detail-label">Location</div>
-              <div className="detail-value">{selectedSupplier.city}, {selectedSupplier.state} - {selectedSupplier.pincode}</div>
-            </div>
-            <div className="detail-item col-span-2">
-              <div className="detail-label">Address</div>
-              <div className="detail-value" style={{ fontWeight: 400, fontSize: '0.85rem' }}>
-                {selectedSupplier.address || 'No street address given.'}
+          <div>
+            <div className="detail-grid">
+              <div className="detail-item">
+                <div className="detail-label">Supplier Code</div>
+                <div className="detail-value">{selectedSupplier.supplierCode}</div>
+              </div>
+              <div className="detail-item">
+                <div className="detail-label">Status</div>
+                <div className="detail-value"><StatusBadge status={selectedSupplier.status} /></div>
+              </div>
+              <div className="detail-item">
+                <div className="detail-label">Contact Person</div>
+                <div className="detail-value">{selectedSupplier.contactPerson}</div>
+              </div>
+              <div className="detail-item">
+                <div className="detail-label">Phone Number</div>
+                <div className="detail-value" style={{ fontFamily: 'var(--font-mono)' }}>{selectedSupplier.mobileNumber}</div>
+              </div>
+              <div className="detail-item">
+                <div className="detail-label">Email</div>
+                <div className="detail-value">{selectedSupplier.email || '—'}</div>
+              </div>
+              <div className="detail-item">
+                <div className="detail-label">GSTIN</div>
+                <div className="detail-value" style={{ fontFamily: 'var(--font-mono)' }}>{selectedSupplier.gstNumber || 'Not provided'}</div>
+              </div>
+              <div className="detail-item">
+                <div className="detail-label">Payment Terms</div>
+                <div className="detail-value">{selectedSupplier.paymentTerms}</div>
+              </div>
+              <div className="detail-item">
+                <div className="detail-label">Location</div>
+                <div className="detail-value">{selectedSupplier.city}, {selectedSupplier.state} - {selectedSupplier.pincode}</div>
+              </div>
+              <div className="detail-item col-span-2">
+                <div className="detail-label">Address</div>
+                <div className="detail-value" style={{ fontWeight: 400, fontSize: '0.85rem' }}>
+                  {selectedSupplier.address || 'No street address given.'}
+                </div>
               </div>
             </div>
+
+            {/* Supplied Materials & Rate Contracts */}
+            {(() => {
+              const matchingLinks = (supplierLinks || []).filter(l => (l.supplier?._id || l.supplier) === selectedSupplier._id);
+              const matchingPOs = (purchaseOrders || []).filter(p => (p.supplier?._id || p.supplier) === selectedSupplier._id);
+
+              return (
+                <div style={{ marginTop: 22 }}>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginBottom: 10,
+                    paddingBottom: 8,
+                    borderBottom: '1px solid var(--border-subtle)'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <Package size={16} style={{ color: 'var(--primary)' }} />
+                      <span style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text-primary)' }}>
+                        Supplied Materials & Rate Contracts ({matchingLinks.length})
+                      </span>
+                    </div>
+                  </div>
+
+                  {matchingLinks.length > 0 ? (
+                    <div className="table-responsive" style={{ maxHeight: 200, overflowY: 'auto', marginBottom: 20 }}>
+                      <table className="data-table" style={{ fontSize: '0.78rem' }}>
+                        <thead>
+                          <tr>
+                            <th>Material</th>
+                            <th>Contract Rate</th>
+                            <th>MOQ</th>
+                            <th>Lead Time</th>
+                            <th>Priority</th>
+                            <th style={{ textAlign: 'right' }}>Action</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {matchingLinks.map(link => {
+                            const mat = link.material || {};
+                            return (
+                              <tr key={link._id}>
+                                <td>
+                                  <div style={{ fontWeight: 600 }}>{mat.materialName || '—'}</div>
+                                  <div style={{ fontSize: '0.7rem', color: 'var(--primary)' }}>{mat.materialCode}</div>
+                                </td>
+                                <td>
+                                  <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--text-primary)' }}>
+                                    ₹{link.unitPrice} / {mat.unit || 'Unit'}
+                                  </span>
+                                </td>
+                                <td>{link.minOrderQty} {mat.unit || ''}</td>
+                                <td>{link.leadTimeDays} Days</td>
+                                <td>
+                                  {link.preferredSupplier ? (
+                                    <span className="badge badge-warning" style={{ fontSize: '0.68rem', gap: 3 }}>
+                                      <Star size={10} fill="#F59E0B" /> Primary
+                                    </span>
+                                  ) : (
+                                    <span style={{ color: 'var(--text-muted)', fontSize: '0.74rem' }}>Standard</span>
+                                  )}
+                                </td>
+                                <td style={{ textAlign: 'right' }}>
+                                  <button
+                                    type="button"
+                                    className="btn btn-primary btn-sm"
+                                    style={{ fontSize: '0.72rem', padding: '3px 8px' }}
+                                    onClick={() => {
+                                      setSelectedSupplier(null);
+                                      if (onNavigateToPO) {
+                                        onNavigateToPO({
+                                          supplierId: selectedSupplier._id,
+                                          materialId: mat._id || link.material,
+                                          unitPrice: link.unitPrice,
+                                          quantity: link.minOrderQty || 100
+                                        });
+                                      }
+                                    }}
+                                  >
+                                    <ShoppingCart size={12} style={{ marginRight: 4 }} /> + Create PO
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div style={{
+                      padding: 12,
+                      background: 'var(--bg-app)',
+                      borderRadius: 6,
+                      fontSize: '0.78rem',
+                      color: 'var(--text-muted)',
+                      marginBottom: 20
+                    }}>
+                      No materials mapped to this supplier yet. Map materials under the "Supplier Material Links" sub-tab.
+                    </div>
+                  )}
+
+                  {/* Recent Purchase Orders Placed with this Vendor */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginBottom: 10,
+                    paddingBottom: 8,
+                    borderBottom: '1px solid var(--border-subtle)'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <ShoppingCart size={16} style={{ color: 'var(--primary)' }} />
+                      <span style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text-primary)' }}>
+                        Recent Purchase Orders ({matchingPOs.length})
+                      </span>
+                    </div>
+                  </div>
+
+                  {matchingPOs.length > 0 ? (
+                    <div className="table-responsive" style={{ maxHeight: 200, overflowY: 'auto' }}>
+                      <table className="data-table" style={{ fontSize: '0.78rem' }}>
+                        <thead>
+                          <tr>
+                            <th>PO Number</th>
+                            <th>Date</th>
+                            <th>Items</th>
+                            <th>Grand Total</th>
+                            <th>Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {matchingPOs.slice(0, 5).map(po => (
+                            <tr key={po._id}>
+                              <td style={{ fontWeight: 600, color: 'var(--primary)' }}>{po.poNumber}</td>
+                              <td>{po.poDate ? new Date(po.poDate).toLocaleDateString() : '—'}</td>
+                              <td>{po.items?.length || 0} items</td>
+                              <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
+                                ₹{Number(po.grandTotal || 0).toLocaleString()}
+                              </td>
+                              <td><StatusBadge status={po.status} /></td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div style={{
+                      padding: 12,
+                      background: 'var(--bg-app)',
+                      borderRadius: 6,
+                      fontSize: '0.78rem',
+                      color: 'var(--text-muted)'
+                    }}>
+                      No purchase orders recorded for this vendor yet.
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         )}
       </Modal>

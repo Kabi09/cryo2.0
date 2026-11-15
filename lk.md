@@ -371,6 +371,18 @@
 - **Impact**: Streamlined shopfloor workflow, zero build errors (`npm run build` in 786ms), 100% backward compatibility for all legacy routes and APIs.
 
 - **Date**: 2026-11-15
+- **Decision**: SCM Stock Promotion to Head Tab & Bidirectional Supplier-Material Cross-Linking
+  1. **Stock Head Tab Promotion**:
+     - Moved `Stock` (InventoryModule) out of `Quality & Inventory` to become the #2 top-level head tab directly below Dashboard (`02 Stock`).
+     - Sidebar order: `01 Dashboard`, `02 Stock`, `03 Materials`, `04 Suppliers`, `05 Purchasing`, `06 Quality Control`, `07 Material Issues`, `08 Reports`.
+     - Quality Control module now focuses cleanly on 3 inspection tabs: `QC Pending`, `QC History`, `Supplier Returns`.
+  2. **Bidirectional Supplier-Material Visibility & Quick PO**:
+     - **Supplier Directory**: Added `Supplied Materials` count badge to table; in details modal, displays table of all supplied materials (SKU, rate, MOQ, lead time, priority) with direct `+ Create PO` button, plus recent purchase order history.
+     - **Material Master**: Added `Approved Suppliers` badge and preferred vendor rate to table; in details modal, displays table of all approved vendors supplying this material with direct `+ Create PO` procurement action.
+     - **Automated PO Pre-population**: Clicking `+ Create PO` from either a Material or Supplier navigates to Purchasing with vendor, material, contract rate, and MOQ pre-filled.
+  3. **Verification**: Frontend build verified clean with Vite (994ms, 0 errors) and all 14 end-to-end integration tests passing.
+
+- **Date**: 2026-11-15
 - **Decision**: SCM Navigation Polish - Move Supplier Material Links to Suppliers Module
   1. **User Request**: User requested moving `Supplier Material Links` from the `Materials` page into the `Suppliers` page so both `Suppliers` and `Supplier Material Links` are together under the Suppliers tab.
   2. **Components Created / Modified**:

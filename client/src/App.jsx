@@ -2,8 +2,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Sidebar from './components/common/Sidebar';
 import Header from './components/common/Header';
 
-// 1. Supply Chain Management (7 Pages)
+// 1. Supply Chain Management (8 Pages)
 import ScmDashboardModule from './components/modules/ScmDashboardModule';
+import InventoryModule from './components/modules/InventoryModule';
 import MaterialsPage from './components/modules/MaterialsPage';
 import SuppliersPage from './components/modules/SuppliersPage';
 import PurchasingPage from './components/modules/PurchasingPage';
@@ -71,6 +72,7 @@ export default function App() {
   const [preSelectedPIForSO, setPreSelectedPIForSO] = useState(null);
   const [preSelectedWOForMR, setPreSelectedWOForMR] = useState(null);
   const [preSelectedQAForFG, setPreSelectedQAForFG] = useState(null);
+  const [preSelectedPOData, setPreSelectedPOData] = useState(null);
 
   // 1. SCM State
   const [materials, setMaterials] = useState([]);
@@ -428,6 +430,11 @@ export default function App() {
     setPreSelectedGRNForQC(grn);
     setActiveModule('scm-quality-inventory');
   };
+  const handleNavigateToPOWithData = (poData) => {
+    setPreSelectedPOData(poData);
+    setActiveDomain('scm');
+    setActiveModule('scm-purchasing');
+  };
 
   // Sales Handlers
   const handleSaveProduct = async (data) => {
@@ -738,6 +745,8 @@ export default function App() {
                   setActiveModule('scm-quality-inventory');
                 } else if (tab === 'material-issues') {
                   setActiveModule('scm-material-issues');
+                } else if (tab === 'inventory' || tab === 'stock') {
+                  setActiveModule('scm-inventory');
                 } else {
                   setActiveModule(`scm-${tab}`);
                 }
@@ -745,11 +754,28 @@ export default function App() {
             />
           )}
 
+          {(activeModule === 'scm-inventory' || activeModule === 'scm-stock') && (
+            <div className="module-container">
+              <InventoryModule
+                inventory={inventory}
+                onAdjustStock={handleAdjustStock}
+                showToast={showToast}
+              />
+            </div>
+          )}
+
           {(activeModule === 'scm-materials' || activeModule === 'scm-material-master') && (
             <MaterialsPage
               materials={materials}
+              suppliers={scmSuppliers}
+              supplierLinks={supplierLinks}
               onSaveMaterial={handleSaveMaterial}
               onUpdateMaterial={handleUpdateMaterial}
+              onNavigateToPO={handleNavigateToPOWithData}
+              onNavigateToSupplierLinks={() => {
+                setActiveDomain('scm');
+                setActiveModule('scm-suppliers');
+              }}
               showToast={showToast}
             />
           )}
@@ -759,10 +785,12 @@ export default function App() {
               suppliers={scmSuppliers}
               materials={materials}
               supplierLinks={supplierLinks}
+              purchaseOrders={scmPurchaseOrders}
               onSaveSupplier={handleSaveScmSupplier}
               onUpdateSupplier={handleUpdateScmSupplier}
               onSaveSupplierLink={handleSaveSupplierLink}
               onUpdateSupplierLink={handleUpdateSupplierLink}
+              onNavigateToPO={handleNavigateToPOWithData}
               showToast={showToast}
               defaultTab={activeModule === 'scm-supplier-links' ? 'links' : 'suppliers'}
             />
@@ -779,23 +807,23 @@ export default function App() {
               onUpdatePOStatus={handleUpdateScmPOStatus}
               onSaveGRN={handleSaveGRN}
               onNavigateToQC={handleNavigateToQC}
+              preSelectedPOData={preSelectedPOData}
+              onClearPreSelected={() => setPreSelectedPOData(null)}
               showToast={showToast}
               defaultTab={activeModule === 'scm-grn' ? 'grn' : 'po'}
             />
           )}
 
-          {(activeModule === 'scm-quality-inventory' || activeModule === 'scm-qc-tests' || activeModule === 'scm-inventory' || activeModule === 'scm-supplier-returns') && (
+          {(activeModule === 'scm-quality-inventory' || activeModule === 'scm-qc-tests' || activeModule === 'scm-supplier-returns') && (
             <QualityInventoryPage
               qcTests={qcTests}
               grns={grns}
-              inventory={inventory}
               supplierReturns={supplierReturns}
               onSaveQCTest={handleSaveQCTest}
-              onAdjustStock={handleAdjustStock}
               onSaveSupplierReturn={handleSaveSupplierReturn}
               preSelectedGRN={preSelectedGRNForQC}
               showToast={showToast}
-              defaultTab={activeModule === 'scm-inventory' ? 'stock' : activeModule === 'scm-supplier-returns' ? 'returns' : activeModule === 'scm-qc-tests' ? 'qc-history' : 'qc-pending'}
+              defaultTab={activeModule === 'scm-supplier-returns' ? 'returns' : 'qc-history'}
             />
           )}
 

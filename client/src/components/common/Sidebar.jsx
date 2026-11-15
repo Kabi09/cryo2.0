@@ -14,12 +14,13 @@ import {
 
 export const SCM_MODULES = [
   { id: 'scm-dashboard', num: '01', title: 'Dashboard' },
-  { id: 'scm-materials', num: '02', title: 'Materials' },
-  { id: 'scm-suppliers', num: '03', title: 'Suppliers' },
-  { id: 'scm-purchasing', num: '04', title: 'Purchasing' },
-  { id: 'scm-quality-inventory', num: '05', title: 'Quality & Inventory' },
-  { id: 'scm-material-issues', num: '06', title: 'Material Issues' },
-  { id: 'scm-reports', num: '07', title: 'Reports' }
+  { id: 'scm-inventory', num: '02', title: 'Stock' },
+  { id: 'scm-materials', num: '03', title: 'Materials' },
+  { id: 'scm-suppliers', num: '04', title: 'Suppliers' },
+  { id: 'scm-purchasing', num: '05', title: 'Purchasing' },
+  { id: 'scm-quality-inventory', num: '06', title: 'Quality Control' },
+  { id: 'scm-material-issues', num: '07', title: 'Material Issues' },
+  { id: 'scm-reports', num: '08', title: 'Reports' }
 ];
 
 export const SALES_MODULES = [

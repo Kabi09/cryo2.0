@@ -1,17 +1,14 @@
 import React, { useState } from 'react';
 import QCTestsModule from './QCTestsModule';
-import InventoryModule from './InventoryModule';
 import SupplierReturnsModule from './SupplierReturnsModule';
 import StatusBadge from '../common/StatusBadge';
-import { ShieldAlert, ShieldCheck, Boxes, RotateCcw, ArrowRight, Eye, CheckCircle2 } from 'lucide-react';
+import { ShieldAlert, ShieldCheck, RotateCcw, ArrowRight, Eye, CheckCircle2 } from 'lucide-react';
 
 export default function QualityInventoryPage({
   qcTests = [],
   grns = [],
-  inventory = [],
   supplierReturns = [],
   onSaveQCTest,
-  onAdjustStock,
   onSaveSupplierReturn,
   preSelectedGRN,
   showToast,
@@ -46,13 +43,6 @@ export default function QualityInventoryPage({
           >
             <ShieldCheck size={14} style={{ marginRight: 6 }} />
             QC History ({qcTests.length})
-          </button>
-          <button
-            className={`tab-btn ${activeTab === 'stock' ? 'active' : ''}`}
-            onClick={() => setActiveTab('stock')}
-          >
-            <Boxes size={14} style={{ marginRight: 6 }} />
-            Stock ({inventory.length})
           </button>
           <button
             className={`tab-btn ${activeTab === 'returns' ? 'active' : ''}`}
@@ -157,16 +147,7 @@ export default function QualityInventoryPage({
         />
       )}
 
-      {/* Tab 3: Stock / Warehouse Inventory */}
-      {activeTab === 'stock' && (
-        <InventoryModule
-          inventory={inventory}
-          onAdjustStock={onAdjustStock}
-          showToast={showToast}
-        />
-      )}
-
-      {/* Tab 4: Supplier Returns */}
+      {/* Tab 3: Supplier Returns */}
       {activeTab === 'returns' && (
         <SupplierReturnsModule
           supplierReturns={supplierReturns}

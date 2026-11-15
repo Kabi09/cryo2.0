@@ -1,11 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Eye, ShoppingCart, Trash2, CheckCircle2, XCircle } from 'lucide-react';
 import DataTable from '../common/DataTable';
 import StatusBadge from '../common/StatusBadge';
 import Modal from '../common/Modal';
 import KpiCard from '../common/KpiCard';
 
-export default function PurchaseOrdersModule({ purchaseOrders, suppliers, materials, supplierLinks, onSave, onUpdateStatus, showToast }) {
+export default function PurchaseOrdersModule({
+  purchaseOrders,
+  suppliers,
+  materials,
+  supplierLinks,
+  onSave,
+  onUpdateStatus,
+  preSelectedPOData,
+  onClearPreSelected,
+  showToast
+}) {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [selectedPO, setSelectedPO] = useState(null);
 
@@ -22,6 +32,46 @@ export default function PurchaseOrdersModule({ purchaseOrders, suppliers, materi
     status: 'Approved',
     items: []
   });
+
+  const handleCloseAdd = () => {
+    setIsAddOpen(false);
+    if (onClearPreSelected) onClearPreSelected();
+  };
+
+  useEffect(() => {
+    if (preSelectedPOData && preSelectedPOData.supplierId) {
+      const supId = preSelectedPOData.supplierId;
+      const matId = preSelectedPOData.materialId;
+      const mat = materials.find(m => (m._id || m) === matId);
+      const link = (supplierLinks || []).find(l => (l.supplier?._id || l.supplier) === supId && (l.material?._id || l.material) === matId);
+      const price = Number(preSelectedPOData.unitPrice || link?.unitPrice || 80);
+      const qty = Number(preSelectedPOData.quantity || link?.minOrderQty || 100);
+
+      const item = mat ? {
+        material: mat._id,
+        materialName: mat.materialName,
+        unit: mat.unit || 'Kg',
+        quantity: qty,
+        unitPrice: price,
+        taxPercent: 18,
+        lineTotal: Math.round(qty * price * 1.18 * 100) / 100
+      } : getInitialLineItem(supId);
+
+      setFormData({
+        poNumber: '',
+        poDate: new Date().toISOString().split('T')[0],
+        supplier: supId,
+        expectedDeliveryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        deliveryAddress: 'Cryo Factory, Phase 2, Industrial Estate, Chennai - 600058',
+        paymentTerms: 'Net 30 Days',
+        freightCharges: 0,
+        notes: `PO generated for ${mat ? mat.materialName : 'selected vendor item'}`,
+        status: 'Approved',
+        items: item ? [item] : []
+      });
+      setIsAddOpen(true);
+    }
+  }, [preSelectedPOData]);
 
   const handleOpenAdd = () => {
     const defaultSupplier = suppliers[0]?._id || '';
@@ -259,7 +309,7 @@ export default function PurchaseOrdersModule({ purchaseOrders, suppliers, materi
       {/* Create PO Modal */}
       <Modal
         isOpen={isAddOpen}
-        onClose={() => setIsAddOpen(false)}
+        onClose={handleCloseAdd}
         size="lg"
         title="Create Purchase Order (PO)"
         subtitle="Order raw materials from registered suppliers with automated tax and total calculation"
@@ -518,7 +568,7 @@ export default function PurchaseOrdersModule({ purchaseOrders, suppliers, materi
           </div>
 
           <div className="modal-footer" style={{ marginTop: 24, padding: '16px 0 0 0' }}>
-            <button type="button" className="btn btn-secondary" onClick={() => setIsAddOpen(false)}>
+            <button type="button" className="btn btn-secondary" onClick={handleCloseAdd}>
               Cancel
             </button>
             <button

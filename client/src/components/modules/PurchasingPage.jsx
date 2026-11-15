@@ -13,6 +13,8 @@ export default function PurchasingPage({
   onUpdatePOStatus,
   onSaveGRN,
   onNavigateToQC,
+  preSelectedPOData,
+  onClearPreSelected,
   showToast,
   defaultTab = 'po'
 }) {
@@ -49,6 +51,8 @@ export default function PurchasingPage({
           supplierLinks={supplierLinks}
           onSave={onSavePO}
           onUpdateStatus={onUpdatePOStatus}
+          preSelectedPOData={preSelectedPOData}
+          onClearPreSelected={onClearPreSelected}
           showToast={showToast}
         />
       )}

@@ -7,10 +7,12 @@ export default function SuppliersPage({
   suppliers = [],
   materials = [],
   supplierLinks = [],
+  purchaseOrders = [],
   onSaveSupplier,
   onUpdateSupplier,
   onSaveSupplierLink,
   onUpdateSupplierLink,
+  onNavigateToPO,
   showToast,
   defaultTab = 'suppliers'
 }) {
@@ -50,8 +52,12 @@ export default function SuppliersPage({
       {activeTab === 'suppliers' && (
         <SuppliersModule
           suppliers={suppliers}
+          materials={materials}
+          supplierLinks={supplierLinks}
+          purchaseOrders={purchaseOrders}
           onSave={onSaveSupplier}
           onUpdate={onUpdateSupplier}
+          onNavigateToPO={onNavigateToPO}
           showToast={showToast}
         />
       )}

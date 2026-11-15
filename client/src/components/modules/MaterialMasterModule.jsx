@@ -1,11 +1,20 @@
 import React, { useState } from 'react';
-import { Plus, Eye, Edit3, Boxes } from 'lucide-react';
+import { Plus, Eye, Edit3, Boxes, Building2, ShoppingCart, Star, Link2 } from 'lucide-react';
 import DataTable from '../common/DataTable';
 import StatusBadge from '../common/StatusBadge';
 import Modal from '../common/Modal';
 import KpiCard from '../common/KpiCard';
 
-export default function MaterialMasterModule({ materials, onSave, onUpdate, showToast }) {
+export default function MaterialMasterModule({
+  materials = [],
+  suppliers = [],
+  supplierLinks = [],
+  onSave,
+  onUpdate,
+  onNavigateToPO,
+  onNavigateToSupplierLinks,
+  showToast
+}) {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [selectedMaterial, setSelectedMaterial] = useState(null);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -134,6 +143,35 @@ export default function MaterialMasterModule({ materials, onSave, onUpdate, show
           }}>
             {row.currentStock || 0} {row.unit}
           </span>
+        );
+      }
+    },
+    {
+      header: 'Approved Suppliers',
+      render: (row) => {
+        const matchingLinks = (supplierLinks || []).filter(l => (l.material?._id || l.material) === row._id);
+        const preferred = matchingLinks.find(l => l.preferredSupplier);
+        if (matchingLinks.length === 0) {
+          return <span style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>None mapped</span>;
+        }
+        return (
+          <div
+            style={{ cursor: 'pointer' }}
+            onClick={(e) => {
+              e.stopPropagation();
+              setSelectedMaterial(row);
+            }}
+            title="Click to view approved suppliers & rates"
+          >
+            <span className="badge badge-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: '0.72rem' }}>
+              <Building2 size={11} /> {matchingLinks.length} {matchingLinks.length === 1 ? 'Supplier' : 'Suppliers'}
+            </span>
+            {preferred && (
+              <div style={{ fontSize: '0.71rem', color: 'var(--text-secondary)', marginTop: 2 }}>
+                ★ {preferred.supplier?.supplierName || 'Preferred'} (₹{preferred.unitPrice})
+              </div>
+            )}
+          </div>
         );
       }
     },
@@ -345,47 +383,168 @@ export default function MaterialMasterModule({ materials, onSave, onUpdate, show
         subtitle={selectedMaterial?.materialName}
       >
         {selectedMaterial && (
-          <div className="detail-grid">
-            <div className="detail-item">
-              <div className="detail-label">Material Code</div>
-              <div className="detail-value">{selectedMaterial.materialCode}</div>
-            </div>
-            <div className="detail-item">
-              <div className="detail-label">Status</div>
-              <div className="detail-value"><StatusBadge status={selectedMaterial.status} /></div>
-            </div>
-            <div className="detail-item">
-              <div className="detail-label">Category</div>
-              <div className="detail-value">{selectedMaterial.category}</div>
-            </div>
-            <div className="detail-item">
-              <div className="detail-label">Unit of Measure</div>
-              <div className="detail-value">{selectedMaterial.unit}</div>
-            </div>
-            <div className="detail-item">
-              <div className="detail-label">Current Available Stock</div>
-              <div className="detail-value" style={{ color: '#34D399' }}>
-                {selectedMaterial.currentStock || 0} {selectedMaterial.unit}
+          <div>
+            <div className="detail-grid">
+              <div className="detail-item">
+                <div className="detail-label">Material Code</div>
+                <div className="detail-value">{selectedMaterial.materialCode}</div>
+              </div>
+              <div className="detail-item">
+                <div className="detail-label">Status</div>
+                <div className="detail-value"><StatusBadge status={selectedMaterial.status} /></div>
+              </div>
+              <div className="detail-item">
+                <div className="detail-label">Category</div>
+                <div className="detail-value">{selectedMaterial.category}</div>
+              </div>
+              <div className="detail-item">
+                <div className="detail-label">Unit of Measure</div>
+                <div className="detail-value">{selectedMaterial.unit}</div>
+              </div>
+              <div className="detail-item">
+                <div className="detail-label">Current Available Stock</div>
+                <div className="detail-value" style={{ color: '#34D399' }}>
+                  {selectedMaterial.currentStock || 0} {selectedMaterial.unit}
+                </div>
+              </div>
+              <div className="detail-item">
+                <div className="detail-label">Minimum Safety Stock</div>
+                <div className="detail-value">{selectedMaterial.minimumStock} {selectedMaterial.unit}</div>
+              </div>
+              <div className="detail-item">
+                <div className="detail-label">Reorder Level</div>
+                <div className="detail-value">{selectedMaterial.reorderLevel} {selectedMaterial.unit}</div>
+              </div>
+              <div className="detail-item">
+                <div className="detail-label">Storage Bay</div>
+                <div className="detail-value">{selectedMaterial.storageLocation || 'Warehouse Main'}</div>
+              </div>
+              <div className="detail-item col-span-2">
+                <div className="detail-label">Description / Specifications</div>
+                <div className="detail-value" style={{ fontWeight: 400, fontSize: '0.85rem' }}>
+                  {selectedMaterial.description || 'No description provided.'}
+                </div>
               </div>
             </div>
-            <div className="detail-item">
-              <div className="detail-label">Minimum Safety Stock</div>
-              <div className="detail-value">{selectedMaterial.minimumStock} {selectedMaterial.unit}</div>
-            </div>
-            <div className="detail-item">
-              <div className="detail-label">Reorder Level</div>
-              <div className="detail-value">{selectedMaterial.reorderLevel} {selectedMaterial.unit}</div>
-            </div>
-            <div className="detail-item">
-              <div className="detail-label">Storage Bay</div>
-              <div className="detail-value">{selectedMaterial.storageLocation || 'Warehouse Main'}</div>
-            </div>
-            <div className="detail-item col-span-2">
-              <div className="detail-label">Description / Specifications</div>
-              <div className="detail-value" style={{ fontWeight: 400, fontSize: '0.85rem' }}>
-                {selectedMaterial.description || 'No description provided.'}
-              </div>
-            </div>
+
+            {/* Approved Suppliers & Procurement Rates */}
+            {(() => {
+              const matchingLinks = (supplierLinks || []).filter(l => (l.material?._id || l.material) === selectedMaterial._id);
+
+              return (
+                <div style={{ marginTop: 22 }}>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginBottom: 10,
+                    paddingBottom: 8,
+                    borderBottom: '1px solid var(--border-subtle)'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <Building2 size={16} style={{ color: 'var(--primary)' }} />
+                      <span style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text-primary)' }}>
+                        Approved Suppliers & Procurement Rates ({matchingLinks.length})
+                      </span>
+                    </div>
+                  </div>
+
+                  {matchingLinks.length > 0 ? (
+                    <div className="table-responsive" style={{ maxHeight: 220, overflowY: 'auto' }}>
+                      <table className="data-table" style={{ fontSize: '0.78rem' }}>
+                        <thead>
+                          <tr>
+                            <th>Supplier Name</th>
+                            <th>Contract Rate</th>
+                            <th>MOQ</th>
+                            <th>Lead Time</th>
+                            <th>Priority</th>
+                            <th style={{ textAlign: 'right' }}>Procurement Action</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {matchingLinks.map(link => {
+                            const sup = link.supplier || {};
+                            return (
+                              <tr key={link._id}>
+                                <td>
+                                  <div style={{ fontWeight: 600 }}>{sup.supplierName || '—'}</div>
+                                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                                    {sup.supplierCode} {sup.mobileNumber ? `• ${sup.mobileNumber}` : ''}
+                                  </div>
+                                </td>
+                                <td>
+                                  <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--text-primary)' }}>
+                                    ₹{link.unitPrice} / {selectedMaterial.unit}
+                                  </span>
+                                </td>
+                                <td>{link.minOrderQty} {selectedMaterial.unit}</td>
+                                <td>{link.leadTimeDays} Days</td>
+                                <td>
+                                  {link.preferredSupplier ? (
+                                    <span className="badge badge-warning" style={{ fontSize: '0.68rem', gap: 3 }}>
+                                      <Star size={10} fill="#F59E0B" /> Preferred
+                                    </span>
+                                  ) : (
+                                    <span style={{ color: 'var(--text-muted)', fontSize: '0.74rem' }}>Standard</span>
+                                  )}
+                                </td>
+                                <td style={{ textAlign: 'right' }}>
+                                  <button
+                                    type="button"
+                                    className="btn btn-primary btn-sm"
+                                    style={{ fontSize: '0.72rem', padding: '3px 8px' }}
+                                    onClick={() => {
+                                      setSelectedMaterial(null);
+                                      if (onNavigateToPO) {
+                                        onNavigateToPO({
+                                          supplierId: sup._id || link.supplier,
+                                          materialId: selectedMaterial._id,
+                                          unitPrice: link.unitPrice,
+                                          quantity: link.minOrderQty || 100
+                                        });
+                                      }
+                                    }}
+                                  >
+                                    <ShoppingCart size={12} style={{ marginRight: 4 }} /> + Create PO
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div style={{
+                      padding: 14,
+                      background: 'var(--bg-app)',
+                      borderRadius: 6,
+                      fontSize: '0.78rem',
+                      color: 'var(--text-muted)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      flexWrap: 'wrap',
+                      gap: 10
+                    }}>
+                      <span>No suppliers mapped to this material yet.</span>
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        style={{ fontSize: '0.72rem' }}
+                        onClick={() => {
+                          setSelectedMaterial(null);
+                          if (onNavigateToSupplierLinks) onNavigateToSupplierLinks();
+                        }}
+                      >
+                        <Link2 size={12} style={{ marginRight: 4 }} /> Link a Supplier ➔
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         )}
       </Modal>

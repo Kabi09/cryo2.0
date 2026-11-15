@@ -179,7 +179,7 @@ export default function ScmDashboardModule({
             type="button"
             className="btn btn-secondary btn-sm"
             style={{ width: '100%', fontSize: '0.74rem', padding: '4px 8px', justifyContent: 'center' }}
-            onClick={() => onNavigateTab && onNavigateTab('quality-inventory', 'stock')}
+            onClick={() => onNavigateTab && onNavigateTab('inventory')}
           >
             Check Stock Balances ➔
           </button>
