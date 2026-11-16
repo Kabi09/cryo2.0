@@ -435,6 +435,44 @@
   - **Reason**: Safety constraint to maintain local branch control without remote interference.
   - **Date**: 2026-11-13
 
+### 2026-11-16
+#### Change: Production Management Simplification, Visual Stepper & Seamless Handover
+- **What was changed**:
+  1. **Numbered Sidebar Navigation**:
+     - `01 Dashboard`: Executive summary with interactive manufacturing pipeline overview, 6 KPIs, and priority blocker tasks.
+     - `02 Work Orders`: Work Orders, BOM recipes, and production scheduling with 1-click status transitions.
+     - `03 Material Requests`: Clarified from generic "Materials" to eliminate confusion with SCM Materials Master. Manages shopfloor requisitions and warehouse material issues.
+     - `04 Assembly & Execution`: Clarified from "Manufacturing" to emphasize shopfloor assembly lines, shifts, and daily progress logs.
+     - `05 Quality & Rework`: Clarified from "Quality Check" to encompass quarantine inspection, test parameter checks, and rework loops.
+     - `06 Finished Goods`: Warehouse storage, serial tracking, and 1-click handover to Logistics delivery scheduling.
+     - `07 Reports`: Production throughput, QA yield, and scrap analytics.
+  2. **Interactive 5-Stage Stepper (`ProductionPipelineStepper.jsx`)**:
+     - Embedded across all Production views (`Dashboard`, `Work Orders`, `Material Requests`, `Assembly & Execution`, `Quality & Rework`, `Finished Goods`).
+     - Features live count badges for each stage (`workOrders`, `materialRequests`, `executions`, `qaTests`, `finishedGoods`).
+     - Allows direct 1-click navigation between stages and provides visual cues for active vs passed stages.
+  3. **Seamless Stage Handovers (Zero Duplicate Steps)**:
+     - **Work Orders ➔ Material Requests**: Clicking "Materials" carries the Work Order down and pre-calculates required raw materials from the active BOM.
+     - **Work Orders ➔ Assembly**: Added direct 1-click `Assembly ➔` button on ready/running orders to jump directly to the assembly execution bay.
+     - **Material Requests ➔ Material Issue**: Fixed state loss bug where clicking `Issue ➔` previously dropped the requisition. Now passes `selectedMRForIssue` to `ProductionMaterialIssueModule` and auto-opens the prefilled issue modal.
+     - **Material Issue ➔ Shopfloor Assembly**: Added `Proceed to Shopfloor Assembly ➔` button on issue records and detail modals to transition immediately into manufacturing.
+     - **Shopfloor Assembly ➔ Completion**: Added `Complete ➔` button on active execution rows to take operators directly into the completion log.
+     - **Completion ➔ Quality QA**: 1-click handover to quarantine quality inspection.
+     - **Quality QA ➔ Finished Goods**: 1-click transfer on passed inspection into warehouse inventory.
+- **Files changed**:
+  - `client/src/components/common/Sidebar.jsx`
+  - `client/src/components/production/ProductionPipelineStepper.jsx`
+  - `client/src/components/production/ProductionDashboardModule.jsx`
+  - `client/src/components/production/ProductionOrdersPage.jsx`
+  - `client/src/components/production/ProductionPlanningModule.jsx`
+  - `client/src/components/production/ProdMaterialRequestsPage.jsx`
+  - `client/src/components/production/ProductionMaterialIssueModule.jsx`
+  - `client/src/components/production/ProductionTrackingPage.jsx`
+  - `client/src/components/production/ProductionExecutionModule.jsx`
+  - `client/src/components/production/QualityReworkPage.jsx`
+  - `client/src/components/production/FinishedGoodsModule.jsx`
+  - `client/src/App.jsx`
+- **Impact**: Intuitive, easy-to-use production workflow with zero technical friction for shopfloor staff. Production build passes cleanly with zero errors.
+
 ---
 
 ## Important Notes
