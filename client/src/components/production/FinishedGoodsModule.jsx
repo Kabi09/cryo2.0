@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import DataTable from '../common/DataTable';
 import Modal from '../common/Modal';
 import StatusBadge from '../common/StatusBadge';
+import ProductionPipelineStepper from './ProductionPipelineStepper';
 import { PackageCheck, ShieldCheck, Warehouse, Truck, CheckCircle2, Eye, ArrowRight, Layers } from 'lucide-react';
 
 export default function FinishedGoodsModule({
@@ -13,6 +14,7 @@ export default function FinishedGoodsModule({
   onSave,
   onUpdateStatus,
   onHandoverToLogistics,
+  onNavigateModule,
   showToast
 }) {
   const [activeTab, setActiveTab] = useState('all'); // 'all' | 'Available' | 'Reserved' | 'Dispatched'
@@ -228,6 +230,13 @@ export default function FinishedGoodsModule({
 
   return (
     <div className="module-container">
+      {/* 5-Stage Interactive Manufacturing Stepper */}
+      <ProductionPipelineStepper
+        currentModule="production-finished-goods"
+        onNavigate={onNavigateModule}
+        counts={{ finishedGoods: finishedGoods.length }}
+      />
+
       {/* Sub-Tabs: All | Available | Reserved | Dispatched */}
       <div style={{ marginBottom: 18, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
         <div className="tab-switcher">

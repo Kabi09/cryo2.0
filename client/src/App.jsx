@@ -1049,20 +1049,20 @@ export default function App() {
             <ProductionDashboardModule
               dashboardData={productionDashboardData}
               onNavigateModule={(mod) => {
-                if (mod === 'orders' || mod === 'planning' || mod === 'work-orders') {
+                if (mod === 'orders' || mod === 'planning' || mod === 'work-orders' || mod === 'production-orders') {
                   setActiveModule('production-orders');
-                } else if (mod === 'materials' || mod === 'material-requests' || mod === 'material-issue') {
+                } else if (mod === 'materials' || mod === 'material-requests' || mod === 'material-issue' || mod === 'production-materials') {
                   setActiveModule('production-materials');
-                } else if (mod === 'manufacturing' || mod === 'execution' || mod === 'updates' || mod === 'completion' || mod === 'tracking') {
+                } else if (mod === 'manufacturing' || mod === 'execution' || mod === 'updates' || mod === 'completion' || mod === 'tracking' || mod === 'production-manufacturing') {
                   setActiveModule('production-manufacturing');
-                } else if (mod === 'quality' || mod === 'qa' || mod === 'rework') {
+                } else if (mod === 'quality' || mod === 'qa' || mod === 'rework' || mod === 'production-quality') {
                   setActiveModule('production-quality');
-                } else if (mod === 'finished-goods') {
+                } else if (mod === 'finished-goods' || mod === 'production-finished-goods') {
                   setActiveModule('production-finished-goods');
-                } else if (mod === 'reports') {
+                } else if (mod === 'reports' || mod === 'production-reports') {
                   setActiveModule('production-reports');
                 } else {
-                  setActiveModule(`production-${mod}`);
+                  setActiveModule(mod.startsWith('production-') ? mod : `production-${mod}`);
                 }
               }}
             />
@@ -1085,6 +1085,17 @@ export default function App() {
                 setPreSelectedWOForMR(wo);
                 setActiveModule('production-materials');
               }}
+              onNavigateToManufacturing={(wo) => {
+                setActiveModule('production-manufacturing');
+              }}
+              onNavigateModule={(mod) => {
+                if (mod === 'orders' || mod === 'production-orders') setActiveModule('production-orders');
+                else if (mod === 'materials' || mod === 'production-materials') setActiveModule('production-materials');
+                else if (mod === 'manufacturing' || mod === 'production-manufacturing') setActiveModule('production-manufacturing');
+                else if (mod === 'quality' || mod === 'production-quality') setActiveModule('production-quality');
+                else if (mod === 'finished-goods' || mod === 'production-finished-goods') setActiveModule('production-finished-goods');
+                else setActiveModule(mod);
+              }}
               showToast={showToast}
               defaultTab={activeModule === 'production-bom' ? 'bom' : activeModule === 'production-schedule' ? 'schedule' : 'orders'}
             />
@@ -1105,6 +1116,17 @@ export default function App() {
                 setActiveDomain('scm');
                 setActiveModule('scm-purchasing');
               }}
+              onNavigateToManufacturing={(wo) => {
+                setActiveModule('production-manufacturing');
+              }}
+              onNavigateModule={(mod) => {
+                if (mod === 'orders' || mod === 'production-orders') setActiveModule('production-orders');
+                else if (mod === 'materials' || mod === 'production-materials') setActiveModule('production-materials');
+                else if (mod === 'manufacturing' || mod === 'production-manufacturing') setActiveModule('production-manufacturing');
+                else if (mod === 'quality' || mod === 'production-quality') setActiveModule('production-quality');
+                else if (mod === 'finished-goods' || mod === 'production-finished-goods') setActiveModule('production-finished-goods');
+                else setActiveModule(mod);
+              }}
               showToast={showToast}
               defaultTab={activeModule === 'production-material-issue' ? 'issues' : 'requests'}
             />
@@ -1121,6 +1143,14 @@ export default function App() {
               onSaveProductionUpdate={handleSaveProductionUpdate}
               onSaveCompletion={handleSaveCompletion}
               onNavigateToQA={() => setActiveModule('production-quality')}
+              onNavigateModule={(mod) => {
+                if (mod === 'orders' || mod === 'production-orders') setActiveModule('production-orders');
+                else if (mod === 'materials' || mod === 'production-materials') setActiveModule('production-materials');
+                else if (mod === 'manufacturing' || mod === 'production-manufacturing') setActiveModule('production-manufacturing');
+                else if (mod === 'quality' || mod === 'production-quality') setActiveModule('production-quality');
+                else if (mod === 'finished-goods' || mod === 'production-finished-goods') setActiveModule('production-finished-goods');
+                else setActiveModule(mod);
+              }}
               showToast={showToast}
               defaultTab={activeModule === 'production-updates' ? 'updates' : activeModule === 'production-completion' ? 'completion' : 'execution'}
             />
@@ -1138,6 +1168,14 @@ export default function App() {
               onNavigateToFG={(qa) => {
                 setPreSelectedQAForFG(qa);
                 setActiveModule('production-finished-goods');
+              }}
+              onNavigateModule={(mod) => {
+                if (mod === 'orders' || mod === 'production-orders') setActiveModule('production-orders');
+                else if (mod === 'materials' || mod === 'production-materials') setActiveModule('production-materials');
+                else if (mod === 'manufacturing' || mod === 'production-manufacturing') setActiveModule('production-manufacturing');
+                else if (mod === 'quality' || mod === 'production-quality') setActiveModule('production-quality');
+                else if (mod === 'finished-goods' || mod === 'production-finished-goods') setActiveModule('production-finished-goods');
+                else setActiveModule(mod);
               }}
               showToast={showToast}
               defaultTab={activeModule === 'production-rework' ? 'rework' : activeModule === 'production-qa' ? 'passed' : 'pending'}
@@ -1157,6 +1195,14 @@ export default function App() {
                 showToast(`Finished Goods ${fg.fgNumber} ready for Logistics delivery schedule`, 'success');
                 setActiveDomain('logistics');
                 setActiveModule('logistics-planning');
+              }}
+              onNavigateModule={(mod) => {
+                if (mod === 'orders' || mod === 'production-orders') setActiveModule('production-orders');
+                else if (mod === 'materials' || mod === 'production-materials') setActiveModule('production-materials');
+                else if (mod === 'manufacturing' || mod === 'production-manufacturing') setActiveModule('production-manufacturing');
+                else if (mod === 'quality' || mod === 'production-quality') setActiveModule('production-quality');
+                else if (mod === 'finished-goods' || mod === 'production-finished-goods') setActiveModule('production-finished-goods');
+                else setActiveModule(mod);
               }}
               showToast={showToast}
             />

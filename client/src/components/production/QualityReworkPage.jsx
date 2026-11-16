@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import ProductionQAModule from './ProductionQAModule';
 import ReworkModule from './ReworkModule';
+import ProductionPipelineStepper from './ProductionPipelineStepper';
 import DataTable from '../common/DataTable';
 import StatusBadge from '../common/StatusBadge';
 import Modal from '../common/Modal';
@@ -15,6 +16,7 @@ export default function QualityReworkPage({
   onSaveReworkOrder,
   onUpdateReworkStatus,
   onNavigateToFG,
+  onNavigateModule,
   showToast,
   defaultTab = 'pending'
 }) {
@@ -94,6 +96,13 @@ export default function QualityReworkPage({
 
   return (
     <div className="module-container">
+      {/* 5-Stage Interactive Manufacturing Stepper */}
+      <ProductionPipelineStepper
+        currentModule="production-quality"
+        onNavigate={onNavigateModule}
+        counts={{ qaTests: pendingCompletions.length + passedQAs.length }}
+      />
+
       {/* Sub-Tabs: Pending QA | Passed | Failed & Rework */}
       <div style={{ marginBottom: 18, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
         <div className="tab-switcher">

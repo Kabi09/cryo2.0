@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import MaterialRequestsModule from './MaterialRequestsModule';
 import ProductionMaterialIssueModule from './ProductionMaterialIssueModule';
+import ProductionPipelineStepper from './ProductionPipelineStepper';
 import { ArrowDownLeft, CheckSquare } from 'lucide-react';
 
 export default function ProdMaterialRequestsPage({
@@ -14,10 +15,13 @@ export default function ProdMaterialRequestsPage({
   onSaveMaterialRequest,
   onSaveProductionMaterialIssue,
   onNavigateToPurchasing,
+  onNavigateToManufacturing,
+  onNavigateModule,
   showToast,
   defaultTab = 'requests'
 }) {
   const [activeTab, setActiveTab] = useState(defaultTab);
+  const [selectedMRForIssue, setSelectedMRForIssue] = useState(null);
 
   useEffect(() => {
     if (defaultTab) {
@@ -27,6 +31,13 @@ export default function ProdMaterialRequestsPage({
 
   return (
     <div className="module-container">
+      {/* 5-Stage Interactive Manufacturing Stepper */}
+      <ProductionPipelineStepper
+        currentModule="production-materials"
+        onNavigate={onNavigateModule}
+        counts={{ materialRequests: materialRequests.length }}
+      />
+
       {/* Sub-Tabs Switcher */}
       <div style={{ marginBottom: 18, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
         <div className="tab-switcher">
@@ -59,7 +70,10 @@ export default function ProdMaterialRequestsPage({
           inventory={inventory}
           preSelectedWO={preSelectedWO}
           onSave={onSaveMaterialRequest}
-          onNavigateToIssue={(mr) => setActiveTab('issues')}
+          onNavigateToIssue={(mr) => {
+            setSelectedMRForIssue(mr);
+            setActiveTab('issues');
+          }}
           onNavigateToPurchasing={onNavigateToPurchasing}
           showToast={showToast}
         />
@@ -71,6 +85,9 @@ export default function ProdMaterialRequestsPage({
           materialIssues={materialIssues}
           materialRequests={materialRequests}
           inventory={inventory}
+          preSelectedRequest={selectedMRForIssue}
+          onClearPreSelectedRequest={() => setSelectedMRForIssue(null)}
+          onNavigateToManufacturing={onNavigateToManufacturing}
           onSave={onSaveProductionMaterialIssue}
           showToast={showToast}
         />

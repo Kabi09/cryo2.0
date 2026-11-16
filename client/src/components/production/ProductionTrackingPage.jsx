@@ -2,18 +2,20 @@ import React, { useState } from 'react';
 import ProductionExecutionModule from './ProductionExecutionModule';
 import ProductionUpdatesModule from './ProductionUpdatesModule';
 import ProductionCompletionModule from './ProductionCompletionModule';
+import ProductionPipelineStepper from './ProductionPipelineStepper';
 import { PlayCircle, ListOrdered, CheckCircle2 } from 'lucide-react';
 
 export default function ProductionTrackingPage({
-  executions,
-  workOrders,
-  productionUpdates,
-  completions,
+  executions = [],
+  workOrders = [],
+  productionUpdates = [],
+  completions = [],
   onStartExecution,
   onUpdateExecutionStatus,
   onSaveProductionUpdate,
   onSaveCompletion,
   onNavigateToQA,
+  onNavigateModule,
   showToast,
   defaultTab = 'execution'
 }) {
@@ -21,6 +23,13 @@ export default function ProductionTrackingPage({
 
   return (
     <div className="module-container">
+      {/* 5-Stage Interactive Manufacturing Stepper */}
+      <ProductionPipelineStepper
+        currentModule="production-manufacturing"
+        onNavigate={onNavigateModule}
+        counts={{ executions: executions.length }}
+      />
+
       {/* Sub-Tabs Switcher */}
       <div style={{ marginBottom: 18, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
         <div className="tab-switcher">
@@ -58,6 +67,7 @@ export default function ProductionTrackingPage({
           workOrders={workOrders}
           onStart={onStartExecution}
           onUpdateStatus={onUpdateExecutionStatus}
+          onNavigateToCompletion={() => setActiveTab('completion')}
           showToast={showToast}
         />
       )}
@@ -83,4 +93,3 @@ export default function ProductionTrackingPage({
     </div>
   );
 }
-

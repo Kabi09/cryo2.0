@@ -1,13 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import DataTable from '../common/DataTable';
 import Modal from '../common/Modal';
 import StatusBadge from '../common/StatusBadge';
-import { Warehouse, CheckCircle2, AlertTriangle, Printer, Layers, Eye } from 'lucide-react';
+import { Warehouse, CheckCircle2, AlertTriangle, Printer, Layers, Eye, Factory } from 'lucide-react';
 
 export default function ProductionMaterialIssueModule({
   materialIssues = [],
   materialRequests = [],
   inventory = [],
+  preSelectedRequest = null,
+  onClearPreSelectedRequest,
+  onNavigateToManufacturing,
   onSave,
   showToast
 }) {
@@ -26,6 +29,15 @@ export default function ProductionMaterialIssueModule({
     remarks: '',
     items: []
   });
+
+  useEffect(() => {
+    if (preSelectedRequest) {
+      const mrId = preSelectedRequest._id || preSelectedRequest;
+      handleSelectRequest(mrId);
+      setIsModalOpen(true);
+      onClearPreSelectedRequest?.();
+    }
+  }, [preSelectedRequest]);
 
   const handleOpenModal = () => {
     if (materialRequests.length > 0 && !formData.materialRequest) {
@@ -177,6 +189,17 @@ export default function ProductionMaterialIssueModule({
           >
             <Eye size={15} />
           </button>
+          {onNavigateToManufacturing && (
+            <button
+              type="button"
+              className="btn btn-primary"
+              style={{ padding: '2px 8px', fontSize: '0.72rem', height: 26, gap: 4 }}
+              title="Proceed to Shopfloor Assembly"
+              onClick={() => onNavigateToManufacturing(row.workOrder)}
+            >
+              <Factory size={12} /> Assembly ➔
+            </button>
+          )}
         </div>
       )
     }
@@ -450,7 +473,23 @@ export default function ProductionMaterialIssueModule({
               </div>
             </div>
 
-            <div style={{ marginTop: 24, textAlign: 'right' }}>
+            <div style={{ marginTop: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                {onNavigateToManufacturing && (
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    style={{ gap: 6 }}
+                    onClick={() => {
+                      const wo = selectedIssue.workOrder;
+                      setSelectedIssue(null);
+                      onNavigateToManufacturing(wo);
+                    }}
+                  >
+                    <Factory size={14} /> Proceed to Shopfloor Assembly ➔
+                  </button>
+                )}
+              </div>
               <button
                 type="button"
                 className="btn btn-secondary"

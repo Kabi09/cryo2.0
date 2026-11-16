@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import ProductionPlanningModule from './ProductionPlanningModule';
 import BOMModule from './BOMModule';
 import ProductionScheduleModule from './ProductionScheduleModule';
+import ProductionPipelineStepper from './ProductionPipelineStepper';
 import { Calendar, Layers, Clock } from 'lucide-react';
 
 export default function ProductionOrdersPage({
@@ -17,6 +18,8 @@ export default function ProductionOrdersPage({
   onSaveBOM,
   onSaveSchedule,
   onNavigateToMaterials,
+  onNavigateToManufacturing,
+  onNavigateModule,
   showToast,
   defaultTab = 'orders'
 }) {
@@ -30,6 +33,13 @@ export default function ProductionOrdersPage({
 
   return (
     <div className="module-container">
+      {/* 5-Stage Interactive Manufacturing Stepper */}
+      <ProductionPipelineStepper
+        currentModule="production-orders"
+        onNavigate={onNavigateModule}
+        counts={{ workOrders: workOrders.length }}
+      />
+
       {/* Sub-Tabs Switcher: All Orders | BOM | Schedule */}
       <div style={{ marginBottom: 18, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
         <div className="tab-switcher">
@@ -73,6 +83,7 @@ export default function ProductionOrdersPage({
           onNavigateToBOM={() => setActiveTab('bom')}
           onNavigateToSchedule={() => setActiveTab('schedule')}
           onNavigateToMaterials={onNavigateToMaterials}
+          onNavigateToManufacturing={onNavigateToManufacturing}
           showToast={showToast}
         />
       )}

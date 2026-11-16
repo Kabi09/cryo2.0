@@ -2,13 +2,14 @@ import React, { useState } from 'react';
 import DataTable from '../common/DataTable';
 import Modal from '../common/Modal';
 import StatusBadge from '../common/StatusBadge';
-import { Play, Pause, Square, Factory, CheckCircle, Clock } from 'lucide-react';
+import { Play, Pause, Square, Factory, CheckCircle, Clock, CheckCircle2 } from 'lucide-react';
 
 export default function ProductionExecutionModule({
   executions = [],
   workOrders = [],
   onStart,
   onUpdateStatus,
+  onNavigateToCompletion,
   showToast
 }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -146,6 +147,16 @@ export default function ProductionExecutionModule({
           >
             Hold
           </button>
+          {onNavigateToCompletion && (
+            <button
+              className="btn btn-secondary btn-sm"
+              style={{ color: 'var(--success)', borderColor: 'var(--success-border)', gap: 4 }}
+              onClick={() => onNavigateToCompletion(row)}
+              title="Record Batch Completion"
+            >
+              <CheckCircle2 size={13} /> Complete ➔
+            </button>
+          )}
         </div>
       )
     }

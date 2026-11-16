@@ -29,6 +29,7 @@ export default function ProductionPlanningModule({
   onNavigateToBOM,
   onNavigateToSchedule,
   onNavigateToMaterials,
+  onNavigateToManufacturing,
   showToast
 }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -253,6 +254,17 @@ export default function ProductionPlanningModule({
               onClick={() => onNavigateToMaterials(row)}
             >
               <ArrowDownLeft size={12} /> Materials
+            </button>
+          )}
+          {(row.status === 'Ready to Start' || row.status === 'Running') && onNavigateToManufacturing && (
+            <button
+              type="button"
+              className="btn btn-primary"
+              style={{ padding: '2px 8px', fontSize: '0.72rem', height: 26, gap: 4 }}
+              title="Open Shopfloor Assembly Execution"
+              onClick={() => onNavigateToManufacturing(row)}
+            >
+              <Factory size={12} /> Assembly ➔
             </button>
           )}
         </div>
@@ -615,6 +627,20 @@ export default function ProductionPlanningModule({
                     }}
                   >
                     <ArrowDownLeft size={13} /> Check & Issue Materials ➔
+                  </button>
+                )}
+                {onNavigateToManufacturing && (
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-sm"
+                    style={{ gap: 4 }}
+                    onClick={() => {
+                      const wo = selectedWO;
+                      setSelectedWO(null);
+                      onNavigateToManufacturing(wo);
+                    }}
+                  >
+                    <Factory size={13} /> Open Shopfloor Assembly ➔
                   </button>
                 )}
                 {onNavigateToBOM && (

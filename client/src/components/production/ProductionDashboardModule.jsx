@@ -2,6 +2,7 @@ import React from 'react';
 import KpiCard from '../common/KpiCard';
 import DataTable from '../common/DataTable';
 import StatusBadge from '../common/StatusBadge';
+import ProductionPipelineStepper from './ProductionPipelineStepper';
 import {
   Factory,
   Clock,
@@ -15,7 +16,9 @@ import {
   PackageCheck,
   ArrowDownLeft,
   Eye,
-  Truck
+  Truck,
+  Wrench,
+  Boxes
 } from 'lucide-react';
 
 export default function ProductionDashboardModule({ dashboardData, onNavigateModule }) {
@@ -99,6 +102,19 @@ export default function ProductionDashboardModule({ dashboardData, onNavigateMod
 
   return (
     <div className="module-container">
+      {/* 5-Stage Interactive Manufacturing Stepper */}
+      <ProductionPipelineStepper
+        currentModule="production-dashboard"
+        onNavigate={onNavigateModule}
+        counts={{
+          workOrders: kpis.totalOrders,
+          materialRequests: kpis.waitingMaterials,
+          executions: kpis.inProgress,
+          qaTests: kpis.qaPending,
+          finishedGoods: readyForDispatch
+        }}
+      />
+
       {/* Useful Summary Cards (6 Exact requested Cards) */}
       <div className="kpi-grid" style={{ marginBottom: 20 }}>
         <KpiCard

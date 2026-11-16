@@ -37,9 +37,9 @@ export const SALES_MODULES = [
 export const PRODUCTION_MODULES = [
   { id: 'production-dashboard', num: '01', title: 'Dashboard' },
   { id: 'production-orders', num: '02', title: 'Work Orders' },
-  { id: 'production-materials', num: '03', title: 'Materials' },
-  { id: 'production-manufacturing', num: '04', title: 'Manufacturing' },
-  { id: 'production-quality', num: '05', title: 'Quality Check' },
+  { id: 'production-materials', num: '03', title: 'Material Requests' },
+  { id: 'production-manufacturing', num: '04', title: 'Assembly & Execution' },
+  { id: 'production-quality', num: '05', title: 'Quality & Rework' },
   { id: 'production-finished-goods', num: '06', title: 'Finished Goods' },
   { id: 'production-reports', num: '07', title: 'Reports' }
 ];
