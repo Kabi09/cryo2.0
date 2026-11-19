@@ -77,7 +77,7 @@ const materialRequestSchema = new mongoose.Schema({
   items: [requestItemSchema],
   status: {
     type: String,
-    enum: ['Draft', 'Pending', 'Approved', 'Partially Approved', 'Rejected', 'Fully Issued'],
+    enum: ['Draft', 'Pending', 'Approved', 'Partially Approved', 'Partially Issued', 'Rejected', 'Fully Issued'],
     default: 'Pending'
   },
   remarks: String

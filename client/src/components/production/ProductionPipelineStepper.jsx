@@ -13,7 +13,7 @@ const PRODUCTION_STAGES = [
     id: 'production-orders',
     alias: 'orders',
     num: '1',
-    title: '1. Work Orders',
+    title: '1. Work Orders (from SO)',
     desc: 'Planning, BOM Recipes & Schedule',
     icon: Factory,
     countKey: 'workOrders'
@@ -22,8 +22,8 @@ const PRODUCTION_STAGES = [
     id: 'production-materials',
     alias: 'materials',
     num: '2',
-    title: '2. Material Requests',
-    desc: 'Requisition & Warehouse Issues',
+    title: '2. Stock Issued & Requisitions',
+    desc: 'BOM Request & Store Issue',
     icon: ArrowDownLeft,
     countKey: 'materialRequests'
   },
@@ -31,8 +31,8 @@ const PRODUCTION_STAGES = [
     id: 'production-manufacturing',
     alias: 'manufacturing',
     num: '3',
-    title: '3. Shopfloor Assembly',
-    desc: 'Station Routing & Shift Progress',
+    title: '3. Start Production & Updates',
+    desc: 'Active Assembly & Daily Progress',
     icon: Wrench,
     countKey: 'executions'
   },
@@ -40,8 +40,8 @@ const PRODUCTION_STAGES = [
     id: 'production-quality',
     alias: 'quality',
     num: '4',
-    title: '4. Quality & Rework',
-    desc: 'QA Testing & Rework Orders',
+    title: '4. Quality QA Inspection',
+    desc: 'Functional Testing & Pass/Rework',
     icon: ShieldCheck,
     countKey: 'qaTests'
   },
@@ -49,8 +49,8 @@ const PRODUCTION_STAGES = [
     id: 'production-finished-goods',
     alias: 'finished-goods',
     num: '5',
-    title: '5. Finished Goods',
-    desc: 'Warehouse Storage & Logistics',
+    title: '5. Production Completed',
+    desc: 'Finished Goods & Logistics Dispatch',
     icon: PackageCheck,
     countKey: 'finishedGoods'
   }
@@ -63,11 +63,11 @@ export default function ProductionPipelineStepper({
 }) {
   const getStageIndex = (mod) => {
     if (!mod) return -1;
-    if (mod === 'production-orders' || mod === 'production-planning' || mod === 'production-bom' || mod === 'production-schedule' || mod === 'orders') return 0;
-    if (mod === 'production-materials' || mod === 'production-material-requests' || mod === 'production-material-issue' || mod === 'materials') return 1;
-    if (mod === 'production-manufacturing' || mod === 'production-tracking' || mod === 'production-execution' || mod === 'production-updates' || mod === 'production-completion' || mod === 'manufacturing') return 2;
+    if (mod === 'production-orders' || mod === 'orders') return 0;
+    if (mod === 'production-planning' || mod === 'production-bom' || mod === 'production-schedule' || mod === 'planning' || mod === 'production-materials' || mod === 'materials') return 1;
+    if (mod === 'production-daily' || mod === 'production-manufacturing' || mod === 'production-tracking' || mod === 'production-execution' || mod === 'production-updates' || mod === 'daily' || mod === 'manufacturing') return 2;
     if (mod === 'production-quality' || mod === 'production-quality-rework' || mod === 'production-qa' || mod === 'production-rework' || mod === 'quality') return 3;
-    if (mod === 'production-finished-goods' || mod === 'finished-goods') return 4;
+    if (mod === 'production-completed' || mod === 'production-finished-goods' || mod === 'completed' || mod === 'finished-goods') return 4;
     return -1;
   };
 

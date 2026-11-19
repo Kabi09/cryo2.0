@@ -18,6 +18,65 @@
   - **SINGLE ACTION BUTTON**: Exactly one primary action button per data table toolbar (`+ [Action]`) to eliminate UI clutter.
   - **WIDE MODALS**: All form dialogs utilize wide `size="lg"` dialog layouts with high contrast inputs and clean light date-picker color schemes.
 
+### 2026-11-16 (Simplified ERP Production & Supply Chain Management Workflow)
+- **User Request**: "ERP – Simplify Production & Supply Chain Workflow: Fix and simplify existing Production and SCM workflows without rebuilding. Phase 1: Sales Order Confirmed -> Production Order Created -> Planning -> BOM -> Material Request Sent to Store. Phase 2: Material Request Received -> Stock Availability Check (Case A: Fully Available -> Issue 100 -> Fully Issued; Case B: Partially Available -> Issue 60 -> Partially Issued -> Remaining: 40; Case C: Not Available -> Out of Stock -> Proceed to purchase). Phase 3: Shortage -> Purchase Request -> Supplier / PO -> GRN -> Inventory Updated -> Remaining Material Issued. Phase 4: Material Issued -> Production Plan -> Daily Production Process -> Production Completed. Fix Existing BOM Pending Bug: SCM already issued materials but Production still shows BOM Pending. Keep only 4 essential Production tabs (Production Orders, Planning & BOM, Daily Production, Completed Production) and 4 essential Store tabs (Material Requests, Stock & Material Issue, Purchase & GRN, Issue History). Single update to Finished Goods inventory and Sales Order synchronization."
+- **Reason**: Factory workers and operators require a simple, intuitive, non-technical ERP interface with clear real-time statuses and seamless stage handovers without disconnected models or false "BOM Pending" indicators.
+- **Root Cause of BOM Pending Bug**:
+  - Supply Chain Store issued materials via `scmController.createMaterialIssue` (`/api/material-issues`), which wrote exclusively to `MaterialIssue` and did not update `MaterialRequest` or `WorkOrder`, nor write to `ProductionIssue` (`/api/production/material-issues`).
+  - Production components checked `productionMaterialIssues`, so after SCM issued materials, Production had zero issue records and displayed "Store Issue Pending" or "Request BOM Required".
+  - BOM status was not separated from Material Request and Material Issue status.
+- **What was changed**:
+  1. **Backend Synchronization & Dual-Model Mirroring**:
+     - `scmController.createMaterialIssue`:
+       - Synchronizes `MaterialRequest`: Updates `alreadyIssuedQty`, `remainingQty`, and sets status to `Fully Issued` or `Partially Issued`.
+       - Synchronizes `WorkOrder`: Updates status to `Ready to Start` when fully issued, or `Partially Issued`.
+       - Mirrors issue into `ProductionIssue` collection so all Production endpoints immediately receive the issue records.
+     - `productionController.createMaterialIssue`:
+       - Synchronizes `MaterialRequest` and `WorkOrder`.
+       - Mirrors issue into `MaterialIssue` (SCM collection).
+     - `productionController.createProductionUpdate`:
+       - Supports daily progress logging (`supervisorName`, `workCompletedDescription`).
+       - When completed (`isCompleted: true` or `totalCompleted >= planned`): Marks `WorkOrder.status = 'Completed'`, updates `SalesOrder.productionStatus = 'Completed'`, and creates `FinishedGood` inventory **exactly once**.
+       - While in progress: Sets `WorkOrder.status = 'Running'` and `SalesOrder.productionStatus = 'In Assembly'`.
+     - `scmController.createGRN`:
+       - When GRN is directly accepted (`status: 'Accepted'`), immediately credits `Inventory.availableStock` and `Material.currentStock` and logs to `StockLedger`, enabling instant replenishment and issue of remaining materials.
+     - Updated Mongoose Schema Enums in `WorkOrder.js`, `MaterialRequest.js`, `ProductionIssue.js`, `GRN.js`, and `StockLedger.js` to support all required operational states.
+  2. **Simplified 4-Tab Production Management (`ProductionOrdersPage.jsx`)**:
+     - **Tab 1: Production Orders**:
+       - View all production orders with clear status breakdown (Planning, BOM Verified, Materials Readiness, Production Status) and dynamic next action.
+       - **Simple Production Order Form**: Sales Order (dropdown), Product (auto-filled), Quantity (auto-filled/editable), Planned Start/End Dates, BOM (select dropdown), Remarks. Actions: **Save Plan | Request Materials**.
+     - **Tab 2: Planning & BOM**:
+       - Production Plan inspection, BOM recipe component verification, store inventory check with shortage detection.
+       - 1-click **Send Material Request to Store** button.
+     - **Tab 3: Daily Production**:
+       - Active order selector, **Daily Production Form** (Order select, Production Date, Planned Qty, Previously Completed Qty, Completed Today, Rejected Today, Remaining Qty, Remarks).
+       - Actions: **Save Daily Progress | Complete Production**.
+       - Daily Shift Logs table.
+     - **Tab 4: Completed Production**:
+       - Archive of all completed production orders, finished goods serial and batch numbers, and warehouse stock status.
+  3. **Simplified 4-Tab Supply Chain / Store (`MaterialRequestsPage.jsx`)**:
+     - **Tab 1: Material Requests**: Requisitions received from Production with stock check (Case A: Fully In Stock, Case B: Partially In Stock, Case C: Out of Stock).
+     - **Tab 2: Stock & Material Issue**: **Simple Material Issue Form** (Request ID, Production Order, Material, Required Qty, Available Stock, Already Issued, Issue Qty, Balance Qty) with stock limit validation warnings. Handles Case A, B, and C.
+     - **Tab 3: Purchase & GRN**: Shortages table with 1-click **+ Create PO ➔**, Purchase Orders list, and Inward GRN receipt with direct acceptance to credit Store stock.
+     - **Tab 4: Issue History**: Verified ledger of all material issue slips.
+  4. **Sidebar & Pipeline Stepper Alignment**:
+     - `Sidebar.jsx`: Production menu updated to `01 Production Orders`, `02 Planning & BOM`, `03 Daily Production`, `04 Completed Production`, and `05 Dashboard`. SCM item updated to `07 Store & Material Issue`.
+     - `ProductionPipelineStepper.jsx`: Mapped to the streamlined stages.
+- **Verification**:
+  - Full end-to-end node integration test script passed 100% across all 9 workflow stages:
+    1. Sales Order -> Production Order Created -> Planned.
+    2. BOM Verified.
+    3. Material Request Sent to Store -> Pending.
+    4. SCM Partial Issue (Case B) -> Material Request & Work Order updated to `Partially Issued`.
+    5. Shortage PO created -> GRN accepted -> Store inventory updated to 60 units.
+    6. Issue Remaining (Case A) -> Material Request updated to `Fully Issued` and Work Order to `Ready to Start` (ZERO BOM Pending!).
+    7. Daily Production progress logged -> Work Order updated to `Running` and Sales Order to `In Assembly`.
+    8. Production completed -> Work Order updated to `Completed` and Sales Order to `Completed`.
+    9. Finished Goods inventory record created **exactly once**.
+  - `npm --prefix client run build`: Built in 878ms with zero errors.
+  - Backend running healthy on port 5000 with MongoDB connected.
+  - Zero `git push` executed (all changes kept locally).
+
 ---
 
 ## Project Structure
@@ -46,6 +105,65 @@
   - `client/src/App.jsx`: Master root React component orchestrating global state and 47 module renders.
   - `client/src/index.css`: Global obsidian dark theme CSS variable definitions and responsive rules.
 
+### 2026-11-16 (Simplified ERP Production & Supply Chain Management Workflow)
+- **User Request**: "ERP – Simplify Production & Supply Chain Workflow: Fix and simplify existing Production and SCM workflows without rebuilding. Phase 1: Sales Order Confirmed -> Production Order Created -> Planning -> BOM -> Material Request Sent to Store. Phase 2: Material Request Received -> Stock Availability Check (Case A: Fully Available -> Issue 100 -> Fully Issued; Case B: Partially Available -> Issue 60 -> Partially Issued -> Remaining: 40; Case C: Not Available -> Out of Stock -> Proceed to purchase). Phase 3: Shortage -> Purchase Request -> Supplier / PO -> GRN -> Inventory Updated -> Remaining Material Issued. Phase 4: Material Issued -> Production Plan -> Daily Production Process -> Production Completed. Fix Existing BOM Pending Bug: SCM already issued materials but Production still shows BOM Pending. Keep only 4 essential Production tabs (Production Orders, Planning & BOM, Daily Production, Completed Production) and 4 essential Store tabs (Material Requests, Stock & Material Issue, Purchase & GRN, Issue History). Single update to Finished Goods inventory and Sales Order synchronization."
+- **Reason**: Factory workers and operators require a simple, intuitive, non-technical ERP interface with clear real-time statuses and seamless stage handovers without disconnected models or false "BOM Pending" indicators.
+- **Root Cause of BOM Pending Bug**:
+  - Supply Chain Store issued materials via `scmController.createMaterialIssue` (`/api/material-issues`), which wrote exclusively to `MaterialIssue` and did not update `MaterialRequest` or `WorkOrder`, nor write to `ProductionIssue` (`/api/production/material-issues`).
+  - Production components checked `productionMaterialIssues`, so after SCM issued materials, Production had zero issue records and displayed "Store Issue Pending" or "Request BOM Required".
+  - BOM status was not separated from Material Request and Material Issue status.
+- **What was changed**:
+  1. **Backend Synchronization & Dual-Model Mirroring**:
+     - `scmController.createMaterialIssue`:
+       - Synchronizes `MaterialRequest`: Updates `alreadyIssuedQty`, `remainingQty`, and sets status to `Fully Issued` or `Partially Issued`.
+       - Synchronizes `WorkOrder`: Updates status to `Ready to Start` when fully issued, or `Partially Issued`.
+       - Mirrors issue into `ProductionIssue` collection so all Production endpoints immediately receive the issue records.
+     - `productionController.createMaterialIssue`:
+       - Synchronizes `MaterialRequest` and `WorkOrder`.
+       - Mirrors issue into `MaterialIssue` (SCM collection).
+     - `productionController.createProductionUpdate`:
+       - Supports daily progress logging (`supervisorName`, `workCompletedDescription`).
+       - When completed (`isCompleted: true` or `totalCompleted >= planned`): Marks `WorkOrder.status = 'Completed'`, updates `SalesOrder.productionStatus = 'Completed'`, and creates `FinishedGood` inventory **exactly once**.
+       - While in progress: Sets `WorkOrder.status = 'Running'` and `SalesOrder.productionStatus = 'In Assembly'`.
+     - `scmController.createGRN`:
+       - When GRN is directly accepted (`status: 'Accepted'`), immediately credits `Inventory.availableStock` and `Material.currentStock` and logs to `StockLedger`, enabling instant replenishment and issue of remaining materials.
+     - Updated Mongoose Schema Enums in `WorkOrder.js`, `MaterialRequest.js`, `ProductionIssue.js`, `GRN.js`, and `StockLedger.js` to support all required operational states.
+  2. **Simplified 4-Tab Production Management (`ProductionOrdersPage.jsx`)**:
+     - **Tab 1: Production Orders**:
+       - View all production orders with clear status breakdown (Planning, BOM Verified, Materials Readiness, Production Status) and dynamic next action.
+       - **Simple Production Order Form**: Sales Order (dropdown), Product (auto-filled), Quantity (auto-filled/editable), Planned Start/End Dates, BOM (select dropdown), Remarks. Actions: **Save Plan | Request Materials**.
+     - **Tab 2: Planning & BOM**:
+       - Production Plan inspection, BOM recipe component verification, store inventory check with shortage detection.
+       - 1-click **Send Material Request to Store** button.
+     - **Tab 3: Daily Production**:
+       - Active order selector, **Daily Production Form** (Order select, Production Date, Planned Qty, Previously Completed Qty, Completed Today, Rejected Today, Remaining Qty, Remarks).
+       - Actions: **Save Daily Progress | Complete Production**.
+       - Daily Shift Logs table.
+     - **Tab 4: Completed Production**:
+       - Archive of all completed production orders, finished goods serial and batch numbers, and warehouse stock status.
+  3. **Simplified 4-Tab Supply Chain / Store (`MaterialRequestsPage.jsx`)**:
+     - **Tab 1: Material Requests**: Requisitions received from Production with stock check (Case A: Fully In Stock, Case B: Partially In Stock, Case C: Out of Stock).
+     - **Tab 2: Stock & Material Issue**: **Simple Material Issue Form** (Request ID, Production Order, Material, Required Qty, Available Stock, Already Issued, Issue Qty, Balance Qty) with stock limit validation warnings. Handles Case A, B, and C.
+     - **Tab 3: Purchase & GRN**: Shortages table with 1-click **+ Create PO ➔**, Purchase Orders list, and Inward GRN receipt with direct acceptance to credit Store stock.
+     - **Tab 4: Issue History**: Verified ledger of all material issue slips.
+  4. **Sidebar & Pipeline Stepper Alignment**:
+     - `Sidebar.jsx`: Production menu updated to `01 Production Orders`, `02 Planning & BOM`, `03 Daily Production`, `04 Completed Production`, and `05 Dashboard`. SCM item updated to `07 Store & Material Issue`.
+     - `ProductionPipelineStepper.jsx`: Mapped to the streamlined stages.
+- **Verification**:
+  - Full end-to-end node integration test script passed 100% across all 9 workflow stages:
+    1. Sales Order -> Production Order Created -> Planned.
+    2. BOM Verified.
+    3. Material Request Sent to Store -> Pending.
+    4. SCM Partial Issue (Case B) -> Material Request & Work Order updated to `Partially Issued`.
+    5. Shortage PO created -> GRN accepted -> Store inventory updated to 60 units.
+    6. Issue Remaining (Case A) -> Material Request updated to `Fully Issued` and Work Order to `Ready to Start` (ZERO BOM Pending!).
+    7. Daily Production progress logged -> Work Order updated to `Running` and Sales Order to `In Assembly`.
+    8. Production completed -> Work Order updated to `Completed` and Sales Order to `Completed`.
+    9. Finished Goods inventory record created **exactly once**.
+  - `npm --prefix client run build`: Built in 878ms with zero errors.
+  - Backend running healthy on port 5000 with MongoDB connected.
+  - Zero `git push` executed (all changes kept locally).
+
 ---
 
 ## UI & Styling Rules
@@ -57,6 +175,65 @@
   - Flexbox and CSS Grid layout with mobile collapse breakpoints (`@media (max-width: 768px)`).
   - Left navigation drawers for mobile (`isOpen` / `onClose`).
   - Sticky table headers and frozen sticky first column for wide permission matrices (`position: sticky`, `left: 0`, `z-index: 2`).
+
+### 2026-11-16 (Simplified ERP Production & Supply Chain Management Workflow)
+- **User Request**: "ERP – Simplify Production & Supply Chain Workflow: Fix and simplify existing Production and SCM workflows without rebuilding. Phase 1: Sales Order Confirmed -> Production Order Created -> Planning -> BOM -> Material Request Sent to Store. Phase 2: Material Request Received -> Stock Availability Check (Case A: Fully Available -> Issue 100 -> Fully Issued; Case B: Partially Available -> Issue 60 -> Partially Issued -> Remaining: 40; Case C: Not Available -> Out of Stock -> Proceed to purchase). Phase 3: Shortage -> Purchase Request -> Supplier / PO -> GRN -> Inventory Updated -> Remaining Material Issued. Phase 4: Material Issued -> Production Plan -> Daily Production Process -> Production Completed. Fix Existing BOM Pending Bug: SCM already issued materials but Production still shows BOM Pending. Keep only 4 essential Production tabs (Production Orders, Planning & BOM, Daily Production, Completed Production) and 4 essential Store tabs (Material Requests, Stock & Material Issue, Purchase & GRN, Issue History). Single update to Finished Goods inventory and Sales Order synchronization."
+- **Reason**: Factory workers and operators require a simple, intuitive, non-technical ERP interface with clear real-time statuses and seamless stage handovers without disconnected models or false "BOM Pending" indicators.
+- **Root Cause of BOM Pending Bug**:
+  - Supply Chain Store issued materials via `scmController.createMaterialIssue` (`/api/material-issues`), which wrote exclusively to `MaterialIssue` and did not update `MaterialRequest` or `WorkOrder`, nor write to `ProductionIssue` (`/api/production/material-issues`).
+  - Production components checked `productionMaterialIssues`, so after SCM issued materials, Production had zero issue records and displayed "Store Issue Pending" or "Request BOM Required".
+  - BOM status was not separated from Material Request and Material Issue status.
+- **What was changed**:
+  1. **Backend Synchronization & Dual-Model Mirroring**:
+     - `scmController.createMaterialIssue`:
+       - Synchronizes `MaterialRequest`: Updates `alreadyIssuedQty`, `remainingQty`, and sets status to `Fully Issued` or `Partially Issued`.
+       - Synchronizes `WorkOrder`: Updates status to `Ready to Start` when fully issued, or `Partially Issued`.
+       - Mirrors issue into `ProductionIssue` collection so all Production endpoints immediately receive the issue records.
+     - `productionController.createMaterialIssue`:
+       - Synchronizes `MaterialRequest` and `WorkOrder`.
+       - Mirrors issue into `MaterialIssue` (SCM collection).
+     - `productionController.createProductionUpdate`:
+       - Supports daily progress logging (`supervisorName`, `workCompletedDescription`).
+       - When completed (`isCompleted: true` or `totalCompleted >= planned`): Marks `WorkOrder.status = 'Completed'`, updates `SalesOrder.productionStatus = 'Completed'`, and creates `FinishedGood` inventory **exactly once**.
+       - While in progress: Sets `WorkOrder.status = 'Running'` and `SalesOrder.productionStatus = 'In Assembly'`.
+     - `scmController.createGRN`:
+       - When GRN is directly accepted (`status: 'Accepted'`), immediately credits `Inventory.availableStock` and `Material.currentStock` and logs to `StockLedger`, enabling instant replenishment and issue of remaining materials.
+     - Updated Mongoose Schema Enums in `WorkOrder.js`, `MaterialRequest.js`, `ProductionIssue.js`, `GRN.js`, and `StockLedger.js` to support all required operational states.
+  2. **Simplified 4-Tab Production Management (`ProductionOrdersPage.jsx`)**:
+     - **Tab 1: Production Orders**:
+       - View all production orders with clear status breakdown (Planning, BOM Verified, Materials Readiness, Production Status) and dynamic next action.
+       - **Simple Production Order Form**: Sales Order (dropdown), Product (auto-filled), Quantity (auto-filled/editable), Planned Start/End Dates, BOM (select dropdown), Remarks. Actions: **Save Plan | Request Materials**.
+     - **Tab 2: Planning & BOM**:
+       - Production Plan inspection, BOM recipe component verification, store inventory check with shortage detection.
+       - 1-click **Send Material Request to Store** button.
+     - **Tab 3: Daily Production**:
+       - Active order selector, **Daily Production Form** (Order select, Production Date, Planned Qty, Previously Completed Qty, Completed Today, Rejected Today, Remaining Qty, Remarks).
+       - Actions: **Save Daily Progress | Complete Production**.
+       - Daily Shift Logs table.
+     - **Tab 4: Completed Production**:
+       - Archive of all completed production orders, finished goods serial and batch numbers, and warehouse stock status.
+  3. **Simplified 4-Tab Supply Chain / Store (`MaterialRequestsPage.jsx`)**:
+     - **Tab 1: Material Requests**: Requisitions received from Production with stock check (Case A: Fully In Stock, Case B: Partially In Stock, Case C: Out of Stock).
+     - **Tab 2: Stock & Material Issue**: **Simple Material Issue Form** (Request ID, Production Order, Material, Required Qty, Available Stock, Already Issued, Issue Qty, Balance Qty) with stock limit validation warnings. Handles Case A, B, and C.
+     - **Tab 3: Purchase & GRN**: Shortages table with 1-click **+ Create PO ➔**, Purchase Orders list, and Inward GRN receipt with direct acceptance to credit Store stock.
+     - **Tab 4: Issue History**: Verified ledger of all material issue slips.
+  4. **Sidebar & Pipeline Stepper Alignment**:
+     - `Sidebar.jsx`: Production menu updated to `01 Production Orders`, `02 Planning & BOM`, `03 Daily Production`, `04 Completed Production`, and `05 Dashboard`. SCM item updated to `07 Store & Material Issue`.
+     - `ProductionPipelineStepper.jsx`: Mapped to the streamlined stages.
+- **Verification**:
+  - Full end-to-end node integration test script passed 100% across all 9 workflow stages:
+    1. Sales Order -> Production Order Created -> Planned.
+    2. BOM Verified.
+    3. Material Request Sent to Store -> Pending.
+    4. SCM Partial Issue (Case B) -> Material Request & Work Order updated to `Partially Issued`.
+    5. Shortage PO created -> GRN accepted -> Store inventory updated to 60 units.
+    6. Issue Remaining (Case A) -> Material Request updated to `Fully Issued` and Work Order to `Ready to Start` (ZERO BOM Pending!).
+    7. Daily Production progress logged -> Work Order updated to `Running` and Sales Order to `In Assembly`.
+    8. Production completed -> Work Order updated to `Completed` and Sales Order to `Completed`.
+    9. Finished Goods inventory record created **exactly once**.
+  - `npm --prefix client run build`: Built in 878ms with zero errors.
+  - Backend running healthy on port 5000 with MongoDB connected.
+  - Zero `git push` executed (all changes kept locally).
 
 ---
 
@@ -79,6 +256,65 @@
   - **Super Admin Inviolability**: Super Admin permissions cannot be degraded, modified, or deactivated.
   - **Cascading RBAC**: Disabling `access` on a module clears and disables all 6 operational action flags (`view`, `add`, `edit`, `delete`, `export`, `approve`).
 
+### 2026-11-16 (Simplified ERP Production & Supply Chain Management Workflow)
+- **User Request**: "ERP – Simplify Production & Supply Chain Workflow: Fix and simplify existing Production and SCM workflows without rebuilding. Phase 1: Sales Order Confirmed -> Production Order Created -> Planning -> BOM -> Material Request Sent to Store. Phase 2: Material Request Received -> Stock Availability Check (Case A: Fully Available -> Issue 100 -> Fully Issued; Case B: Partially Available -> Issue 60 -> Partially Issued -> Remaining: 40; Case C: Not Available -> Out of Stock -> Proceed to purchase). Phase 3: Shortage -> Purchase Request -> Supplier / PO -> GRN -> Inventory Updated -> Remaining Material Issued. Phase 4: Material Issued -> Production Plan -> Daily Production Process -> Production Completed. Fix Existing BOM Pending Bug: SCM already issued materials but Production still shows BOM Pending. Keep only 4 essential Production tabs (Production Orders, Planning & BOM, Daily Production, Completed Production) and 4 essential Store tabs (Material Requests, Stock & Material Issue, Purchase & GRN, Issue History). Single update to Finished Goods inventory and Sales Order synchronization."
+- **Reason**: Factory workers and operators require a simple, intuitive, non-technical ERP interface with clear real-time statuses and seamless stage handovers without disconnected models or false "BOM Pending" indicators.
+- **Root Cause of BOM Pending Bug**:
+  - Supply Chain Store issued materials via `scmController.createMaterialIssue` (`/api/material-issues`), which wrote exclusively to `MaterialIssue` and did not update `MaterialRequest` or `WorkOrder`, nor write to `ProductionIssue` (`/api/production/material-issues`).
+  - Production components checked `productionMaterialIssues`, so after SCM issued materials, Production had zero issue records and displayed "Store Issue Pending" or "Request BOM Required".
+  - BOM status was not separated from Material Request and Material Issue status.
+- **What was changed**:
+  1. **Backend Synchronization & Dual-Model Mirroring**:
+     - `scmController.createMaterialIssue`:
+       - Synchronizes `MaterialRequest`: Updates `alreadyIssuedQty`, `remainingQty`, and sets status to `Fully Issued` or `Partially Issued`.
+       - Synchronizes `WorkOrder`: Updates status to `Ready to Start` when fully issued, or `Partially Issued`.
+       - Mirrors issue into `ProductionIssue` collection so all Production endpoints immediately receive the issue records.
+     - `productionController.createMaterialIssue`:
+       - Synchronizes `MaterialRequest` and `WorkOrder`.
+       - Mirrors issue into `MaterialIssue` (SCM collection).
+     - `productionController.createProductionUpdate`:
+       - Supports daily progress logging (`supervisorName`, `workCompletedDescription`).
+       - When completed (`isCompleted: true` or `totalCompleted >= planned`): Marks `WorkOrder.status = 'Completed'`, updates `SalesOrder.productionStatus = 'Completed'`, and creates `FinishedGood` inventory **exactly once**.
+       - While in progress: Sets `WorkOrder.status = 'Running'` and `SalesOrder.productionStatus = 'In Assembly'`.
+     - `scmController.createGRN`:
+       - When GRN is directly accepted (`status: 'Accepted'`), immediately credits `Inventory.availableStock` and `Material.currentStock` and logs to `StockLedger`, enabling instant replenishment and issue of remaining materials.
+     - Updated Mongoose Schema Enums in `WorkOrder.js`, `MaterialRequest.js`, `ProductionIssue.js`, `GRN.js`, and `StockLedger.js` to support all required operational states.
+  2. **Simplified 4-Tab Production Management (`ProductionOrdersPage.jsx`)**:
+     - **Tab 1: Production Orders**:
+       - View all production orders with clear status breakdown (Planning, BOM Verified, Materials Readiness, Production Status) and dynamic next action.
+       - **Simple Production Order Form**: Sales Order (dropdown), Product (auto-filled), Quantity (auto-filled/editable), Planned Start/End Dates, BOM (select dropdown), Remarks. Actions: **Save Plan | Request Materials**.
+     - **Tab 2: Planning & BOM**:
+       - Production Plan inspection, BOM recipe component verification, store inventory check with shortage detection.
+       - 1-click **Send Material Request to Store** button.
+     - **Tab 3: Daily Production**:
+       - Active order selector, **Daily Production Form** (Order select, Production Date, Planned Qty, Previously Completed Qty, Completed Today, Rejected Today, Remaining Qty, Remarks).
+       - Actions: **Save Daily Progress | Complete Production**.
+       - Daily Shift Logs table.
+     - **Tab 4: Completed Production**:
+       - Archive of all completed production orders, finished goods serial and batch numbers, and warehouse stock status.
+  3. **Simplified 4-Tab Supply Chain / Store (`MaterialRequestsPage.jsx`)**:
+     - **Tab 1: Material Requests**: Requisitions received from Production with stock check (Case A: Fully In Stock, Case B: Partially In Stock, Case C: Out of Stock).
+     - **Tab 2: Stock & Material Issue**: **Simple Material Issue Form** (Request ID, Production Order, Material, Required Qty, Available Stock, Already Issued, Issue Qty, Balance Qty) with stock limit validation warnings. Handles Case A, B, and C.
+     - **Tab 3: Purchase & GRN**: Shortages table with 1-click **+ Create PO ➔**, Purchase Orders list, and Inward GRN receipt with direct acceptance to credit Store stock.
+     - **Tab 4: Issue History**: Verified ledger of all material issue slips.
+  4. **Sidebar & Pipeline Stepper Alignment**:
+     - `Sidebar.jsx`: Production menu updated to `01 Production Orders`, `02 Planning & BOM`, `03 Daily Production`, `04 Completed Production`, and `05 Dashboard`. SCM item updated to `07 Store & Material Issue`.
+     - `ProductionPipelineStepper.jsx`: Mapped to the streamlined stages.
+- **Verification**:
+  - Full end-to-end node integration test script passed 100% across all 9 workflow stages:
+    1. Sales Order -> Production Order Created -> Planned.
+    2. BOM Verified.
+    3. Material Request Sent to Store -> Pending.
+    4. SCM Partial Issue (Case B) -> Material Request & Work Order updated to `Partially Issued`.
+    5. Shortage PO created -> GRN accepted -> Store inventory updated to 60 units.
+    6. Issue Remaining (Case A) -> Material Request updated to `Fully Issued` and Work Order to `Ready to Start` (ZERO BOM Pending!).
+    7. Daily Production progress logged -> Work Order updated to `Running` and Sales Order to `In Assembly`.
+    8. Production completed -> Work Order updated to `Completed` and Sales Order to `Completed`.
+    9. Finished Goods inventory record created **exactly once**.
+  - `npm --prefix client run build`: Built in 878ms with zero errors.
+  - Backend running healthy on port 5000 with MongoDB connected.
+  - Zero `git push` executed (all changes kept locally).
+
 ---
 
 ## API / Backend Integration
@@ -91,6 +327,65 @@
   - **Employee & RBAC (6)**: `/api/employees/dashboard`, `/api/employees`, `/api/employees/roles`, `/api/employees/departments`, `/api/employees/login`, `/api/employees/reports`, `/api/employees/audit-logs`.
 - **Payload Structures**: Standard JSON with `Content-Type: application/json`.
 - **Response Handling**: Standard response envelope `{ success: true, count?: number, data: ... }`.
+
+### 2026-11-16 (Simplified ERP Production & Supply Chain Management Workflow)
+- **User Request**: "ERP – Simplify Production & Supply Chain Workflow: Fix and simplify existing Production and SCM workflows without rebuilding. Phase 1: Sales Order Confirmed -> Production Order Created -> Planning -> BOM -> Material Request Sent to Store. Phase 2: Material Request Received -> Stock Availability Check (Case A: Fully Available -> Issue 100 -> Fully Issued; Case B: Partially Available -> Issue 60 -> Partially Issued -> Remaining: 40; Case C: Not Available -> Out of Stock -> Proceed to purchase). Phase 3: Shortage -> Purchase Request -> Supplier / PO -> GRN -> Inventory Updated -> Remaining Material Issued. Phase 4: Material Issued -> Production Plan -> Daily Production Process -> Production Completed. Fix Existing BOM Pending Bug: SCM already issued materials but Production still shows BOM Pending. Keep only 4 essential Production tabs (Production Orders, Planning & BOM, Daily Production, Completed Production) and 4 essential Store tabs (Material Requests, Stock & Material Issue, Purchase & GRN, Issue History). Single update to Finished Goods inventory and Sales Order synchronization."
+- **Reason**: Factory workers and operators require a simple, intuitive, non-technical ERP interface with clear real-time statuses and seamless stage handovers without disconnected models or false "BOM Pending" indicators.
+- **Root Cause of BOM Pending Bug**:
+  - Supply Chain Store issued materials via `scmController.createMaterialIssue` (`/api/material-issues`), which wrote exclusively to `MaterialIssue` and did not update `MaterialRequest` or `WorkOrder`, nor write to `ProductionIssue` (`/api/production/material-issues`).
+  - Production components checked `productionMaterialIssues`, so after SCM issued materials, Production had zero issue records and displayed "Store Issue Pending" or "Request BOM Required".
+  - BOM status was not separated from Material Request and Material Issue status.
+- **What was changed**:
+  1. **Backend Synchronization & Dual-Model Mirroring**:
+     - `scmController.createMaterialIssue`:
+       - Synchronizes `MaterialRequest`: Updates `alreadyIssuedQty`, `remainingQty`, and sets status to `Fully Issued` or `Partially Issued`.
+       - Synchronizes `WorkOrder`: Updates status to `Ready to Start` when fully issued, or `Partially Issued`.
+       - Mirrors issue into `ProductionIssue` collection so all Production endpoints immediately receive the issue records.
+     - `productionController.createMaterialIssue`:
+       - Synchronizes `MaterialRequest` and `WorkOrder`.
+       - Mirrors issue into `MaterialIssue` (SCM collection).
+     - `productionController.createProductionUpdate`:
+       - Supports daily progress logging (`supervisorName`, `workCompletedDescription`).
+       - When completed (`isCompleted: true` or `totalCompleted >= planned`): Marks `WorkOrder.status = 'Completed'`, updates `SalesOrder.productionStatus = 'Completed'`, and creates `FinishedGood` inventory **exactly once**.
+       - While in progress: Sets `WorkOrder.status = 'Running'` and `SalesOrder.productionStatus = 'In Assembly'`.
+     - `scmController.createGRN`:
+       - When GRN is directly accepted (`status: 'Accepted'`), immediately credits `Inventory.availableStock` and `Material.currentStock` and logs to `StockLedger`, enabling instant replenishment and issue of remaining materials.
+     - Updated Mongoose Schema Enums in `WorkOrder.js`, `MaterialRequest.js`, `ProductionIssue.js`, `GRN.js`, and `StockLedger.js` to support all required operational states.
+  2. **Simplified 4-Tab Production Management (`ProductionOrdersPage.jsx`)**:
+     - **Tab 1: Production Orders**:
+       - View all production orders with clear status breakdown (Planning, BOM Verified, Materials Readiness, Production Status) and dynamic next action.
+       - **Simple Production Order Form**: Sales Order (dropdown), Product (auto-filled), Quantity (auto-filled/editable), Planned Start/End Dates, BOM (select dropdown), Remarks. Actions: **Save Plan | Request Materials**.
+     - **Tab 2: Planning & BOM**:
+       - Production Plan inspection, BOM recipe component verification, store inventory check with shortage detection.
+       - 1-click **Send Material Request to Store** button.
+     - **Tab 3: Daily Production**:
+       - Active order selector, **Daily Production Form** (Order select, Production Date, Planned Qty, Previously Completed Qty, Completed Today, Rejected Today, Remaining Qty, Remarks).
+       - Actions: **Save Daily Progress | Complete Production**.
+       - Daily Shift Logs table.
+     - **Tab 4: Completed Production**:
+       - Archive of all completed production orders, finished goods serial and batch numbers, and warehouse stock status.
+  3. **Simplified 4-Tab Supply Chain / Store (`MaterialRequestsPage.jsx`)**:
+     - **Tab 1: Material Requests**: Requisitions received from Production with stock check (Case A: Fully In Stock, Case B: Partially In Stock, Case C: Out of Stock).
+     - **Tab 2: Stock & Material Issue**: **Simple Material Issue Form** (Request ID, Production Order, Material, Required Qty, Available Stock, Already Issued, Issue Qty, Balance Qty) with stock limit validation warnings. Handles Case A, B, and C.
+     - **Tab 3: Purchase & GRN**: Shortages table with 1-click **+ Create PO ➔**, Purchase Orders list, and Inward GRN receipt with direct acceptance to credit Store stock.
+     - **Tab 4: Issue History**: Verified ledger of all material issue slips.
+  4. **Sidebar & Pipeline Stepper Alignment**:
+     - `Sidebar.jsx`: Production menu updated to `01 Production Orders`, `02 Planning & BOM`, `03 Daily Production`, `04 Completed Production`, and `05 Dashboard`. SCM item updated to `07 Store & Material Issue`.
+     - `ProductionPipelineStepper.jsx`: Mapped to the streamlined stages.
+- **Verification**:
+  - Full end-to-end node integration test script passed 100% across all 9 workflow stages:
+    1. Sales Order -> Production Order Created -> Planned.
+    2. BOM Verified.
+    3. Material Request Sent to Store -> Pending.
+    4. SCM Partial Issue (Case B) -> Material Request & Work Order updated to `Partially Issued`.
+    5. Shortage PO created -> GRN accepted -> Store inventory updated to 60 units.
+    6. Issue Remaining (Case A) -> Material Request updated to `Fully Issued` and Work Order to `Ready to Start` (ZERO BOM Pending!).
+    7. Daily Production progress logged -> Work Order updated to `Running` and Sales Order to `In Assembly`.
+    8. Production completed -> Work Order updated to `Completed` and Sales Order to `Completed`.
+    9. Finished Goods inventory record created **exactly once**.
+  - `npm --prefix client run build`: Built in 878ms with zero errors.
+  - Backend running healthy on port 5000 with MongoDB connected.
+  - Zero `git push` executed (all changes kept locally).
 
 ---
 
@@ -116,6 +411,65 @@
 ### EmployeeLoginModule (`client/src/components/employee/EmployeeLoginModule.jsx`)
 - **Purpose**: Active session inspector, quick role simulation switcher (5 preset accounts), and manual JWT sign-in form.
 - **Props**: `currentUser`, `onLogin`, `onLogout`, `showToast`.
+
+### 2026-11-16 (Simplified ERP Production & Supply Chain Management Workflow)
+- **User Request**: "ERP – Simplify Production & Supply Chain Workflow: Fix and simplify existing Production and SCM workflows without rebuilding. Phase 1: Sales Order Confirmed -> Production Order Created -> Planning -> BOM -> Material Request Sent to Store. Phase 2: Material Request Received -> Stock Availability Check (Case A: Fully Available -> Issue 100 -> Fully Issued; Case B: Partially Available -> Issue 60 -> Partially Issued -> Remaining: 40; Case C: Not Available -> Out of Stock -> Proceed to purchase). Phase 3: Shortage -> Purchase Request -> Supplier / PO -> GRN -> Inventory Updated -> Remaining Material Issued. Phase 4: Material Issued -> Production Plan -> Daily Production Process -> Production Completed. Fix Existing BOM Pending Bug: SCM already issued materials but Production still shows BOM Pending. Keep only 4 essential Production tabs (Production Orders, Planning & BOM, Daily Production, Completed Production) and 4 essential Store tabs (Material Requests, Stock & Material Issue, Purchase & GRN, Issue History). Single update to Finished Goods inventory and Sales Order synchronization."
+- **Reason**: Factory workers and operators require a simple, intuitive, non-technical ERP interface with clear real-time statuses and seamless stage handovers without disconnected models or false "BOM Pending" indicators.
+- **Root Cause of BOM Pending Bug**:
+  - Supply Chain Store issued materials via `scmController.createMaterialIssue` (`/api/material-issues`), which wrote exclusively to `MaterialIssue` and did not update `MaterialRequest` or `WorkOrder`, nor write to `ProductionIssue` (`/api/production/material-issues`).
+  - Production components checked `productionMaterialIssues`, so after SCM issued materials, Production had zero issue records and displayed "Store Issue Pending" or "Request BOM Required".
+  - BOM status was not separated from Material Request and Material Issue status.
+- **What was changed**:
+  1. **Backend Synchronization & Dual-Model Mirroring**:
+     - `scmController.createMaterialIssue`:
+       - Synchronizes `MaterialRequest`: Updates `alreadyIssuedQty`, `remainingQty`, and sets status to `Fully Issued` or `Partially Issued`.
+       - Synchronizes `WorkOrder`: Updates status to `Ready to Start` when fully issued, or `Partially Issued`.
+       - Mirrors issue into `ProductionIssue` collection so all Production endpoints immediately receive the issue records.
+     - `productionController.createMaterialIssue`:
+       - Synchronizes `MaterialRequest` and `WorkOrder`.
+       - Mirrors issue into `MaterialIssue` (SCM collection).
+     - `productionController.createProductionUpdate`:
+       - Supports daily progress logging (`supervisorName`, `workCompletedDescription`).
+       - When completed (`isCompleted: true` or `totalCompleted >= planned`): Marks `WorkOrder.status = 'Completed'`, updates `SalesOrder.productionStatus = 'Completed'`, and creates `FinishedGood` inventory **exactly once**.
+       - While in progress: Sets `WorkOrder.status = 'Running'` and `SalesOrder.productionStatus = 'In Assembly'`.
+     - `scmController.createGRN`:
+       - When GRN is directly accepted (`status: 'Accepted'`), immediately credits `Inventory.availableStock` and `Material.currentStock` and logs to `StockLedger`, enabling instant replenishment and issue of remaining materials.
+     - Updated Mongoose Schema Enums in `WorkOrder.js`, `MaterialRequest.js`, `ProductionIssue.js`, `GRN.js`, and `StockLedger.js` to support all required operational states.
+  2. **Simplified 4-Tab Production Management (`ProductionOrdersPage.jsx`)**:
+     - **Tab 1: Production Orders**:
+       - View all production orders with clear status breakdown (Planning, BOM Verified, Materials Readiness, Production Status) and dynamic next action.
+       - **Simple Production Order Form**: Sales Order (dropdown), Product (auto-filled), Quantity (auto-filled/editable), Planned Start/End Dates, BOM (select dropdown), Remarks. Actions: **Save Plan | Request Materials**.
+     - **Tab 2: Planning & BOM**:
+       - Production Plan inspection, BOM recipe component verification, store inventory check with shortage detection.
+       - 1-click **Send Material Request to Store** button.
+     - **Tab 3: Daily Production**:
+       - Active order selector, **Daily Production Form** (Order select, Production Date, Planned Qty, Previously Completed Qty, Completed Today, Rejected Today, Remaining Qty, Remarks).
+       - Actions: **Save Daily Progress | Complete Production**.
+       - Daily Shift Logs table.
+     - **Tab 4: Completed Production**:
+       - Archive of all completed production orders, finished goods serial and batch numbers, and warehouse stock status.
+  3. **Simplified 4-Tab Supply Chain / Store (`MaterialRequestsPage.jsx`)**:
+     - **Tab 1: Material Requests**: Requisitions received from Production with stock check (Case A: Fully In Stock, Case B: Partially In Stock, Case C: Out of Stock).
+     - **Tab 2: Stock & Material Issue**: **Simple Material Issue Form** (Request ID, Production Order, Material, Required Qty, Available Stock, Already Issued, Issue Qty, Balance Qty) with stock limit validation warnings. Handles Case A, B, and C.
+     - **Tab 3: Purchase & GRN**: Shortages table with 1-click **+ Create PO ➔**, Purchase Orders list, and Inward GRN receipt with direct acceptance to credit Store stock.
+     - **Tab 4: Issue History**: Verified ledger of all material issue slips.
+  4. **Sidebar & Pipeline Stepper Alignment**:
+     - `Sidebar.jsx`: Production menu updated to `01 Production Orders`, `02 Planning & BOM`, `03 Daily Production`, `04 Completed Production`, and `05 Dashboard`. SCM item updated to `07 Store & Material Issue`.
+     - `ProductionPipelineStepper.jsx`: Mapped to the streamlined stages.
+- **Verification**:
+  - Full end-to-end node integration test script passed 100% across all 9 workflow stages:
+    1. Sales Order -> Production Order Created -> Planned.
+    2. BOM Verified.
+    3. Material Request Sent to Store -> Pending.
+    4. SCM Partial Issue (Case B) -> Material Request & Work Order updated to `Partially Issued`.
+    5. Shortage PO created -> GRN accepted -> Store inventory updated to 60 units.
+    6. Issue Remaining (Case A) -> Material Request updated to `Fully Issued` and Work Order to `Ready to Start` (ZERO BOM Pending!).
+    7. Daily Production progress logged -> Work Order updated to `Running` and Sales Order to `In Assembly`.
+    8. Production completed -> Work Order updated to `Completed` and Sales Order to `Completed`.
+    9. Finished Goods inventory record created **exactly once**.
+  - `npm --prefix client run build`: Built in 878ms with zero errors.
+  - Backend running healthy on port 5000 with MongoDB connected.
+  - Zero `git push` executed (all changes kept locally).
 
 ---
 
@@ -259,6 +613,65 @@
 - **Reason**: User requested: "sales management-complex irruku tabes change panni make user fiendly and simply understanable; fix;enquiry-follow-qualified lead/not qualified-follow-quation-pi-so;fix the worflow; make simply ; easy to use and client web easy use; fix; easy tabs and esay make; worflow;".
 - **Impact**: Extremely simple and intuitive navigation. Eliminates confusing tab bundles and reflects the natural sales funnel sequentially with 1-click progression.
 
+### 2026-11-16 (Simplified ERP Production & Supply Chain Management Workflow)
+- **User Request**: "ERP – Simplify Production & Supply Chain Workflow: Fix and simplify existing Production and SCM workflows without rebuilding. Phase 1: Sales Order Confirmed -> Production Order Created -> Planning -> BOM -> Material Request Sent to Store. Phase 2: Material Request Received -> Stock Availability Check (Case A: Fully Available -> Issue 100 -> Fully Issued; Case B: Partially Available -> Issue 60 -> Partially Issued -> Remaining: 40; Case C: Not Available -> Out of Stock -> Proceed to purchase). Phase 3: Shortage -> Purchase Request -> Supplier / PO -> GRN -> Inventory Updated -> Remaining Material Issued. Phase 4: Material Issued -> Production Plan -> Daily Production Process -> Production Completed. Fix Existing BOM Pending Bug: SCM already issued materials but Production still shows BOM Pending. Keep only 4 essential Production tabs (Production Orders, Planning & BOM, Daily Production, Completed Production) and 4 essential Store tabs (Material Requests, Stock & Material Issue, Purchase & GRN, Issue History). Single update to Finished Goods inventory and Sales Order synchronization."
+- **Reason**: Factory workers and operators require a simple, intuitive, non-technical ERP interface with clear real-time statuses and seamless stage handovers without disconnected models or false "BOM Pending" indicators.
+- **Root Cause of BOM Pending Bug**:
+  - Supply Chain Store issued materials via `scmController.createMaterialIssue` (`/api/material-issues`), which wrote exclusively to `MaterialIssue` and did not update `MaterialRequest` or `WorkOrder`, nor write to `ProductionIssue` (`/api/production/material-issues`).
+  - Production components checked `productionMaterialIssues`, so after SCM issued materials, Production had zero issue records and displayed "Store Issue Pending" or "Request BOM Required".
+  - BOM status was not separated from Material Request and Material Issue status.
+- **What was changed**:
+  1. **Backend Synchronization & Dual-Model Mirroring**:
+     - `scmController.createMaterialIssue`:
+       - Synchronizes `MaterialRequest`: Updates `alreadyIssuedQty`, `remainingQty`, and sets status to `Fully Issued` or `Partially Issued`.
+       - Synchronizes `WorkOrder`: Updates status to `Ready to Start` when fully issued, or `Partially Issued`.
+       - Mirrors issue into `ProductionIssue` collection so all Production endpoints immediately receive the issue records.
+     - `productionController.createMaterialIssue`:
+       - Synchronizes `MaterialRequest` and `WorkOrder`.
+       - Mirrors issue into `MaterialIssue` (SCM collection).
+     - `productionController.createProductionUpdate`:
+       - Supports daily progress logging (`supervisorName`, `workCompletedDescription`).
+       - When completed (`isCompleted: true` or `totalCompleted >= planned`): Marks `WorkOrder.status = 'Completed'`, updates `SalesOrder.productionStatus = 'Completed'`, and creates `FinishedGood` inventory **exactly once**.
+       - While in progress: Sets `WorkOrder.status = 'Running'` and `SalesOrder.productionStatus = 'In Assembly'`.
+     - `scmController.createGRN`:
+       - When GRN is directly accepted (`status: 'Accepted'`), immediately credits `Inventory.availableStock` and `Material.currentStock` and logs to `StockLedger`, enabling instant replenishment and issue of remaining materials.
+     - Updated Mongoose Schema Enums in `WorkOrder.js`, `MaterialRequest.js`, `ProductionIssue.js`, `GRN.js`, and `StockLedger.js` to support all required operational states.
+  2. **Simplified 4-Tab Production Management (`ProductionOrdersPage.jsx`)**:
+     - **Tab 1: Production Orders**:
+       - View all production orders with clear status breakdown (Planning, BOM Verified, Materials Readiness, Production Status) and dynamic next action.
+       - **Simple Production Order Form**: Sales Order (dropdown), Product (auto-filled), Quantity (auto-filled/editable), Planned Start/End Dates, BOM (select dropdown), Remarks. Actions: **Save Plan | Request Materials**.
+     - **Tab 2: Planning & BOM**:
+       - Production Plan inspection, BOM recipe component verification, store inventory check with shortage detection.
+       - 1-click **Send Material Request to Store** button.
+     - **Tab 3: Daily Production**:
+       - Active order selector, **Daily Production Form** (Order select, Production Date, Planned Qty, Previously Completed Qty, Completed Today, Rejected Today, Remaining Qty, Remarks).
+       - Actions: **Save Daily Progress | Complete Production**.
+       - Daily Shift Logs table.
+     - **Tab 4: Completed Production**:
+       - Archive of all completed production orders, finished goods serial and batch numbers, and warehouse stock status.
+  3. **Simplified 4-Tab Supply Chain / Store (`MaterialRequestsPage.jsx`)**:
+     - **Tab 1: Material Requests**: Requisitions received from Production with stock check (Case A: Fully In Stock, Case B: Partially In Stock, Case C: Out of Stock).
+     - **Tab 2: Stock & Material Issue**: **Simple Material Issue Form** (Request ID, Production Order, Material, Required Qty, Available Stock, Already Issued, Issue Qty, Balance Qty) with stock limit validation warnings. Handles Case A, B, and C.
+     - **Tab 3: Purchase & GRN**: Shortages table with 1-click **+ Create PO ➔**, Purchase Orders list, and Inward GRN receipt with direct acceptance to credit Store stock.
+     - **Tab 4: Issue History**: Verified ledger of all material issue slips.
+  4. **Sidebar & Pipeline Stepper Alignment**:
+     - `Sidebar.jsx`: Production menu updated to `01 Production Orders`, `02 Planning & BOM`, `03 Daily Production`, `04 Completed Production`, and `05 Dashboard`. SCM item updated to `07 Store & Material Issue`.
+     - `ProductionPipelineStepper.jsx`: Mapped to the streamlined stages.
+- **Verification**:
+  - Full end-to-end node integration test script passed 100% across all 9 workflow stages:
+    1. Sales Order -> Production Order Created -> Planned.
+    2. BOM Verified.
+    3. Material Request Sent to Store -> Pending.
+    4. SCM Partial Issue (Case B) -> Material Request & Work Order updated to `Partially Issued`.
+    5. Shortage PO created -> GRN accepted -> Store inventory updated to 60 units.
+    6. Issue Remaining (Case A) -> Material Request updated to `Fully Issued` and Work Order to `Ready to Start` (ZERO BOM Pending!).
+    7. Daily Production progress logged -> Work Order updated to `Running` and Sales Order to `In Assembly`.
+    8. Production completed -> Work Order updated to `Completed` and Sales Order to `Completed`.
+    9. Finished Goods inventory record created **exactly once**.
+  - `npm --prefix client run build`: Built in 878ms with zero errors.
+  - Backend running healthy on port 5000 with MongoDB connected.
+  - Zero `git push` executed (all changes kept locally).
+
 ---
 
 ## Current Progress
@@ -287,10 +700,128 @@
 - **Pending**:
   - User feedback and acceptance testing.
 
+### 2026-11-16 (Simplified ERP Production & Supply Chain Management Workflow)
+- **User Request**: "ERP – Simplify Production & Supply Chain Workflow: Fix and simplify existing Production and SCM workflows without rebuilding. Phase 1: Sales Order Confirmed -> Production Order Created -> Planning -> BOM -> Material Request Sent to Store. Phase 2: Material Request Received -> Stock Availability Check (Case A: Fully Available -> Issue 100 -> Fully Issued; Case B: Partially Available -> Issue 60 -> Partially Issued -> Remaining: 40; Case C: Not Available -> Out of Stock -> Proceed to purchase). Phase 3: Shortage -> Purchase Request -> Supplier / PO -> GRN -> Inventory Updated -> Remaining Material Issued. Phase 4: Material Issued -> Production Plan -> Daily Production Process -> Production Completed. Fix Existing BOM Pending Bug: SCM already issued materials but Production still shows BOM Pending. Keep only 4 essential Production tabs (Production Orders, Planning & BOM, Daily Production, Completed Production) and 4 essential Store tabs (Material Requests, Stock & Material Issue, Purchase & GRN, Issue History). Single update to Finished Goods inventory and Sales Order synchronization."
+- **Reason**: Factory workers and operators require a simple, intuitive, non-technical ERP interface with clear real-time statuses and seamless stage handovers without disconnected models or false "BOM Pending" indicators.
+- **Root Cause of BOM Pending Bug**:
+  - Supply Chain Store issued materials via `scmController.createMaterialIssue` (`/api/material-issues`), which wrote exclusively to `MaterialIssue` and did not update `MaterialRequest` or `WorkOrder`, nor write to `ProductionIssue` (`/api/production/material-issues`).
+  - Production components checked `productionMaterialIssues`, so after SCM issued materials, Production had zero issue records and displayed "Store Issue Pending" or "Request BOM Required".
+  - BOM status was not separated from Material Request and Material Issue status.
+- **What was changed**:
+  1. **Backend Synchronization & Dual-Model Mirroring**:
+     - `scmController.createMaterialIssue`:
+       - Synchronizes `MaterialRequest`: Updates `alreadyIssuedQty`, `remainingQty`, and sets status to `Fully Issued` or `Partially Issued`.
+       - Synchronizes `WorkOrder`: Updates status to `Ready to Start` when fully issued, or `Partially Issued`.
+       - Mirrors issue into `ProductionIssue` collection so all Production endpoints immediately receive the issue records.
+     - `productionController.createMaterialIssue`:
+       - Synchronizes `MaterialRequest` and `WorkOrder`.
+       - Mirrors issue into `MaterialIssue` (SCM collection).
+     - `productionController.createProductionUpdate`:
+       - Supports daily progress logging (`supervisorName`, `workCompletedDescription`).
+       - When completed (`isCompleted: true` or `totalCompleted >= planned`): Marks `WorkOrder.status = 'Completed'`, updates `SalesOrder.productionStatus = 'Completed'`, and creates `FinishedGood` inventory **exactly once**.
+       - While in progress: Sets `WorkOrder.status = 'Running'` and `SalesOrder.productionStatus = 'In Assembly'`.
+     - `scmController.createGRN`:
+       - When GRN is directly accepted (`status: 'Accepted'`), immediately credits `Inventory.availableStock` and `Material.currentStock` and logs to `StockLedger`, enabling instant replenishment and issue of remaining materials.
+     - Updated Mongoose Schema Enums in `WorkOrder.js`, `MaterialRequest.js`, `ProductionIssue.js`, `GRN.js`, and `StockLedger.js` to support all required operational states.
+  2. **Simplified 4-Tab Production Management (`ProductionOrdersPage.jsx`)**:
+     - **Tab 1: Production Orders**:
+       - View all production orders with clear status breakdown (Planning, BOM Verified, Materials Readiness, Production Status) and dynamic next action.
+       - **Simple Production Order Form**: Sales Order (dropdown), Product (auto-filled), Quantity (auto-filled/editable), Planned Start/End Dates, BOM (select dropdown), Remarks. Actions: **Save Plan | Request Materials**.
+     - **Tab 2: Planning & BOM**:
+       - Production Plan inspection, BOM recipe component verification, store inventory check with shortage detection.
+       - 1-click **Send Material Request to Store** button.
+     - **Tab 3: Daily Production**:
+       - Active order selector, **Daily Production Form** (Order select, Production Date, Planned Qty, Previously Completed Qty, Completed Today, Rejected Today, Remaining Qty, Remarks).
+       - Actions: **Save Daily Progress | Complete Production**.
+       - Daily Shift Logs table.
+     - **Tab 4: Completed Production**:
+       - Archive of all completed production orders, finished goods serial and batch numbers, and warehouse stock status.
+  3. **Simplified 4-Tab Supply Chain / Store (`MaterialRequestsPage.jsx`)**:
+     - **Tab 1: Material Requests**: Requisitions received from Production with stock check (Case A: Fully In Stock, Case B: Partially In Stock, Case C: Out of Stock).
+     - **Tab 2: Stock & Material Issue**: **Simple Material Issue Form** (Request ID, Production Order, Material, Required Qty, Available Stock, Already Issued, Issue Qty, Balance Qty) with stock limit validation warnings. Handles Case A, B, and C.
+     - **Tab 3: Purchase & GRN**: Shortages table with 1-click **+ Create PO ➔**, Purchase Orders list, and Inward GRN receipt with direct acceptance to credit Store stock.
+     - **Tab 4: Issue History**: Verified ledger of all material issue slips.
+  4. **Sidebar & Pipeline Stepper Alignment**:
+     - `Sidebar.jsx`: Production menu updated to `01 Production Orders`, `02 Planning & BOM`, `03 Daily Production`, `04 Completed Production`, and `05 Dashboard`. SCM item updated to `07 Store & Material Issue`.
+     - `ProductionPipelineStepper.jsx`: Mapped to the streamlined stages.
+- **Verification**:
+  - Full end-to-end node integration test script passed 100% across all 9 workflow stages:
+    1. Sales Order -> Production Order Created -> Planned.
+    2. BOM Verified.
+    3. Material Request Sent to Store -> Pending.
+    4. SCM Partial Issue (Case B) -> Material Request & Work Order updated to `Partially Issued`.
+    5. Shortage PO created -> GRN accepted -> Store inventory updated to 60 units.
+    6. Issue Remaining (Case A) -> Material Request updated to `Fully Issued` and Work Order to `Ready to Start` (ZERO BOM Pending!).
+    7. Daily Production progress logged -> Work Order updated to `Running` and Sales Order to `In Assembly`.
+    8. Production completed -> Work Order updated to `Completed` and Sales Order to `Completed`.
+    9. Finished Goods inventory record created **exactly once**.
+  - `npm --prefix client run build`: Built in 878ms with zero errors.
+  - Backend running healthy on port 5000 with MongoDB connected.
+  - Zero `git push` executed (all changes kept locally).
+
 ---
 
 ## Known Issues
 - *None.* All 50 API endpoints and frontend modules compile and render cleanly with zero errors.
+
+### 2026-11-16 (Simplified ERP Production & Supply Chain Management Workflow)
+- **User Request**: "ERP – Simplify Production & Supply Chain Workflow: Fix and simplify existing Production and SCM workflows without rebuilding. Phase 1: Sales Order Confirmed -> Production Order Created -> Planning -> BOM -> Material Request Sent to Store. Phase 2: Material Request Received -> Stock Availability Check (Case A: Fully Available -> Issue 100 -> Fully Issued; Case B: Partially Available -> Issue 60 -> Partially Issued -> Remaining: 40; Case C: Not Available -> Out of Stock -> Proceed to purchase). Phase 3: Shortage -> Purchase Request -> Supplier / PO -> GRN -> Inventory Updated -> Remaining Material Issued. Phase 4: Material Issued -> Production Plan -> Daily Production Process -> Production Completed. Fix Existing BOM Pending Bug: SCM already issued materials but Production still shows BOM Pending. Keep only 4 essential Production tabs (Production Orders, Planning & BOM, Daily Production, Completed Production) and 4 essential Store tabs (Material Requests, Stock & Material Issue, Purchase & GRN, Issue History). Single update to Finished Goods inventory and Sales Order synchronization."
+- **Reason**: Factory workers and operators require a simple, intuitive, non-technical ERP interface with clear real-time statuses and seamless stage handovers without disconnected models or false "BOM Pending" indicators.
+- **Root Cause of BOM Pending Bug**:
+  - Supply Chain Store issued materials via `scmController.createMaterialIssue` (`/api/material-issues`), which wrote exclusively to `MaterialIssue` and did not update `MaterialRequest` or `WorkOrder`, nor write to `ProductionIssue` (`/api/production/material-issues`).
+  - Production components checked `productionMaterialIssues`, so after SCM issued materials, Production had zero issue records and displayed "Store Issue Pending" or "Request BOM Required".
+  - BOM status was not separated from Material Request and Material Issue status.
+- **What was changed**:
+  1. **Backend Synchronization & Dual-Model Mirroring**:
+     - `scmController.createMaterialIssue`:
+       - Synchronizes `MaterialRequest`: Updates `alreadyIssuedQty`, `remainingQty`, and sets status to `Fully Issued` or `Partially Issued`.
+       - Synchronizes `WorkOrder`: Updates status to `Ready to Start` when fully issued, or `Partially Issued`.
+       - Mirrors issue into `ProductionIssue` collection so all Production endpoints immediately receive the issue records.
+     - `productionController.createMaterialIssue`:
+       - Synchronizes `MaterialRequest` and `WorkOrder`.
+       - Mirrors issue into `MaterialIssue` (SCM collection).
+     - `productionController.createProductionUpdate`:
+       - Supports daily progress logging (`supervisorName`, `workCompletedDescription`).
+       - When completed (`isCompleted: true` or `totalCompleted >= planned`): Marks `WorkOrder.status = 'Completed'`, updates `SalesOrder.productionStatus = 'Completed'`, and creates `FinishedGood` inventory **exactly once**.
+       - While in progress: Sets `WorkOrder.status = 'Running'` and `SalesOrder.productionStatus = 'In Assembly'`.
+     - `scmController.createGRN`:
+       - When GRN is directly accepted (`status: 'Accepted'`), immediately credits `Inventory.availableStock` and `Material.currentStock` and logs to `StockLedger`, enabling instant replenishment and issue of remaining materials.
+     - Updated Mongoose Schema Enums in `WorkOrder.js`, `MaterialRequest.js`, `ProductionIssue.js`, `GRN.js`, and `StockLedger.js` to support all required operational states.
+  2. **Simplified 4-Tab Production Management (`ProductionOrdersPage.jsx`)**:
+     - **Tab 1: Production Orders**:
+       - View all production orders with clear status breakdown (Planning, BOM Verified, Materials Readiness, Production Status) and dynamic next action.
+       - **Simple Production Order Form**: Sales Order (dropdown), Product (auto-filled), Quantity (auto-filled/editable), Planned Start/End Dates, BOM (select dropdown), Remarks. Actions: **Save Plan | Request Materials**.
+     - **Tab 2: Planning & BOM**:
+       - Production Plan inspection, BOM recipe component verification, store inventory check with shortage detection.
+       - 1-click **Send Material Request to Store** button.
+     - **Tab 3: Daily Production**:
+       - Active order selector, **Daily Production Form** (Order select, Production Date, Planned Qty, Previously Completed Qty, Completed Today, Rejected Today, Remaining Qty, Remarks).
+       - Actions: **Save Daily Progress | Complete Production**.
+       - Daily Shift Logs table.
+     - **Tab 4: Completed Production**:
+       - Archive of all completed production orders, finished goods serial and batch numbers, and warehouse stock status.
+  3. **Simplified 4-Tab Supply Chain / Store (`MaterialRequestsPage.jsx`)**:
+     - **Tab 1: Material Requests**: Requisitions received from Production with stock check (Case A: Fully In Stock, Case B: Partially In Stock, Case C: Out of Stock).
+     - **Tab 2: Stock & Material Issue**: **Simple Material Issue Form** (Request ID, Production Order, Material, Required Qty, Available Stock, Already Issued, Issue Qty, Balance Qty) with stock limit validation warnings. Handles Case A, B, and C.
+     - **Tab 3: Purchase & GRN**: Shortages table with 1-click **+ Create PO ➔**, Purchase Orders list, and Inward GRN receipt with direct acceptance to credit Store stock.
+     - **Tab 4: Issue History**: Verified ledger of all material issue slips.
+  4. **Sidebar & Pipeline Stepper Alignment**:
+     - `Sidebar.jsx`: Production menu updated to `01 Production Orders`, `02 Planning & BOM`, `03 Daily Production`, `04 Completed Production`, and `05 Dashboard`. SCM item updated to `07 Store & Material Issue`.
+     - `ProductionPipelineStepper.jsx`: Mapped to the streamlined stages.
+- **Verification**:
+  - Full end-to-end node integration test script passed 100% across all 9 workflow stages:
+    1. Sales Order -> Production Order Created -> Planned.
+    2. BOM Verified.
+    3. Material Request Sent to Store -> Pending.
+    4. SCM Partial Issue (Case B) -> Material Request & Work Order updated to `Partially Issued`.
+    5. Shortage PO created -> GRN accepted -> Store inventory updated to 60 units.
+    6. Issue Remaining (Case A) -> Material Request updated to `Fully Issued` and Work Order to `Ready to Start` (ZERO BOM Pending!).
+    7. Daily Production progress logged -> Work Order updated to `Running` and Sales Order to `In Assembly`.
+    8. Production completed -> Work Order updated to `Completed` and Sales Order to `Completed`.
+    9. Finished Goods inventory record created **exactly once**.
+  - `npm --prefix client run build`: Built in 878ms with zero errors.
+  - Backend running healthy on port 5000 with MongoDB connected.
+  - Zero `git push` executed (all changes kept locally).
 
 ---
 
@@ -436,7 +967,40 @@
   - **Date**: 2026-11-13
 
 ### 2026-11-16
-#### Change: Production Management Simplification, Visual Stepper & Seamless Handover
+#### Change: Production & Supply Chain Workflow Harmonization & Sales Order Visibility
+- **What was changed**:
+  1. **Sales Order Visibility in Production Dashboard**:
+     - Embedded dedicated **Incoming Sales Orders (from Sales CRM)** table directly in `ProductionDashboardModule.jsx`.
+     - Displays confirmed customer sales orders awaiting production planning with Customer name, Product, Ordered Quantity, Target Delivery Date, and Work Order linkage status.
+     - 1-Click **`+ Create Work Order ➔`** button opens the pre-filled Work Order creation dialog with customer, product, batch quantity, and BOM pre-selected (zero duplicate typing).
+  2. **Work Orders Enhanced with Sales Order Context & Stock Issued Status**:
+     - `ProductionPlanningModule.jsx` renders linked Sales Order particulars (SO number, shipping address, commercial notes, and sales instructions) in the Work Order row and details view.
+     - Displays real-time **Stock / Material Status** (`✓ Stock Issued`, `Store Issue Pending`, `Request BOM Required`) based on store issuance records.
+     - Added direct **`Request BOM ➔`** and **`Assembly ➔`** action buttons on every Work Order.
+  3. **Supply Chain Dashboard Production Requisitions & Shortage PO Integration**:
+     - `ScmDashboardModule.jsx` features a dedicated **Production Material Requisitions** section evaluating warehouse stock balances for every requested BOM component.
+     - **If stock is available**: 1-click **`Issue to Production ➔`** opens store issue slip.
+     - **If material shortage exists**: Displays prominent warning badge and 1-click **`+ Order from Supplier (Create PO) ➔`** which pre-fills the vendor, raw material, and required shortage quantity into `PurchaseOrdersModule.jsx`.
+     - Added visual **5-Step SCM Inward Lifecycle Banner**: `1. Order from Supplier (PO) ➔ 2. Goods Receipt (GRN) ➔ 3. Quality Check (QC Pass) ➔ 4. Stock Increases ➔ 5. Issue to Production`.
+  4. **Production Execution, Daily Updates & QA Completion Workflow**:
+     - Added direct **`+ Daily Update`** button on active assembly execution rows in `ProductionExecutionModule.jsx` to log shift progress without changing screens.
+     - `ProductionQAModule.jsx` passing inspection (`Pass`) automatically updates the Work Order status to `Completed`, updates completion status to `QA Passed`, and transfers approved machines to `FinishedGoodsModule.jsx`.
+     - `ProductionPipelineStepper.jsx` updated to 5 user-friendly lifecycle stages: `1. Work Orders (from SO) ➔ 2. Stock Issued & Requisitions ➔ 3. Start Production & Updates ➔ 4. Quality QA Inspection ➔ 5. Production Completed`.
+- **Files changed**:
+  - `client/src/components/production/ProductionDashboardModule.jsx`
+  - `client/src/components/production/ProductionPlanningModule.jsx`
+  - `client/src/components/production/ProductionOrdersPage.jsx`
+  - `client/src/components/production/ProductionExecutionModule.jsx`
+  - `client/src/components/production/ProductionTrackingPage.jsx`
+  - `client/src/components/production/ProductionPipelineStepper.jsx`
+  - `client/src/components/production/MaterialRequestsModule.jsx`
+  - `client/src/components/production/QualityReworkPage.jsx`
+  - `client/src/components/modules/ScmDashboardModule.jsx`
+  - `client/src/App.jsx`
+  - `server/controllers/productionController.js`
+  - `lk.md`
+- **Reason**: User requested: "sales management=> enquiry-qualifed lead-follow up-quation-customer accept/reject-pi-po like(so)-production dashboard show so order have; production management- work order sho the so details- request bom send- show the supply chain dashboard- have material issuse not metrial have - order suppier-gnd-quatity check-accept increase the stock- then issuse to production; production show the stock issued-planning-start production-daily updates-qa-pass-production completed; make userfriendli worflow; dont complex design; make simmply ;user friendly; alredy correct working sales management and supply chain management; production is some complex ; fix; also worflow make; fix;".
+- **Impact**: Full end-to-end synchronization between Sales, Supply Chain, and Production. Clear, intuitive, non-complex navigation for shopfloor staff. Production build passes in 1.68s with zero errors; no code pushed to remote Git.
 - **What was changed**:
   1. **Numbered Sidebar Navigation**:
      - `01 Dashboard`: Executive summary with interactive manufacturing pipeline overview, 6 KPIs, and priority blocker tasks.
@@ -472,6 +1036,93 @@
   - `client/src/components/production/FinishedGoodsModule.jsx`
   - `client/src/App.jsx`
 - **Impact**: Intuitive, easy-to-use production workflow with zero technical friction for shopfloor staff. Production build passes cleanly with zero errors.
+
+### 2026-11-16 (Post-WO BOM Recipe Workflow & Zero BOQ in Work Order Form)
+- **User Request**: "one small chabge create work order then make the bom; fix the bug; form dont be show select the boq"
+- **Reason**: The user specified that Work Orders must be created first before formulating the BOM recipe, and the Work Order creation form must NEVER ask the user to select a BOM/BOQ.
+- **What was changed**:
+  1. **Work Order Form Simplification (Zero BOM/BOQ Select)**:
+     - Verified and ensured the Create Work Order modal in `ProductionPlanningModule.jsx` has NO BOM or BOQ select dropdown.
+     - Added a helpful inline tip: *"💡 Tip: Create this Work Order first. You will define or review its BOM recipe in the next step."*
+     - Sanitized `formData.bom`, `salesOrder`, `customer`, and `product` so empty strings do not trigger Mongoose `CastError` during creation.
+  2. **Post-WO BOM Creation & Auto-Link Flow**:
+     - In `ProductionOrdersPage.jsx`: Added state `preSelectedProductForBOM` and handler `handleNavigateToBOM(wo)`.
+     - In `ProductionPlanningModule.jsx`:
+       - If no BOM exists for the Work Order product: table shows `+ Make BOM ➔` button in orange; details modal displays *Step 2: Define Bill of Materials (BOM Recipe)* banner with `+ Make BOM Recipe ➔` button.
+       - If BOM exists: displays *Request BOM Materials ➔* store requisition button.
+     - In `BOMModule.jsx`: Accepts `preSelectedProduct` and auto-opens the "Create Bill of Materials" modal with the Work Order's target product pre-selected.
+     - In `server/controllers/productionController.js`:
+       - `createWorkOrder`: Cleans empty string references to prevent Mongoose ObjectId cast failures.
+       - `createBOM`: Automatically links the newly created BOM to any pending Work Orders for that product in the database.
+- **Files changed**:
+  - `client/src/components/production/ProductionPlanningModule.jsx`
+  - `client/src/components/production/ProductionOrdersPage.jsx`
+  - `client/src/components/production/BOMModule.jsx`
+  - `server/controllers/productionController.js`
+  - `lk.md`
+- **Verification**:
+  - `npm --prefix client run build`: Built cleanly in 1.41s with zero errors.
+  - Backend running healthy on port 5000 with MongoDB connected.
+  - Zero git push performed (all changes kept locally).
+
+### 2026-11-16 (Simplified ERP Production & Supply Chain Management Workflow)
+- **User Request**: "ERP – Simplify Production & Supply Chain Workflow: Fix and simplify existing Production and SCM workflows without rebuilding. Phase 1: Sales Order Confirmed -> Production Order Created -> Planning -> BOM -> Material Request Sent to Store. Phase 2: Material Request Received -> Stock Availability Check (Case A: Fully Available -> Issue 100 -> Fully Issued; Case B: Partially Available -> Issue 60 -> Partially Issued -> Remaining: 40; Case C: Not Available -> Out of Stock -> Proceed to purchase). Phase 3: Shortage -> Purchase Request -> Supplier / PO -> GRN -> Inventory Updated -> Remaining Material Issued. Phase 4: Material Issued -> Production Plan -> Daily Production Process -> Production Completed. Fix Existing BOM Pending Bug: SCM already issued materials but Production still shows BOM Pending. Keep only 4 essential Production tabs (Production Orders, Planning & BOM, Daily Production, Completed Production) and 4 essential Store tabs (Material Requests, Stock & Material Issue, Purchase & GRN, Issue History). Single update to Finished Goods inventory and Sales Order synchronization."
+- **Reason**: Factory workers and operators require a simple, intuitive, non-technical ERP interface with clear real-time statuses and seamless stage handovers without disconnected models or false "BOM Pending" indicators.
+- **Root Cause of BOM Pending Bug**:
+  - Supply Chain Store issued materials via `scmController.createMaterialIssue` (`/api/material-issues`), which wrote exclusively to `MaterialIssue` and did not update `MaterialRequest` or `WorkOrder`, nor write to `ProductionIssue` (`/api/production/material-issues`).
+  - Production components checked `productionMaterialIssues`, so after SCM issued materials, Production had zero issue records and displayed "Store Issue Pending" or "Request BOM Required".
+  - BOM status was not separated from Material Request and Material Issue status.
+- **What was changed**:
+  1. **Backend Synchronization & Dual-Model Mirroring**:
+     - `scmController.createMaterialIssue`:
+       - Synchronizes `MaterialRequest`: Updates `alreadyIssuedQty`, `remainingQty`, and sets status to `Fully Issued` or `Partially Issued`.
+       - Synchronizes `WorkOrder`: Updates status to `Ready to Start` when fully issued, or `Partially Issued`.
+       - Mirrors issue into `ProductionIssue` collection so all Production endpoints immediately receive the issue records.
+     - `productionController.createMaterialIssue`:
+       - Synchronizes `MaterialRequest` and `WorkOrder`.
+       - Mirrors issue into `MaterialIssue` (SCM collection).
+     - `productionController.createProductionUpdate`:
+       - Supports daily progress logging (`supervisorName`, `workCompletedDescription`).
+       - When completed (`isCompleted: true` or `totalCompleted >= planned`): Marks `WorkOrder.status = 'Completed'`, updates `SalesOrder.productionStatus = 'Completed'`, and creates `FinishedGood` inventory **exactly once**.
+       - While in progress: Sets `WorkOrder.status = 'Running'` and `SalesOrder.productionStatus = 'In Assembly'`.
+     - `scmController.createGRN`:
+       - When GRN is directly accepted (`status: 'Accepted'`), immediately credits `Inventory.availableStock` and `Material.currentStock` and logs to `StockLedger`, enabling instant replenishment and issue of remaining materials.
+     - Updated Mongoose Schema Enums in `WorkOrder.js`, `MaterialRequest.js`, `ProductionIssue.js`, `GRN.js`, and `StockLedger.js` to support all required operational states.
+  2. **Simplified 4-Tab Production Management (`ProductionOrdersPage.jsx`)**:
+     - **Tab 1: Production Orders**:
+       - View all production orders with clear status breakdown (Planning, BOM Verified, Materials Readiness, Production Status) and dynamic next action.
+       - **Simple Production Order Form**: Sales Order (dropdown), Product (auto-filled), Quantity (auto-filled/editable), Planned Start/End Dates, BOM (select dropdown), Remarks. Actions: **Save Plan | Request Materials**.
+     - **Tab 2: Planning & BOM**:
+       - Production Plan inspection, BOM recipe component verification, store inventory check with shortage detection.
+       - 1-click **Send Material Request to Store** button.
+     - **Tab 3: Daily Production**:
+       - Active order selector, **Daily Production Form** (Order select, Production Date, Planned Qty, Previously Completed Qty, Completed Today, Rejected Today, Remaining Qty, Remarks).
+       - Actions: **Save Daily Progress | Complete Production**.
+       - Daily Shift Logs table.
+     - **Tab 4: Completed Production**:
+       - Archive of all completed production orders, finished goods serial and batch numbers, and warehouse stock status.
+  3. **Simplified 4-Tab Supply Chain / Store (`MaterialRequestsPage.jsx`)**:
+     - **Tab 1: Material Requests**: Requisitions received from Production with stock check (Case A: Fully In Stock, Case B: Partially In Stock, Case C: Out of Stock).
+     - **Tab 2: Stock & Material Issue**: **Simple Material Issue Form** (Request ID, Production Order, Material, Required Qty, Available Stock, Already Issued, Issue Qty, Balance Qty) with stock limit validation warnings. Handles Case A, B, and C.
+     - **Tab 3: Purchase & GRN**: Shortages table with 1-click **+ Create PO ➔**, Purchase Orders list, and Inward GRN receipt with direct acceptance to credit Store stock.
+     - **Tab 4: Issue History**: Verified ledger of all material issue slips.
+  4. **Sidebar & Pipeline Stepper Alignment**:
+     - `Sidebar.jsx`: Production menu updated to `01 Production Orders`, `02 Planning & BOM`, `03 Daily Production`, `04 Completed Production`, and `05 Dashboard`. SCM item updated to `07 Store & Material Issue`.
+     - `ProductionPipelineStepper.jsx`: Mapped to the streamlined stages.
+- **Verification**:
+  - Full end-to-end node integration test script passed 100% across all 9 workflow stages:
+    1. Sales Order -> Production Order Created -> Planned.
+    2. BOM Verified.
+    3. Material Request Sent to Store -> Pending.
+    4. SCM Partial Issue (Case B) -> Material Request & Work Order updated to `Partially Issued`.
+    5. Shortage PO created -> GRN accepted -> Store inventory updated to 60 units.
+    6. Issue Remaining (Case A) -> Material Request updated to `Fully Issued` and Work Order to `Ready to Start` (ZERO BOM Pending!).
+    7. Daily Production progress logged -> Work Order updated to `Running` and Sales Order to `In Assembly`.
+    8. Production completed -> Work Order updated to `Completed` and Sales Order to `Completed`.
+    9. Finished Goods inventory record created **exactly once**.
+  - `npm --prefix client run build`: Built in 878ms with zero errors.
+  - Backend running healthy on port 5000 with MongoDB connected.
+  - Zero `git push` executed (all changes kept locally).
 
 ---
 

@@ -8,6 +8,9 @@ const Inventory = require('../models/Inventory');
 const StockLedger = require('../models/StockLedger');
 const MaterialIssue = require('../models/MaterialIssue');
 const SupplierReturn = require('../models/SupplierReturn');
+const MaterialRequest = require('../models/MaterialRequest');
+const WorkOrder = require('../models/WorkOrder');
+const ProductionIssue = require('../models/ProductionIssue');
 
 // Helper to determine inventory status
 const calculateInventoryStatus = (available, min) => {
@@ -435,6 +438,7 @@ exports.createGRN = async (req, res) => {
       };
     });
 
+    const isDirectAccepted = req.body.status === 'Accepted';
     const grn = await GRN.create({
       grnNumber: grnNumber.toUpperCase(),
       purchaseOrder,
@@ -447,8 +451,36 @@ exports.createGRN = async (req, res) => {
       receivedBy: receivedBy || 'Store Officer',
       items: processedItems,
       remarks,
-      status: 'QC Pending' // STRICT RULE: Never direct to stock. Must be QC Pending!
+      status: isDirectAccepted ? 'Accepted' : 'QC Pending'
     });
+
+    if (isDirectAccepted) {
+      for (const item of processedItems) {
+        let inv = await Inventory.findOne({ material: item.material });
+        if (!inv) {
+          inv = new Inventory({ material: item.material, availableStock: 0, minimumStock: 100 });
+        }
+        inv.totalReceived = (inv.totalReceived || 0) + item.currentReceivedQty;
+        inv.availableStock = (inv.availableStock || 0) + item.currentReceivedQty;
+        inv.status = calculateInventoryStatus(inv.availableStock, inv.minimumStock);
+        inv.lastUpdated = Date.now();
+        await inv.save();
+
+        await Material.findByIdAndUpdate(item.material, { currentStock: inv.availableStock });
+
+        await StockLedger.create({
+          material: item.material,
+          date: receivedDate || Date.now(),
+          transactionType: 'GRN Direct Receipt',
+          referenceDoc: grnNumber.toUpperCase(),
+          qtyIn: item.currentReceivedQty,
+          qtyOut: 0,
+          balanceAfter: inv.availableStock,
+          loggedBy: receivedBy || 'Store Officer',
+          notes: `Received against ${po.poNumber}`
+        });
+      }
+    }
 
     // Update PO item received counts and status
     let allCompleted = true;
@@ -783,6 +815,93 @@ exports.createMaterialIssue = async (req, res) => {
       remarks,
       status: 'Issued'
     });
+
+    // 4. Synchronize with Production MaterialRequest and WorkOrder
+    let mr = null;
+    if (req.body.materialRequestId) {
+      mr = await MaterialRequest.findById(req.body.materialRequestId);
+    }
+    if (!mr && workOrder) {
+      mr = await MaterialRequest.findOne({
+        $or: [{ workOrderNumber: String(workOrder).toUpperCase() }, { workOrderNumber: String(workOrder) }]
+      }).sort({ createdAt: -1 });
+    }
+
+    let allFullyIssued = true;
+    let anyIssued = false;
+
+    if (mr) {
+      for (const issuedItem of processedItems) {
+        const reqItem = mr.items.find(i => String(i.material?._id || i.material) === String(issuedItem.material));
+        if (reqItem) {
+          reqItem.alreadyIssuedQty = (reqItem.alreadyIssuedQty || 0) + Number(issuedItem.issueQuantity);
+          reqItem.remainingQty = Math.max(0, (reqItem.requiredQty || reqItem.requestedQty || 0) - reqItem.alreadyIssuedQty);
+          reqItem.status = reqItem.remainingQty <= 0 ? 'Issued' : 'Partially Approved';
+        }
+      }
+
+      allFullyIssued = mr.items.every(i => (i.remainingQty || 0) <= 0);
+      anyIssued = mr.items.some(i => (i.alreadyIssuedQty || 0) > 0);
+      mr.status = allFullyIssued ? 'Fully Issued' : (anyIssued ? 'Partially Issued' : mr.status);
+      await mr.save();
+    }
+
+    // Find linked WorkOrder
+    let wo = null;
+    if (mr && mr.workOrder) {
+      wo = await WorkOrder.findById(mr.workOrder);
+    }
+    if (!wo && workOrder) {
+      wo = await WorkOrder.findOne({
+        $or: [{ workOrderNumber: String(workOrder).toUpperCase() }, { workOrderNumber: String(workOrder) }]
+      });
+    }
+
+    if (wo) {
+      if (allFullyIssued) {
+        if (wo.status !== 'Running' && wo.status !== 'Completed') {
+          wo.status = 'Ready to Start';
+          await wo.save();
+        }
+      } else if (anyIssued) {
+        if (wo.status === 'Planned' || wo.status === 'Waiting for Materials') {
+          wo.status = 'Partially Issued';
+          await wo.save();
+        }
+      }
+    }
+
+    // 5. Create matching ProductionIssue so Production views are 100% synchronized
+    try {
+      const pCount = await ProductionIssue.countDocuments();
+      const pIssueNumber = `PI-${String(pCount + 1).padStart(3, '0')}`;
+      await ProductionIssue.create({
+        issueNumber: pIssueNumber,
+        materialRequest: mr ? mr._id : undefined,
+        requestNumber: mr ? mr.requestNumber : undefined,
+        workOrder: wo ? wo._id : undefined,
+        workOrderNumber: wo ? wo.workOrderNumber : String(workOrder || 'WO-001').toUpperCase(),
+        issuedBy: issuedBy || 'Store Officer',
+        receivedBy: requestedBy || 'Production Supervisor',
+        department: safeDept,
+        issueDate: issueDate || new Date(),
+        status: allFullyIssued ? 'Fully Issued' : 'Partially Issued',
+        remarks: remarks || `Issued from Store against ${mr?.requestNumber || 'request'}`,
+        items: processedItems.map(it => ({
+          material: it.material,
+          materialCode: it.materialCode || '',
+          materialName: it.materialName || 'Material',
+          requestedQty: it.requiredQuantity || it.issueQuantity,
+          approvedQty: it.issueQuantity,
+          availableStock: it.availableStockAtTime || 0,
+          issuedQty: it.issueQuantity,
+          unit: it.unit || 'Kg',
+          batchNumber: it.batchNumber || 'BAT-DEFAULT'
+        }))
+      });
+    } catch (e) {
+      console.warn('ProductionIssue sync notice:', e.message);
+    }
 
     const populated = await MaterialIssue.findById(materialIssue._id)
       .populate('items.material', 'materialCode materialName unit');

@@ -171,29 +171,43 @@ export default function MaterialRequestsModule({
     },
     {
       header: 'Actions',
-      render: (row) => (
-        <div className="action-btns" onClick={(e) => e.stopPropagation()}>
-          <button
-            type="button"
-            className="icon-btn"
-            title="View Material Request Details"
-            onClick={() => setSelectedMR(row)}
-          >
-            <Eye size={15} />
-          </button>
-          {onNavigateToIssue && (
+      render: (row) => {
+        const hasShortage = (row.items || []).some(it => (it.availableStock || 0) < (it.requestedQty || it.requiredQty || 0));
+        return (
+          <div className="action-btns" onClick={(e) => e.stopPropagation()}>
             <button
               type="button"
-              className="btn btn-secondary"
-              style={{ padding: '2px 8px', fontSize: '0.72rem', height: 26, gap: 4 }}
-              title="Issue Materials from Store"
-              onClick={() => onNavigateToIssue(row)}
+              className="icon-btn"
+              title="View Material Request Details"
+              onClick={() => setSelectedMR(row)}
             >
-              Issue ➔
+              <Eye size={15} />
             </button>
-          )}
-        </div>
-      )
+            {onNavigateToIssue && (
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ padding: '2px 8px', fontSize: '0.72rem', height: 26, gap: 4 }}
+                title="Issue Materials from Store"
+                onClick={() => onNavigateToIssue(row)}
+              >
+                Issue ➔
+              </button>
+            )}
+            {hasShortage && onNavigateToPurchasing && (
+              <button
+                type="button"
+                className="btn btn-warning"
+                style={{ padding: '2px 8px', fontSize: '0.72rem', height: 26, gap: 4, background: '#D97706', color: '#fff', borderColor: '#B45309' }}
+                title="Material Shortage: Order from Supplier"
+                onClick={() => onNavigateToPurchasing(row)}
+              >
+                + Order PO ➔
+              </button>
+            )}
+          </div>
+        );
+      }
     }
   ];
 
@@ -438,7 +452,7 @@ export default function MaterialRequestsModule({
               </div>
             </div>
 
-            <div style={{ marginTop: 24, display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+            <div style={{ marginTop: 24, display: 'flex', justifyContent: 'flex-end', flexWrap: 'wrap', gap: 10 }}>
               <button
                 type="button"
                 className="btn btn-secondary"
@@ -446,6 +460,20 @@ export default function MaterialRequestsModule({
               >
                 Close
               </button>
+              {onNavigateToPurchasing && (
+                <button
+                  type="button"
+                  className="btn btn-warning"
+                  style={{ background: '#D97706', color: '#fff', borderColor: '#B45309', gap: 6 }}
+                  onClick={() => {
+                    const mr = selectedMR;
+                    setSelectedMR(null);
+                    onNavigateToPurchasing(mr);
+                  }}
+                >
+                  <ShoppingCart size={13} /> Order from Supplier (Create PO) ➔
+                </button>
+              )}
               {onNavigateToIssue && (
                 <button
                   type="button"

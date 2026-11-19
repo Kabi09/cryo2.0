@@ -67,7 +67,7 @@ const workOrderSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['Planned', 'Waiting for Materials', 'Ready to Start', 'Running', 'On Hold', 'Completed', 'Cancelled'],
+    enum: ['Planned', 'Waiting for Materials', 'Partially Issued', 'Ready to Start', 'Running', 'On Hold', 'Completed', 'Cancelled'],
     default: 'Planned'
   },
   remarks: String

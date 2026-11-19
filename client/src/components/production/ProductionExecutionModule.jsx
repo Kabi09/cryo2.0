@@ -9,6 +9,7 @@ export default function ProductionExecutionModule({
   workOrders = [],
   onStart,
   onUpdateStatus,
+  onNavigateToUpdate,
   onNavigateToCompletion,
   showToast
 }) {
@@ -147,6 +148,16 @@ export default function ProductionExecutionModule({
           >
             Hold
           </button>
+          {onNavigateToUpdate && (
+            <button
+              className="btn btn-secondary btn-sm"
+              style={{ padding: '2px 8px', fontSize: '0.72rem', height: 26, gap: 4, color: 'var(--primary)', borderColor: 'var(--primary-subtle)' }}
+              onClick={() => onNavigateToUpdate(row)}
+              title="Log Daily Progress & Shift Output"
+            >
+              <Clock size={12} /> + Daily Update
+            </button>
+          )}
           {onNavigateToCompletion && (
             <button
               className="btn btn-secondary btn-sm"

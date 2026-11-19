@@ -75,7 +75,7 @@ const productionIssueSchema = new mongoose.Schema({
   items: [issuedItemSchema],
   status: {
     type: String,
-    enum: ['Issued', 'Partial Issue'],
+    enum: ['Issued', 'Partial Issue', 'Partially Issued', 'Fully Issued'],
     default: 'Issued'
   },
   remarks: String

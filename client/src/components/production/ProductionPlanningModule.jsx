@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import DataTable from '../common/DataTable';
 import Modal from '../common/Modal';
 import StatusBadge from '../common/StatusBadge';
@@ -15,7 +15,9 @@ import {
   Clock,
   ArrowDownLeft,
   CheckCircle2,
-  Package
+  Package,
+  Plus,
+  FileText
 } from 'lucide-react';
 
 export default function ProductionPlanningModule({
@@ -24,6 +26,10 @@ export default function ProductionPlanningModule({
   products = [],
   boms = [],
   inventory = [],
+  materialRequests = [],
+  productionMaterialIssues = [],
+  preSelectedSO = null,
+  onClearPreSelectedSO,
   onSave,
   onUpdateStatus,
   onNavigateToBOM,
@@ -35,7 +41,6 @@ export default function ProductionPlanningModule({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedWO, setSelectedWO] = useState(null);
   const [duplicateWarning, setDuplicateWarning] = useState(null);
-  const [noBomWarning, setNoBomWarning] = useState(false);
 
   const [formData, setFormData] = useState({
     salesOrder: '',
@@ -55,9 +60,17 @@ export default function ProductionPlanningModule({
     remarks: ''
   });
 
+  // Handle incoming preSelectedSO from Production Dashboard or Sales
+  useEffect(() => {
+    if (preSelectedSO) {
+      handleSelectSO(preSelectedSO._id);
+      setIsModalOpen(true);
+      onClearPreSelectedSO?.();
+    }
+  }, [preSelectedSO]);
+
   const handleOpenModal = () => {
     setDuplicateWarning(null);
-    setNoBomWarning(false);
     if (salesOrders.length > 0 && !formData.salesOrder) {
       handleSelectSO(salesOrders[0]._id);
     }
@@ -83,9 +96,8 @@ export default function ProductionPlanningModule({
     const prodId = firstItem?.product?._id || firstItem?.product || '';
     const prodName = firstItem?.productName || firstItem?.product?.productName || '';
 
-    // Check BOM for this product
+    // Check if an existing BOM is available
     const matchingBOM = boms.find(b => String(b.product?._id || b.product) === String(prodId));
-    setNoBomWarning(!matchingBOM);
 
     setFormData(prev => ({
       ...prev,
@@ -104,7 +116,6 @@ export default function ProductionPlanningModule({
   const handleSelectProduct = (prodId) => {
     const p = products.find(prod => prod._id === prodId);
     const matchingBOM = boms.find(b => String(b.product?._id || b.product) === String(prodId));
-    setNoBomWarning(!matchingBOM);
 
     setFormData(prev => ({
       ...prev,
@@ -116,14 +127,21 @@ export default function ProductionPlanningModule({
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.productName) {
+    if (!formData.productName && !formData.product) {
       showToast('Please select a Product or Sales Order', 'error');
       return;
     }
     try {
-      await onSave(formData);
+      const payload = {
+        ...formData,
+        bom: formData.bom || undefined,
+        salesOrder: formData.salesOrder || undefined,
+        customer: formData.customer || undefined,
+        product: formData.product || undefined
+      };
+      await onSave(payload);
       setIsModalOpen(false);
-      showToast('Work Order created successfully! Connected to BOM & Production Schedule.', 'success');
+      showToast('Work Order created successfully! Next: Define BOM recipe or request materials.', 'success');
     } catch (err) {
       showToast(err.message || 'Error creating Work Order', 'error');
     }
@@ -179,16 +197,24 @@ export default function ProductionPlanningModule({
     {
       header: 'Product',
       accessor: 'productName',
-      render: (row) => (
-        <div>
-          <strong style={{ color: 'var(--text-primary)' }}>{row.productName || row.product?.productName || 'Cryo Unit'}</strong>
-          {row.bom && (
-            <div style={{ fontSize: '0.72rem', color: 'var(--primary)' }}>
-              BOM: {row.bom?.bomNumber || 'Standard V1'}
-            </div>
-          )}
-        </div>
-      )
+      render: (row) => {
+        const prodId = row.product?._id || row.product;
+        const matchingBOM = row.bom || boms.find(b => String(b.product?._id || b.product) === String(prodId));
+        return (
+          <div>
+            <strong style={{ color: 'var(--text-primary)' }}>{row.productName || row.product?.productName || 'Cryo Unit'}</strong>
+            {matchingBOM ? (
+              <div style={{ fontSize: '0.72rem', color: 'var(--primary)', fontWeight: 600 }}>
+                BOM: {matchingBOM.bomNumber || 'Standard V1'}
+              </div>
+            ) : (
+              <div style={{ fontSize: '0.72rem', color: '#D97706', fontWeight: 600 }}>
+                • Needs BOM Recipe
+              </div>
+            )}
+          </div>
+        );
+      }
     },
     {
       header: 'Qty',
@@ -198,6 +224,38 @@ export default function ProductionPlanningModule({
           {row.productionQuantity || row.orderQuantity || 0} Units
         </span>
       )
+    },
+    {
+      header: 'Stock Status',
+      render: (row) => {
+        const isIssued = productionMaterialIssues.some(mi =>
+          (mi.workOrderNumber === row.workOrderNumber || String(mi.workOrder?._id || mi.workOrder) === String(row._id)) &&
+          (mi.status === 'Issued' || mi.status === 'Fully Issued')
+        );
+        const hasRequest = materialRequests.some(mr =>
+          mr.workOrderNumber === row.workOrderNumber || String(mr.workOrder?._id || mr.workOrder) === String(row._id)
+        );
+
+        if (isIssued || row.status === 'Ready to Start' || row.status === 'Running' || row.status === 'Completed') {
+          return (
+            <span className="badge badge-success" style={{ fontSize: '0.72rem', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+              <CheckCircle2 size={11} /> Stock Issued
+            </span>
+          );
+        }
+        if (hasRequest) {
+          return (
+            <span className="badge badge-warning" style={{ fontSize: '0.72rem', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+              <Clock size={11} /> Store Issue Pending
+            </span>
+          );
+        }
+        return (
+          <span className="badge badge-secondary" style={{ fontSize: '0.72rem', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+            <AlertCircle size={11} /> Request BOM Required
+          </span>
+        );
+      }
     },
     {
       header: 'Assigned Team',
@@ -224,51 +282,71 @@ export default function ProductionPlanningModule({
     },
     {
       header: 'Actions',
-      render: (row) => (
-        <div className="action-btns" onClick={(e) => e.stopPropagation()}>
-          <button
-            type="button"
-            className="icon-btn"
-            title="View Work Order Particulars"
-            onClick={() => setSelectedWO(row)}
-          >
-            <Eye size={15} />
-          </button>
-          {row.status === 'Planned' && (
+      render: (row) => {
+        const isIssued = productionMaterialIssues.some(mi =>
+          (mi.workOrderNumber === row.workOrderNumber || String(mi.workOrder?._id || mi.workOrder) === String(row._id)) &&
+          (mi.status === 'Issued' || mi.status === 'Fully Issued')
+        );
+        const prodId = row.product?._id || row.product;
+        const matchingBOM = row.bom || boms.find(b => String(b.product?._id || b.product) === String(prodId));
+
+        return (
+          <div className="action-btns" onClick={(e) => e.stopPropagation()}>
             <button
               type="button"
-              className="btn btn-secondary"
-              style={{ padding: '2px 8px', fontSize: '0.72rem', height: 26, gap: 4 }}
-              title="Release Work Order to Ready to Start"
-              onClick={() => handleStatusChange(row._id, 'Ready to Start')}
+              className="icon-btn"
+              title="View Work Order & Sales Order Particulars"
+              onClick={() => setSelectedWO(row)}
             >
-              <CheckCircle2 size={12} /> Release ➔
+              <Eye size={15} />
             </button>
-          )}
-          {onNavigateToMaterials && (
-            <button
-              type="button"
-              className="btn btn-secondary"
-              style={{ padding: '2px 8px', fontSize: '0.72rem', height: 26, gap: 4, color: 'var(--primary)', borderColor: 'var(--primary-subtle)' }}
-              title="Requisition Materials for this Work Order"
-              onClick={() => onNavigateToMaterials(row)}
-            >
-              <ArrowDownLeft size={12} /> Materials
-            </button>
-          )}
-          {(row.status === 'Ready to Start' || row.status === 'Running') && onNavigateToManufacturing && (
-            <button
-              type="button"
-              className="btn btn-primary"
-              style={{ padding: '2px 8px', fontSize: '0.72rem', height: 26, gap: 4 }}
-              title="Open Shopfloor Assembly Execution"
-              onClick={() => onNavigateToManufacturing(row)}
-            >
-              <Factory size={12} /> Assembly ➔
-            </button>
-          )}
-        </div>
-      )
+            {row.status === 'Planned' && (
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ padding: '2px 8px', fontSize: '0.72rem', height: 26, gap: 4 }}
+                title="Release Work Order to Ready to Start"
+                onClick={() => handleStatusChange(row._id, 'Ready to Start')}
+              >
+                <CheckCircle2 size={12} /> Release ➔
+              </button>
+            )}
+            {!matchingBOM && onNavigateToBOM && (
+              <button
+                type="button"
+                className="btn btn-warning"
+                style={{ padding: '2px 8px', fontSize: '0.72rem', height: 26, gap: 4, background: '#D97706', color: '#fff', borderColor: '#B45309' }}
+                title="Create BOM recipe for this order"
+                onClick={() => onNavigateToBOM(row)}
+              >
+                <Plus size={12} /> Make BOM ➔
+              </button>
+            )}
+            {matchingBOM && onNavigateToMaterials && !isIssued && (
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ padding: '2px 8px', fontSize: '0.72rem', height: 26, gap: 4, color: 'var(--primary)', borderColor: 'var(--primary-subtle)' }}
+                title="Requisition BOM Materials from Store"
+                onClick={() => onNavigateToMaterials(row)}
+              >
+                <ArrowDownLeft size={12} /> Request BOM ➔
+              </button>
+            )}
+            {(isIssued || row.status === 'Ready to Start' || row.status === 'Running') && onNavigateToManufacturing && (
+              <button
+                type="button"
+                className="btn btn-primary"
+                style={{ padding: '2px 8px', fontSize: '0.72rem', height: 26, gap: 4 }}
+                title="Open Shopfloor Assembly Execution"
+                onClick={() => onNavigateToManufacturing(row)}
+              >
+                <Factory size={12} /> Assembly ➔
+              </button>
+            )}
+          </div>
+        );
+      }
     }
   ];
 
@@ -365,22 +443,6 @@ export default function ProductionPlanningModule({
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Associated BOM</label>
-                    <select
-                      className="form-select"
-                      value={formData.bom}
-                      onChange={(e) => setFormData({ ...formData, bom: e.target.value })}
-                    >
-                      <option value="">Select BOM Version</option>
-                      {boms.map(b => (
-                        <option key={b._id} value={b._id}>
-                          {b.bomNumber} - {b.product?.productName || 'Product'} ({b.version})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="form-group">
                     <label className="form-label">Order Quantity <span className="req">*</span></label>
                     <input
                       type="number"
@@ -403,39 +465,11 @@ export default function ProductionPlanningModule({
                       required
                     />
                   </div>
-                </div>
 
-                {/* No BOM Warning */}
-                {noBomWarning && (
-                  <div style={{
-                    marginTop: 12,
-                    padding: '8px 12px',
-                    background: 'rgba(239, 68, 68, 0.08)',
-                    border: '1px solid rgba(239, 68, 68, 0.25)',
-                    borderRadius: 6,
-                    fontSize: '0.78rem',
-                    color: '#DC2626',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: 8
-                  }}>
-                    <span>⚠️ No active Bill of Materials (BOM) found for this product. Please configure a BOM before manufacturing.</span>
-                    {onNavigateToBOM && (
-                      <button
-                        type="button"
-                        className="btn btn-secondary btn-sm"
-                        style={{ padding: '2px 8px', fontSize: '0.72rem', height: 24, color: '#DC2626', borderColor: '#FECACA' }}
-                        onClick={() => {
-                          setIsModalOpen(false);
-                          onNavigateToBOM();
-                        }}
-                      >
-                        Create BOM ➔
-                      </button>
-                    )}
+                  <div style={{ gridColumn: 'span 2', fontSize: '0.76rem', color: 'var(--text-secondary)', background: 'rgba(99, 102, 241, 0.05)', padding: '8px 12px', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    💡 <em>Tip: Create this Work Order first. You will define or review its BOM recipe in the next step.</em>
                   </div>
-                )}
+                </div>
               </div>
 
               {/* Planning & Schedule Card */}
@@ -530,148 +564,276 @@ export default function ProductionPlanningModule({
       )}
 
       {/* View Work Order Details Modal */}
-      {selectedWO && (
-        <Modal
-          title={`Work Order: ${selectedWO.workOrderNumber}`}
-          subtitle={`Manufacturing details for ${selectedWO.customerName || selectedWO.customer?.companyName || 'Customer'}`}
-          isOpen={!!selectedWO}
-          onClose={() => setSelectedWO(null)}
-          size="lg"
-        >
-          <div>
-            <div className="detail-grid">
-              <div className="detail-item">
-                <div className="detail-label">Work Order No</div>
-                <div className="detail-value" style={{ fontWeight: 700, color: 'var(--primary)' }}>{selectedWO.workOrderNumber}</div>
-              </div>
-              <div className="detail-item">
-                <div className="detail-label">Status</div>
-                <div className="detail-value"><StatusBadge status={selectedWO.status || 'Planned'} /></div>
-              </div>
-              <div className="detail-item">
-                <div className="detail-label">Sales Order Reference</div>
-                <div className="detail-value">{selectedWO.salesOrderNumber || selectedWO.salesOrder?.soNumber || 'Direct Order'}</div>
-              </div>
-              <div className="detail-item">
-                <div className="detail-label">Customer</div>
-                <div className="detail-value">{selectedWO.customerName || selectedWO.customer?.companyName || '—'}</div>
-              </div>
-              <div className="detail-item">
-                <div className="detail-label">Manufactured Product</div>
-                <div className="detail-value">{selectedWO.productName || selectedWO.product?.productName || 'Cryo Unit'}</div>
-              </div>
-              <div className="detail-item">
-                <div className="detail-label">Production Quantity</div>
-                <div className="detail-value" style={{ fontWeight: 700 }}>{selectedWO.productionQuantity || selectedWO.orderQuantity || 0} Units</div>
-              </div>
-              <div className="detail-item">
-                <div className="detail-label">Priority</div>
-                <div className="detail-value"><StatusBadge status={selectedWO.priority || 'Medium'} /></div>
-              </div>
-              <div className="detail-item">
-                <div className="detail-label">Assigned Supervisor</div>
-                <div className="detail-value">{selectedWO.productionManager || 'Supervisor'}</div>
-              </div>
-              <div className="detail-item">
-                <div className="detail-label">Shop Floor Location</div>
-                <div className="detail-value">{selectedWO.productionLocation || 'Assembly Bay 1'}</div>
-              </div>
-              <div className="detail-item">
-                <div className="detail-label">Planned Timeline</div>
-                <div className="detail-value" style={{ fontSize: '0.82rem' }}>
-                  {selectedWO.plannedStartDate ? new Date(selectedWO.plannedStartDate).toLocaleDateString('en-GB') : '-'} to{' '}
-                  {selectedWO.expectedCompletionDate ? new Date(selectedWO.expectedCompletionDate).toLocaleDateString('en-GB') : '-'}
+      {selectedWO && (() => {
+        const prodId = selectedWO.product?._id || selectedWO.product;
+        const matchingBOM = selectedWO.bom || boms.find(b => String(b.product?._id || b.product) === String(prodId));
+        const linkedSO = salesOrders.find(s =>
+          String(s._id) === String(selectedWO.salesOrder?._id || selectedWO.salesOrder) ||
+          s.soNumber === selectedWO.salesOrderNumber
+        );
+        const linkedMR = materialRequests.find(mr =>
+          mr.workOrderNumber === selectedWO.workOrderNumber ||
+          String(mr.workOrder?._id || mr.workOrder) === String(selectedWO._id)
+        );
+        const isStockIssued = productionMaterialIssues.some(mi =>
+          (mi.workOrderNumber === selectedWO.workOrderNumber || String(mi.workOrder?._id || mi.workOrder) === String(selectedWO._id)) &&
+          (mi.status === 'Issued' || mi.status === 'Fully Issued')
+        );
+
+        return (
+          <Modal
+            title={`Work Order: ${selectedWO.workOrderNumber}`}
+            subtitle={`Manufacturing details for ${selectedWO.customerName || selectedWO.customer?.companyName || 'Customer'}`}
+            isOpen={!!selectedWO}
+            onClose={() => setSelectedWO(null)}
+            size="lg"
+          >
+            <div>
+              {/* Card 1: Linked Sales Order Details */}
+              <div style={{
+                background: 'var(--bg-surface-elevated)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: 8,
+                padding: '14px 16px',
+                marginBottom: 16
+              }}>
+                <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+                  <ShoppingCart size={15} /> Linked Sales Order & Customer Particulars:
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 10, fontSize: '0.8rem' }}>
+                  <div>
+                    <span style={{ color: 'var(--text-muted)' }}>Sales Order:</span>{' '}
+                    <strong style={{ color: 'var(--primary)' }}>{selectedWO.salesOrderNumber || selectedWO.salesOrder?.soNumber || 'SO-Direct'}</strong>
+                  </div>
+                  <div>
+                    <span style={{ color: 'var(--text-muted)' }}>Customer:</span>{' '}
+                    <strong>{selectedWO.customerName || selectedWO.customer?.companyName || linkedSO?.customer?.companyName || 'Confirmed Client'}</strong>
+                  </div>
+                  <div>
+                    <span style={{ color: 'var(--text-muted)' }}>Delivery Target:</span>{' '}
+                    <strong>{selectedWO.expectedCompletionDate ? new Date(selectedWO.expectedCompletionDate).toLocaleDateString('en-GB') : '-'}</strong>
+                  </div>
+                  {linkedSO?.shippingAddress && (
+                    <div style={{ gridColumn: 'span 2' }}>
+                      <span style={{ color: 'var(--text-muted)' }}>Shipping / Plant Address:</span>{' '}
+                      <span>{linkedSO.shippingAddress}</span>
+                    </div>
+                  )}
+                  {linkedSO?.productionRemarks && (
+                    <div style={{ gridColumn: 'span 2' }}>
+                      <span style={{ color: 'var(--text-muted)' }}>Sales Instructions:</span>{' '}
+                      <em>{linkedSO.productionRemarks}</em>
+                    </div>
+                  )}
                 </div>
               </div>
-              {selectedWO.remarks && (
-                <div className="detail-item col-span-2">
-                  <div className="detail-label">Engineering Remarks</div>
-                  <div className="detail-value" style={{ fontSize: '0.82rem' }}>{selectedWO.remarks}</div>
+
+              {/* Card 2: Stock & BOM Requisition Status */}
+              {!matchingBOM ? (
+                <div style={{
+                  background: 'rgba(245, 158, 11, 0.08)',
+                  border: '1px solid rgba(245, 158, 11, 0.3)',
+                  borderRadius: 8,
+                  padding: '12px 16px',
+                  marginBottom: 16,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: 10
+                }}>
+                  <div>
+                    <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#D97706', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <AlertCircle size={15} /> Step 2: Define Bill of Materials (BOM Recipe)
+                    </div>
+                    <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', marginTop: 2 }}>
+                      Work Order is created. Formulate the BOM recipe specifying raw materials before requisitioning stock from Company Store.
+                    </div>
+                  </div>
+                  {onNavigateToBOM && (
+                    <button
+                      type="button"
+                      className="btn btn-warning btn-sm"
+                      style={{ background: '#D97706', color: '#fff', borderColor: '#B45309', gap: 4 }}
+                      onClick={() => {
+                        const wo = selectedWO;
+                        setSelectedWO(null);
+                        onNavigateToBOM(wo);
+                      }}
+                    >
+                      <Plus size={13} /> Make BOM Recipe ➔
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div style={{
+                  background: isStockIssued ? 'rgba(22, 163, 106, 0.06)' : 'rgba(245, 158, 11, 0.06)',
+                  border: `1px solid ${isStockIssued ? 'rgba(22, 163, 106, 0.25)' : 'rgba(245, 158, 11, 0.25)'}`,
+                  borderRadius: 8,
+                  padding: '12px 16px',
+                  marginBottom: 16,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: 10
+                }}>
+                  <div>
+                    <div style={{ fontSize: '0.82rem', fontWeight: 700, color: isStockIssued ? '#16A36A' : '#D97706' }}>
+                      {isStockIssued ? '✓ Stock Issued from Company Store' : linkedMR ? `Store Requisition: ${linkedMR.requestNumber} (Pending Issue)` : 'Material Requisition Required'}
+                    </div>
+                    <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', marginTop: 2 }}>
+                      {isStockIssued
+                        ? 'All BOM components have been verified and issued by the warehouse. Ready for shop floor assembly.'
+                        : linkedMR
+                          ? 'Material Request has been dispatched to Company Store. Awaiting physical issue.'
+                          : 'BOM recipe is ready. Send requisition to SCM Company Store to allocate raw material stock.'}
+                    </div>
+                  </div>
+                  {!isStockIssued && onNavigateToMaterials && (
+                    <button
+                      type="button"
+                      className="btn btn-primary btn-sm"
+                      onClick={() => {
+                        const wo = selectedWO;
+                        setSelectedWO(null);
+                        onNavigateToMaterials(wo);
+                      }}
+                    >
+                      <ArrowDownLeft size={13} /> Request BOM Materials ➔
+                    </button>
+                  )}
                 </div>
               )}
-            </div>
 
-            {/* Quick Handover Actions */}
-            <div style={{ marginTop: 24, paddingTop: 16, borderTop: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
-              <div style={{ display: 'flex', gap: 8 }}>
-                {selectedWO.status === 'Planned' && (
-                  <button
-                    type="button"
-                    className="btn btn-primary btn-sm"
-                    onClick={() => handleStatusChange(selectedWO._id, 'Ready to Start')}
-                  >
-                    <CheckCircle2 size={13} /> Release for Production
-                  </button>
-                )}
-                {selectedWO.status === 'Ready to Start' && (
-                  <button
-                    type="button"
-                    className="btn btn-primary btn-sm"
-                    onClick={() => handleStatusChange(selectedWO._id, 'Running')}
-                  >
-                    <Factory size={13} /> Mark Running / In Assembly
-                  </button>
+              {/* Card 3: Standard Details */}
+              <div className="detail-grid">
+                <div className="detail-item">
+                  <div className="detail-label">Work Order No</div>
+                  <div className="detail-value" style={{ fontWeight: 700, color: 'var(--primary)' }}>{selectedWO.workOrderNumber}</div>
+                </div>
+                <div className="detail-item">
+                  <div className="detail-label">Status</div>
+                  <div className="detail-value"><StatusBadge status={selectedWO.status || 'Planned'} /></div>
+                </div>
+                <div className="detail-item">
+                  <div className="detail-label">Manufactured Product</div>
+                  <div className="detail-value">{selectedWO.productName || selectedWO.product?.productName || 'Cryo Unit'}</div>
+                </div>
+                <div className="detail-item">
+                  <div className="detail-label">Production Quantity</div>
+                  <div className="detail-value" style={{ fontWeight: 700 }}>{selectedWO.productionQuantity || selectedWO.orderQuantity || 0} Units</div>
+                </div>
+                <div className="detail-item">
+                  <div className="detail-label">Priority</div>
+                  <div className="detail-value"><StatusBadge status={selectedWO.priority || 'Medium'} /></div>
+                </div>
+                <div className="detail-item">
+                  <div className="detail-label">Assigned Supervisor</div>
+                  <div className="detail-value">{selectedWO.productionManager || 'Supervisor'}</div>
+                </div>
+                <div className="detail-item">
+                  <div className="detail-label">Shop Floor Location</div>
+                  <div className="detail-value">{selectedWO.productionLocation || 'Assembly Bay 1'}</div>
+                </div>
+                <div className="detail-item">
+                  <div className="detail-label">Planned Timeline</div>
+                  <div className="detail-value" style={{ fontSize: '0.82rem' }}>
+                    {selectedWO.plannedStartDate ? new Date(selectedWO.plannedStartDate).toLocaleDateString('en-GB') : '-'} to{' '}
+                    {selectedWO.expectedCompletionDate ? new Date(selectedWO.expectedCompletionDate).toLocaleDateString('en-GB') : '-'}
+                  </div>
+                </div>
+                {selectedWO.remarks && (
+                  <div className="detail-item col-span-2">
+                    <div className="detail-label">Engineering Remarks</div>
+                    <div className="detail-value" style={{ fontSize: '0.82rem' }}>{selectedWO.remarks}</div>
+                  </div>
                 )}
               </div>
 
-              <div style={{ display: 'flex', gap: 8 }}>
-                {onNavigateToMaterials && (
-                  <button
-                    type="button"
-                    className="btn btn-secondary btn-sm"
-                    style={{ color: 'var(--primary)', borderColor: 'var(--primary-subtle)' }}
-                    onClick={() => {
-                      const wo = selectedWO;
-                      setSelectedWO(null);
-                      onNavigateToMaterials(wo);
-                    }}
-                  >
-                    <ArrowDownLeft size={13} /> Check & Issue Materials ➔
-                  </button>
-                )}
-                {onNavigateToManufacturing && (
-                  <button
-                    type="button"
-                    className="btn btn-primary btn-sm"
-                    style={{ gap: 4 }}
-                    onClick={() => {
-                      const wo = selectedWO;
-                      setSelectedWO(null);
-                      onNavigateToManufacturing(wo);
-                    }}
-                  >
-                    <Factory size={13} /> Open Shopfloor Assembly ➔
-                  </button>
-                )}
-                {onNavigateToBOM && (
-                  <button
-                    type="button"
-                    className="btn btn-secondary btn-sm"
-                    onClick={() => {
-                      setSelectedWO(null);
-                      onNavigateToBOM();
-                    }}
-                  >
-                    <Layers size={13} /> View BOM Recipe ➔
-                  </button>
-                )}
-                {onNavigateToSchedule && (
-                  <button
-                    type="button"
-                    className="btn btn-secondary btn-sm"
-                    onClick={() => {
-                      setSelectedWO(null);
-                      onNavigateToSchedule();
-                    }}
-                  >
-                    <Clock size={13} /> View Schedule ➔
-                  </button>
-                )}
+              {/* Quick Handover Actions */}
+              <div style={{ marginTop: 24, paddingTop: 16, borderTop: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {selectedWO.status === 'Planned' && (
+                    <button
+                      type="button"
+                      className="btn btn-primary btn-sm"
+                      onClick={() => handleStatusChange(selectedWO._id, 'Ready to Start')}
+                    >
+                      <CheckCircle2 size={13} /> Release for Production
+                    </button>
+                  )}
+                  {selectedWO.status === 'Ready to Start' && (
+                    <button
+                      type="button"
+                      className="btn btn-primary btn-sm"
+                      onClick={() => handleStatusChange(selectedWO._id, 'Running')}
+                    >
+                      <Factory size={13} /> Mark Running / In Assembly
+                    </button>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {onNavigateToMaterials && (
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      style={{ color: 'var(--primary)', borderColor: 'var(--primary-subtle)' }}
+                      onClick={() => {
+                        const wo = selectedWO;
+                        setSelectedWO(null);
+                        onNavigateToMaterials(wo);
+                      }}
+                    >
+                      <ArrowDownLeft size={13} /> Check & Issue Materials ➔
+                    </button>
+                  )}
+                  {onNavigateToManufacturing && (
+                    <button
+                      type="button"
+                      className="btn btn-primary btn-sm"
+                      style={{ gap: 4 }}
+                      onClick={() => {
+                        const wo = selectedWO;
+                        setSelectedWO(null);
+                        onNavigateToManufacturing(wo);
+                      }}
+                    >
+                      <Factory size={13} /> Open Shopfloor Assembly ➔
+                    </button>
+                  )}
+                  {onNavigateToBOM && (
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      onClick={() => {
+                        const wo = selectedWO;
+                        setSelectedWO(null);
+                        onNavigateToBOM(wo);
+                      }}
+                    >
+                      <Layers size={13} /> {matchingBOM ? 'View BOM Recipe ➔' : '+ Make BOM Recipe ➔'}
+                    </button>
+                  )}
+                  {onNavigateToSchedule && (
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      onClick={() => {
+                        setSelectedWO(null);
+                        onNavigateToSchedule();
+                      }}
+                    >
+                      <Clock size={13} /> View Schedule ➔
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        </Modal>
-      )}
+          </Modal>
+        );
+      })()}
     </div>
   );
 }

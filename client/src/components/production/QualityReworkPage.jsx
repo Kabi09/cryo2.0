@@ -12,6 +12,8 @@ export default function QualityReworkPage({
   workOrders = [],
   completions = [],
   reworkOrders = [],
+  preSelectedCompletion = null,
+  onClearPreSelectedCompletion,
   onSaveQA,
   onSaveReworkOrder,
   onUpdateReworkStatus,
@@ -21,7 +23,15 @@ export default function QualityReworkPage({
   defaultTab = 'pending'
 }) {
   const [activeTab, setActiveTab] = useState(defaultTab);
-  const [preSelectedCompForQA, setPreSelectedCompForQA] = useState(null);
+  const [preSelectedCompForQA, setPreSelectedCompForQA] = useState(preSelectedCompletion);
+
+  useEffect(() => {
+    if (preSelectedCompletion) {
+      setPreSelectedCompForQA(preSelectedCompletion);
+      setActiveTab('pending');
+      onClearPreSelectedCompletion?.();
+    }
+  }, [preSelectedCompletion]);
 
   useEffect(() => {
     if (defaultTab) {

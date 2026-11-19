@@ -91,7 +91,7 @@ const grnSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['Draft', 'QC Pending', 'Completed'],
+    enum: ['Draft', 'QC Pending', 'Accepted', 'Completed'],
     default: 'QC Pending'
   }
 }, { timestamps: true });

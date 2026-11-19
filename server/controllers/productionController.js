@@ -9,6 +9,7 @@ const ProductionCompletion = require('../models/ProductionCompletion');
 const ProductionQA = require('../models/ProductionQA');
 const ReworkOrder = require('../models/ReworkOrder');
 const FinishedGood = require('../models/FinishedGood');
+const MaterialIssue = require('../models/MaterialIssue');
 
 const Material = require('../models/Material');
 const Inventory = require('../models/Inventory');
@@ -34,6 +35,17 @@ exports.getProductionDashboard = async (req, res) => {
       .sort({ createdAt: -1 })
       .limit(6);
 
+    const incomingSalesOrders = await SalesOrder.find({
+      $or: [
+        { productionStatus: 'Sent to Production' },
+        { status: { $in: ['In Production', 'Confirmed'] } }
+      ]
+    })
+      .populate('customer', 'companyName contactPerson mobileNumber email')
+      .populate('items.product', 'productCode productName')
+      .sort({ createdAt: -1 })
+      .limit(10);
+
     res.json({
       success: true,
       kpis: {
@@ -44,7 +56,8 @@ exports.getProductionDashboard = async (req, res) => {
         reworkCount,
         completedOrders
       },
-      recentOrders
+      recentOrders,
+      incomingSalesOrders
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -100,13 +113,19 @@ exports.createWorkOrder = async (req, res) => {
     let status = req.body.status;
     if (!validStatuses.includes(status)) status = 'Planned';
 
+    const cleanBody = { ...req.body };
+    if (!cleanBody.bom) delete cleanBody.bom;
+    if (!cleanBody.customer) delete cleanBody.customer;
+    if (!cleanBody.salesOrder) delete cleanBody.salesOrder;
+    if (!cleanBody.product) delete cleanBody.product;
+
     const newOrder = new WorkOrder({
       orderQuantity: Number(req.body.orderQuantity || qty),
       productionQuantity: qty,
       productionManager: req.body.productionManager || 'Senior Production Engineer',
       plannedStartDate: req.body.plannedStartDate || req.body.startDate || new Date(),
       expectedCompletionDate: req.body.expectedCompletionDate || req.body.targetDate || new Date(Date.now() + 10 * 86400000),
-      ...req.body,
+      ...cleanBody,
       status,
       workOrderNumber,
       customerName: customerName || 'Direct Factory Order',
@@ -161,6 +180,15 @@ exports.createBOM = async (req, res) => {
     });
 
     await newBOM.save();
+
+    // Auto-link newly created BOM to any existing Work Orders for this product lacking a BOM
+    if (newBOM.product) {
+      await WorkOrder.updateMany(
+        { product: newBOM.product, $or: [{ bom: null }, { bom: { $exists: false } }] },
+        { $set: { bom: newBOM._id } }
+      );
+    }
+
     res.status(201).json({ success: true, data: newBOM });
   } catch (err) {
     res.status(400).json({ success: false, message: err.message });
@@ -314,16 +342,18 @@ exports.createMaterialIssue = async (req, res) => {
     // Verify stock and issue
     for (const item of (req.body.items || [])) {
       const inv = await Inventory.findOne({ material: item.material });
-      if (!inv || inv.currentStock < item.issuedQty) {
+      const currentStock = inv ? (inv.availableStock !== undefined ? inv.availableStock : inv.currentStock || 0) : 0;
+      if (!inv || currentStock < item.issuedQty) {
         return res.status(400).json({
           success: false,
-          message: `Insufficient approved stock for ${item.materialName || 'material'}. Available: ${inv ? inv.currentStock : 0}, Requested to Issue: ${item.issuedQty}`
+          message: `Insufficient approved stock for ${item.materialName || 'material'}. Available: ${currentStock}, Requested to Issue: ${item.issuedQty}`
         });
       }
 
       // Decrement stock in Company Store Inventory
-      const prevStock = inv.currentStock;
-      inv.currentStock -= Number(item.issuedQty);
+      const prevStock = currentStock;
+      inv.availableStock = prevStock - Number(item.issuedQty);
+      inv.totalIssued = (inv.totalIssued || 0) + Number(item.issuedQty);
       inv.lastUpdated = new Date();
       await inv.save();
 
@@ -336,12 +366,12 @@ exports.createMaterialIssue = async (req, res) => {
         referenceType: 'PRODUCTION_ISSUE',
         quantity: Number(item.issuedQty),
         previousStock: prevStock,
-        currentStock: inv.currentStock,
+        currentStock: inv.availableStock,
         notes: `Issued to Production for ${req.body.workOrderNumber || 'Work Order'}`
       });
 
       // Update Material master current stock
-      await Material.findByIdAndUpdate(item.material, { currentStock: inv.currentStock });
+      await Material.findByIdAndUpdate(item.material, { currentStock: inv.availableStock });
     }
 
     const newIssue = new ProductionIssue({
@@ -351,25 +381,71 @@ exports.createMaterialIssue = async (req, res) => {
     await newIssue.save();
 
     // Update MaterialRequest items issued qty and status
+    let allFullyIssued = true;
+    let anyIssued = false;
+    let mr = null;
+
     if (req.body.materialRequest) {
-      const mr = await MaterialRequest.findById(req.body.materialRequest);
+      mr = await MaterialRequest.findById(req.body.materialRequest);
       if (mr) {
-        mr.status = 'Fully Issued';
         for (const issuedItem of (req.body.items || [])) {
-          const match = mr.items.find(i => String(i.material) === String(issuedItem.material));
+          const match = mr.items.find(i => String(i.material?._id || i.material) === String(issuedItem.material));
           if (match) {
             match.alreadyIssuedQty = (match.alreadyIssuedQty || 0) + Number(issuedItem.issuedQty);
-            match.remainingQty = Math.max(0, match.requiredQty - match.alreadyIssuedQty);
-            match.status = match.remainingQty === 0 ? 'Issued' : 'Partially Approved';
+            match.remainingQty = Math.max(0, (match.requiredQty || match.requestedQty || 0) - match.alreadyIssuedQty);
+            match.status = match.remainingQty <= 0 ? 'Issued' : 'Partially Approved';
           }
         }
+        allFullyIssued = mr.items.every(i => (i.remainingQty || 0) <= 0);
+        anyIssued = mr.items.some(i => (i.alreadyIssuedQty || 0) > 0);
+        mr.status = allFullyIssued ? 'Fully Issued' : (anyIssued ? 'Partially Issued' : mr.status);
         await mr.save();
       }
     }
 
-    // Update WorkOrder to 'Ready to Start'
-    if (req.body.workOrder) {
-      await WorkOrder.findByIdAndUpdate(req.body.workOrder, { status: 'Ready to Start' });
+    // Update WorkOrder status based on material issue readiness
+    let woId = req.body.workOrder || (mr ? mr.workOrder : null);
+    if (woId) {
+      const wo = await WorkOrder.findById(woId);
+      if (wo) {
+        if (allFullyIssued) {
+          if (wo.status !== 'Running' && wo.status !== 'Completed') {
+            wo.status = 'Ready to Start';
+            await wo.save();
+          }
+        } else if (anyIssued) {
+          if (wo.status === 'Planned' || wo.status === 'Waiting for Materials') {
+            wo.status = 'Partially Issued';
+            await wo.save();
+          }
+        }
+      }
+    }
+
+    // Mirror to MaterialIssue (SCM collection) so both systems show the issue
+    try {
+      const year = new Date().getFullYear();
+      const sCount = await MaterialIssue.countDocuments();
+      await MaterialIssue.create({
+        issueNumber: `MI-${year}-${String(sCount + 1).padStart(3, '0')}`,
+        workOrder: String(req.body.workOrderNumber || 'WO-001').toUpperCase(),
+        department: 'Assembly',
+        issueDate: new Date(),
+        requestedBy: req.body.receivedBy || 'Production Supervisor',
+        issuedBy: req.body.issuedBy || 'Store Officer',
+        status: 'Issued',
+        remarks: req.body.remarks || `Issued for ${req.body.workOrderNumber || 'production'}`,
+        items: (req.body.items || []).map(it => ({
+          material: it.material,
+          availableStockAtTime: it.availableStock || 0,
+          requiredQuantity: it.requestedQty || it.issuedQty,
+          issueQuantity: it.issuedQty,
+          unit: it.unit || 'Kg',
+          batchNumber: it.batchNumber || 'DEFAULT'
+        }))
+      });
+    } catch (e) {
+      console.warn('MaterialIssue mirror notice:', e.message);
     }
 
     res.status(201).json({ success: true, data: newIssue });
@@ -461,6 +537,8 @@ exports.createProductionUpdate = async (req, res) => {
     const pending = Math.max(0, planned - totalCompleted);
 
     const newUpdate = new ProductionUpdate({
+      supervisorName: req.body.supervisorName || 'Senior Production Engineer',
+      workCompletedDescription: req.body.workCompletedDescription || req.body.remarks || 'Daily assembly output logged',
       ...req.body,
       updateNumber,
       previouslyCompletedQuantity: prevCompleted,
@@ -469,6 +547,59 @@ exports.createProductionUpdate = async (req, res) => {
     });
 
     await newUpdate.save();
+
+    // Auto-sync Work Order, Sales Order, and Finished Goods
+    if (req.body.workOrder) {
+      const wo = await WorkOrder.findById(req.body.workOrder);
+      if (wo) {
+        if (req.body.isCompleted || (planned > 0 && totalCompleted >= planned)) {
+          wo.status = 'Completed';
+          await wo.save();
+
+          // Sync Sales Order
+          if (wo.salesOrder) {
+            await SalesOrder.findByIdAndUpdate(wo.salesOrder, {
+              status: 'In Production',
+              productionStatus: 'Completed'
+            });
+          }
+
+          // Ensure Finished Good is created only once
+          const existingFG = await FinishedGood.findOne({ workOrder: wo._id });
+          if (!existingFG) {
+            const fgCount = await FinishedGood.countDocuments();
+            const fgNumber = `FG-${String(fgCount + 1).padStart(3, '0')}`;
+            await FinishedGood.create({
+              fgNumber,
+              workOrder: wo._id,
+              workOrderNumber: wo.workOrderNumber,
+              salesOrder: wo.salesOrder,
+              salesOrderNumber: wo.salesOrderNumber,
+              product: wo.product,
+              productName: wo.productName,
+              serialNumber: `SN-${new Date().getFullYear()}-${String(fgCount + 1).padStart(4, '0')}`,
+              approvedQuantity: totalCompleted || planned || 1,
+              warehouseLocation: 'FG Warehouse - Section A1',
+              storageDate: new Date(),
+              stockStatus: 'Available'
+            });
+          }
+        } else {
+          // If daily progress is logged and status is not yet Running, mark it Running
+          if (wo.status !== 'Completed' && wo.status !== 'Running') {
+            wo.status = 'Running';
+            await wo.save();
+            if (wo.salesOrder) {
+              await SalesOrder.findByIdAndUpdate(wo.salesOrder, {
+                status: 'In Production',
+                productionStatus: 'In Assembly'
+              });
+            }
+          }
+        }
+      }
+    }
+
     res.status(201).json({ success: true, data: newUpdate });
   } catch (err) {
     res.status(400).json({ success: false, message: err.message });
@@ -563,10 +694,16 @@ exports.createQATest = async (req, res) => {
       });
     }
 
-    // Update Completion status
+    // Update Completion status and Work Order status
     if (newQA.completion) {
       await ProductionCompletion.findByIdAndUpdate(newQA.completion, {
         status: newQA.overallResult === 'Pass' ? 'QA Passed' : 'QA Failed'
+      });
+    }
+
+    if (newQA.workOrder && (newQA.overallResult === 'Pass' || newQA.decision === 'Finished Goods')) {
+      await WorkOrder.findByIdAndUpdate(newQA.workOrder, {
+        status: 'Completed'
       });
     }
 
@@ -661,7 +798,13 @@ exports.createFinishedGood = async (req, res) => {
 
     // Mark WorkOrder completed
     if (req.body.workOrder) {
-      await WorkOrder.findByIdAndUpdate(req.body.workOrder, { status: 'Completed' });
+      const wo = await WorkOrder.findByIdAndUpdate(req.body.workOrder, { status: 'Completed' }, { new: true });
+      if (wo && wo.salesOrder) {
+        await SalesOrder.findByIdAndUpdate(wo.salesOrder, { productionStatus: 'Completed', status: 'In Production' });
+      }
+    }
+    if (req.body.salesOrder) {
+      await SalesOrder.findByIdAndUpdate(req.body.salesOrder, { productionStatus: 'Completed', status: 'In Production' });
     }
 
     res.status(201).json({ success: true, data: newFG });

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import DataTable from '../common/DataTable';
 import Modal from '../common/Modal';
 import StatusBadge from '../common/StatusBadge';
@@ -8,6 +8,8 @@ export default function BOMModule({
   boms = [],
   products = [],
   materials = [],
+  preSelectedProduct = null,
+  onClearPreSelectedProduct,
   onSave,
   showToast
 }) {
@@ -29,6 +31,20 @@ export default function BOMModule({
       }
     ]
   });
+
+  useEffect(() => {
+    if (preSelectedProduct && preSelectedProduct._id) {
+      setFormData(prev => ({
+        ...prev,
+        product: preSelectedProduct._id,
+        remarks: `BOM recipe formulated for Work Order (${preSelectedProduct.productName || 'Manufactured Item'})`
+      }));
+      setIsModalOpen(true);
+      if (onClearPreSelectedProduct) {
+        onClearPreSelectedProduct();
+      }
+    }
+  }, [preSelectedProduct]);
 
   const handleOpenModal = () => {
     if (products.length > 0 && !formData.product) {
@@ -194,6 +210,11 @@ export default function BOMModule({
                         </option>
                       ))}
                     </select>
+                    {formData.product && (
+                      <div style={{ marginTop: 6, fontSize: '0.74rem', color: 'var(--cyan)' }}>
+                        ✓ Formulating recipe for <strong>{products.find(p => p._id === formData.product)?.productName || 'Product'}</strong>. Saving will make it available for all related Work Orders.
+                      </div>
+                    )}
                   </div>
 
                   <div className="form-group">

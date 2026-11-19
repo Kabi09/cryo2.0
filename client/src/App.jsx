@@ -72,7 +72,9 @@ export default function App() {
   const [preSelectedPIForSO, setPreSelectedPIForSO] = useState(null);
   const [preSelectedWOForMR, setPreSelectedWOForMR] = useState(null);
   const [preSelectedQAForFG, setPreSelectedQAForFG] = useState(null);
+  const [preSelectedCompletionForQA, setPreSelectedCompletionForQA] = useState(null);
   const [preSelectedPOData, setPreSelectedPOData] = useState(null);
+  const [preSelectedSOForWO, setPreSelectedSOForWO] = useState(null);
 
   // 1. SCM State
   const [materials, setMaterials] = useState([]);
@@ -523,6 +525,12 @@ export default function App() {
     setActiveModule('production-orders');
   };
 
+  const handleSelectSOForWO = (so) => {
+    setPreSelectedSOForWO(so);
+    setActiveDomain('production');
+    setActiveModule('production-orders');
+  };
+
   // Production Handlers
   const handleSaveWorkOrder = async (data) => {
     await api.createWorkOrder(data);
@@ -738,6 +746,7 @@ export default function App() {
               inventory={inventory}
               materialIssues={materialIssues}
               materialRequests={materialRequests}
+              supplierLinks={supplierLinks}
               onNavigateTab={(tab, sub) => {
                 if (tab === 'purchasing') {
                   setActiveModule('scm-purchasing');
@@ -751,6 +760,7 @@ export default function App() {
                   setActiveModule(`scm-${tab}`);
                 }
               }}
+              onNavigateToPOWithData={handleNavigateToPOWithData}
             />
           )}
 
@@ -833,9 +843,15 @@ export default function App() {
               materials={materials}
               inventory={inventory}
               materialRequests={materialRequests}
+              workOrders={workOrders}
+              suppliers={scmSuppliers}
+              purchaseOrders={scmPurchaseOrders}
+              grns={scmGrns}
               onSaveMaterialIssue={handleSaveMaterialIssue}
+              onSavePurchaseOrder={handleSavePurchaseOrder}
+              onSaveGRN={handleSaveGRN}
               showToast={showToast}
-              defaultTab={activeModule === 'scm-material-issues' ? 'issues' : 'requests'}
+              defaultTab={activeModule === 'scm-material-issues' ? 'issue' : 'requests'}
             />
           )}
 
@@ -1048,56 +1064,78 @@ export default function App() {
           {activeModule === 'production-dashboard' && (
             <ProductionDashboardModule
               dashboardData={productionDashboardData}
+              salesOrders={salesOrders}
+              workOrders={workOrders}
+              materialRequests={materialRequests}
+              productionMaterialIssues={productionMaterialIssues}
               onNavigateModule={(mod) => {
-                if (mod === 'orders' || mod === 'planning' || mod === 'work-orders' || mod === 'production-orders') {
+                if (mod === 'orders' || mod === 'work-orders' || mod === 'production-orders') {
                   setActiveModule('production-orders');
+                } else if (mod === 'planning' || mod === 'bom' || mod === 'production-planning') {
+                  setActiveModule('production-planning');
+                } else if (mod === 'daily' || mod === 'manufacturing' || mod === 'execution' || mod === 'updates' || mod === 'completion' || mod === 'tracking' || mod === 'production-daily') {
+                  setActiveModule('production-daily');
+                } else if (mod === 'completed' || mod === 'finished-goods' || mod === 'production-completed') {
+                  setActiveModule('production-completed');
                 } else if (mod === 'materials' || mod === 'material-requests' || mod === 'material-issue' || mod === 'production-materials') {
-                  setActiveModule('production-materials');
-                } else if (mod === 'manufacturing' || mod === 'execution' || mod === 'updates' || mod === 'completion' || mod === 'tracking' || mod === 'production-manufacturing') {
-                  setActiveModule('production-manufacturing');
-                } else if (mod === 'quality' || mod === 'qa' || mod === 'rework' || mod === 'production-quality') {
-                  setActiveModule('production-quality');
-                } else if (mod === 'finished-goods' || mod === 'production-finished-goods') {
-                  setActiveModule('production-finished-goods');
-                } else if (mod === 'reports' || mod === 'production-reports') {
-                  setActiveModule('production-reports');
+                  setActiveDomain('scm');
+                  setActiveModule('scm-material-issues');
                 } else {
                   setActiveModule(mod.startsWith('production-') ? mod : `production-${mod}`);
                 }
               }}
+              onSelectSOForWO={handleSelectSOForWO}
             />
           )}
 
-          {(activeModule === 'production-orders' || activeModule === 'production-planning' || activeModule === 'production-bom' || activeModule === 'production-schedule') && (
+          {(activeModule === 'production-orders' || activeModule === 'production-planning' || activeModule === 'production-daily' || activeModule === 'production-completed' || activeModule === 'production-bom' || activeModule === 'production-schedule') && (
             <ProductionOrdersPage
               workOrders={workOrders}
               salesOrders={salesOrders}
               products={products}
               boms={boms}
               materials={materials}
-              schedules={schedules}
               inventory={inventory}
+              materialRequests={materialRequests}
+              productionMaterialIssues={productionMaterialIssues}
+              materialIssues={materialIssues}
+              executions={executions}
+              productionUpdates={productionUpdates}
+              completions={completions}
+              finishedGoods={finishedGoods}
+              preSelectedSO={preSelectedSOForWO}
+              onClearPreSelectedSO={() => setPreSelectedSOForWO(null)}
               onSaveWorkOrder={handleSaveWorkOrder}
               onUpdateWorkOrderStatus={handleUpdateWorkOrderStatus}
               onSaveBOM={handleSaveBOM}
-              onSaveSchedule={handleSaveSchedule}
+              onSaveMaterialRequest={handleSaveMaterialRequest}
+              onSaveProductionUpdate={handleSaveProductionUpdate}
+              onSaveCompletion={handleSaveCompletion}
+              onSaveFinishedGood={handleSaveFinishedGood}
               onNavigateToMaterials={(wo) => {
                 setPreSelectedWOForMR(wo);
-                setActiveModule('production-materials');
+                setActiveDomain('scm');
+                setActiveModule('scm-material-issues');
               }}
               onNavigateToManufacturing={(wo) => {
-                setActiveModule('production-manufacturing');
+                setActiveModule('production-daily');
               }}
               onNavigateModule={(mod) => {
                 if (mod === 'orders' || mod === 'production-orders') setActiveModule('production-orders');
-                else if (mod === 'materials' || mod === 'production-materials') setActiveModule('production-materials');
-                else if (mod === 'manufacturing' || mod === 'production-manufacturing') setActiveModule('production-manufacturing');
-                else if (mod === 'quality' || mod === 'production-quality') setActiveModule('production-quality');
-                else if (mod === 'finished-goods' || mod === 'production-finished-goods') setActiveModule('production-finished-goods');
-                else setActiveModule(mod);
+                else if (mod === 'planning' || mod === 'production-planning') setActiveModule('production-planning');
+                else if (mod === 'daily' || mod === 'production-daily' || mod === 'manufacturing' || mod === 'production-manufacturing') setActiveModule('production-daily');
+                else if (mod === 'completed' || mod === 'production-completed' || mod === 'finished-goods' || mod === 'production-finished-goods') setActiveModule('production-completed');
+                else if (mod === 'materials' || mod === 'production-materials') {
+                  setActiveDomain('scm');
+                  setActiveModule('scm-material-issues');
+                } else setActiveModule(mod);
               }}
               showToast={showToast}
-              defaultTab={activeModule === 'production-bom' ? 'bom' : activeModule === 'production-schedule' ? 'schedule' : 'orders'}
+              defaultTab={
+                activeModule === 'production-planning' || activeModule === 'production-bom' ? 'planning' :
+                activeModule === 'production-daily' ? 'daily' :
+                activeModule === 'production-completed' ? 'completed' : 'orders'
+              }
             />
           )}
 
@@ -1112,9 +1150,31 @@ export default function App() {
               preSelectedWO={preSelectedWOForMR}
               onSaveMaterialRequest={handleSaveMaterialRequest}
               onSaveProductionMaterialIssue={handleSaveProductionMaterialIssue}
-              onNavigateToPurchasing={() => {
-                setActiveDomain('scm');
-                setActiveModule('scm-purchasing');
+              onNavigateToPurchasing={(mrOrItem) => {
+                if (mrOrItem && mrOrItem.items) {
+                  const shortItem = mrOrItem.items.find(it => {
+                    const matId = it.material?._id || it.material;
+                    const inv = inventory.find(i => (i.material?._id || i.material) === matId);
+                    return (inv ? (inv.availableStock || inv.currentStock || 0) : 0) < (it.requestedQty || it.requiredQty || 0);
+                  }) || mrOrItem.items[0];
+
+                  const matId = shortItem?.material?._id || shortItem?.material;
+                  const link = (supplierLinks || []).find(l => (l.material?._id || l.material) === matId && l.preferredSupplier) ||
+                               (supplierLinks || []).find(l => (l.material?._id || l.material) === matId);
+                  const supplierId = link ? (link.supplier?._id || link.supplier) : (scmSuppliers[0]?._id || '');
+                  const price = link?.unitPrice || 80;
+                  const qty = Math.max(shortItem?.requestedQty || 100, link?.minOrderQty || 100);
+
+                  handleNavigateToPOWithData({
+                    supplierId,
+                    materialId: matId,
+                    quantity: qty,
+                    unitPrice: price
+                  });
+                } else {
+                  setActiveDomain('scm');
+                  setActiveModule('scm-purchasing');
+                }
               }}
               onNavigateToManufacturing={(wo) => {
                 setActiveModule('production-manufacturing');
@@ -1142,7 +1202,10 @@ export default function App() {
               onUpdateExecutionStatus={handleUpdateExecutionStatus}
               onSaveProductionUpdate={handleSaveProductionUpdate}
               onSaveCompletion={handleSaveCompletion}
-              onNavigateToQA={() => setActiveModule('production-quality')}
+              onNavigateToQA={(comp) => {
+                setPreSelectedCompletionForQA(comp);
+                setActiveModule('production-quality');
+              }}
               onNavigateModule={(mod) => {
                 if (mod === 'orders' || mod === 'production-orders') setActiveModule('production-orders');
                 else if (mod === 'materials' || mod === 'production-materials') setActiveModule('production-materials');
@@ -1162,6 +1225,8 @@ export default function App() {
               reworkOrders={reworkOrders}
               workOrders={workOrders}
               completions={completions}
+              preSelectedCompletion={preSelectedCompletionForQA}
+              onClearPreSelectedCompletion={() => setPreSelectedCompletionForQA(null)}
               onSaveQA={handleSaveProductionQA}
               onSaveReworkOrder={handleSaveReworkOrder}
               onUpdateReworkStatus={handleUpdateReworkStatus}

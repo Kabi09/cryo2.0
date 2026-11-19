@@ -13,7 +13,7 @@ const stockLedgerSchema = new mongoose.Schema({
   },
   transactionType: {
     type: String,
-    enum: ['Opening Stock', 'QC Inward Receipt', 'Production Issue', 'Supplier Return', 'Audit Adjustment'],
+    enum: ['Opening Stock', 'QC Inward Receipt', 'GRN Direct Receipt', 'Production Issue', 'Supplier Return', 'Audit Adjustment'],
     required: true
   },
   referenceDoc: {

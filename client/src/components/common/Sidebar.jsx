@@ -19,7 +19,7 @@ export const SCM_MODULES = [
   { id: 'scm-suppliers', num: '04', title: 'Suppliers' },
   { id: 'scm-purchasing', num: '05', title: 'Purchasing' },
   { id: 'scm-quality-inventory', num: '06', title: 'Quality Control' },
-  { id: 'scm-material-issues', num: '07', title: 'Material Issues' },
+  { id: 'scm-material-issues', num: '07', title: 'Store & Material Issue' },
   { id: 'scm-reports', num: '08', title: 'Reports' }
 ];
 
@@ -35,13 +35,11 @@ export const SALES_MODULES = [
 ];
 
 export const PRODUCTION_MODULES = [
-  { id: 'production-dashboard', num: '01', title: 'Dashboard' },
-  { id: 'production-orders', num: '02', title: 'Work Orders' },
-  { id: 'production-materials', num: '03', title: 'Material Requests' },
-  { id: 'production-manufacturing', num: '04', title: 'Assembly & Execution' },
-  { id: 'production-quality', num: '05', title: 'Quality & Rework' },
-  { id: 'production-finished-goods', num: '06', title: 'Finished Goods' },
-  { id: 'production-reports', num: '07', title: 'Reports' }
+  { id: 'production-orders', num: '01', title: 'Production Orders' },
+  { id: 'production-planning', num: '02', title: 'Planning & BOM' },
+  { id: 'production-daily', num: '03', title: 'Daily Production' },
+  { id: 'production-completed', num: '04', title: 'Completed Production' },
+  { id: 'production-dashboard', num: '05', title: 'Dashboard' }
 ];
 
 export const LOGISTICS_MODULES = [
@@ -282,7 +280,7 @@ export default function Sidebar({
           <div className="tree-dropdown-group" style={{ marginTop: 10 }}>
             <div
               className={`tree-parent-header ${activeDomain === 'production' ? 'active-parent' : ''}`}
-              onClick={() => toggleDropdown('production', 'production-dashboard')}
+              onClick={() => toggleDropdown('production', 'production-orders')}
             >
               <div className="tree-parent-left">
                 <div className="tree-parent-icon production-icon-box">
@@ -290,11 +288,11 @@ export default function Sidebar({
                 </div>
                 <div className="tree-parent-text">
                   <span className="tree-parent-title">Production</span>
-                  <span className="tree-parent-subtitle">7 Modules</span>
+                  <span className="tree-parent-subtitle">4 Essential Tabs</span>
                 </div>
               </div>
               <div className="tree-parent-right">
-                <span className="tree-badge">7</span>
+                <span className="tree-badge">4</span>
                 {openDropdowns.production ? (
                   <ChevronUp size={16} className="tree-chevron open" />
                 ) : (

@@ -67,6 +67,7 @@ export default function ProductionTrackingPage({
           workOrders={workOrders}
           onStart={onStartExecution}
           onUpdateStatus={onUpdateExecutionStatus}
+          onNavigateToUpdate={() => setActiveTab('updates')}
           onNavigateToCompletion={() => setActiveTab('completion')}
           showToast={showToast}
         />
